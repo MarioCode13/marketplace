@@ -1,0 +1,19 @@
+type User {
+    id: ID!
+    username: String!
+    email: String!
+    createdAt: String!
+}
+
+type Query {
+    getUserById(id: ID!): User
+    getAllUsers: [User!]!
+    me: User
+}
+
+type Mutation {
+    updateUser(id: ID!, username: String, email: String): User
+    register(username: String!, email: String!, password: String!): String
+    login(emailOrUsername: String!, password: String!): String
+}
+
