@@ -5,9 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+
 
 @Entity
 @Table(name = "users")
@@ -19,6 +21,7 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
 
     public Long getId() {
         return id;
@@ -68,6 +71,21 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+
+    @Lob
+    @JdbcTypeCode(SqlTypes.BINARY)
+    @Column(name = "profile_image", columnDefinition = "BYTEA")
+    private byte[] profileImage;
+
+    public byte[] getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(byte[] profileImage) {
+        this.profileImage = profileImage;
+    }
+
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -2,6 +2,7 @@ type User {
     id: ID!
     username: String!
     email: String!
+    profileImage: String
     createdAt: String!
 }
 
@@ -9,6 +10,8 @@ type Query {
     getUserById(id: ID!): User
     getAllUsers: [User!]!
     me: User
+    getProfileImage(userId: ID!): String
+    getUserProfileImage(userId: ID!): String
 }
 
 type Mutation {

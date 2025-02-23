@@ -8,7 +8,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import javax.sql.rowset.serial.SerialBlob;
+import java.sql.Blob;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -99,5 +103,44 @@ public class UserService implements UserDetailsService {
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+//    public String getUserProfileImage(Long userId) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        return user.getProfileImage() != null
+//                ? Base64.getEncoder().encodeToString(user.getProfileImage())  // Convert to Base64
+//                : null;
+//    }
+//public String getUserProfileImage(Long userId) {
+//    User user = userRepository.findById(userId)
+//            .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//    return user.getProfileImage() != null
+//            ? Base64.getEncoder().encodeToString(user.getProfileImage())
+//            : null;
+//}
+public Optional<byte[]> getUserProfileImage(Long userId) {
+    return userRepository.findById(userId)
+            .map(User::getProfileImage);
+}
+
+
+
+    @Transactional
+    public void saveUserProfileImage(Long userId, byte[] imageData) {
+        System.out.println("Saving image of size: " + imageData.length);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        System.out.println("Before saving, image data type: " + imageData.getClass().getName()); // Debugging line
+        try {
+            Blob imageBlob = new SerialBlob(imageData); // Convert to Blob
+            user.setProfileImage(imageBlob.getBytes(1, (int) imageBlob.length())); // Ensure byte[] format
+            userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to save profile image", e);
+        }
     }
 }

@@ -4,6 +4,7 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +22,14 @@ public class UserQueryResolver {
 
     private final UserService userService;
 
+    @SchemaMapping(typeName = "User", field = "profileImage")
+    public String resolveProfileImage(User user) {
+        if (user.getProfileImage() != null) {
+            return Base64.getEncoder().encodeToString(user.getProfileImage());
+        }
+        return null; // If no image exists
+    }
+    
     public UserQueryResolver(UserService userService) {
         this.userService = userService;
     }
@@ -38,6 +48,26 @@ public class UserQueryResolver {
         Optional<User> userOpt = userService.getUserByEmail(email);
         return userOpt.orElseThrow(() -> new RuntimeException("User not found"));
     }
+
+//    public Optional<byte[]> getProfileImage(Long userId) {
+//        return userService.getUserProfileImage(userId);
+//    }
+
+//    public String getUserProfileImage(Long userId) {
+//        Optional<byte[]> imageData = userService.getUserProfileImage(userId);
+//
+//        return imageData.map(bytes -> Base64.getEncoder().encodeToString(bytes))
+//                .orElse(null);
+//    }
+
+    public String getUserProfileImage(Long userId) {
+        return userService.getUserProfileImage(userId)
+                .map(bytes -> Base64.getEncoder().encodeToString(bytes))
+                .orElse(null);
+    }
+
+
+
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
