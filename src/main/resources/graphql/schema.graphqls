@@ -1,7 +1,14 @@
+type AuthResponse {
+    token: String!
+    email: String!
+    role: String!
+}
+
 type User {
     id: ID!
     username: String!
     email: String!
+    role: String!
     profileImage: String
     createdAt: String!
 }
@@ -16,7 +23,7 @@ type Query {
 
 type Mutation {
     updateUser(id: ID!, username: String, email: String): User
-    register(username: String!, email: String!, password: String!): String
-    login(emailOrUsername: String!, password: String!): String
+    register(username: String!, email: String!, password: String!): AuthResponse!
+    login(emailOrUsername: String!, password: String!): AuthResponse!
 }
 

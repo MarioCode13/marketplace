@@ -62,6 +62,9 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public Role getRole() { return role; }
+
+    public void setRole(Role role) { this.role = role; }
 
     @Column(nullable = true, unique = true)
     private String username;
@@ -71,6 +74,14 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role; // New field
+
+    public enum Role {
+        VISITOR, HAS_ACCOUNT, SUBSCRIBED
+    }
 
 
     @Lob

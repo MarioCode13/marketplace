@@ -2,6 +2,7 @@ package dev.marketplace.marketplace.service;
 
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.UserRepository;
+import dev.marketplace.marketplace.security.JwtUtil;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,10 +22,12 @@ import java.util.Optional;
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
 
     // Method required by Spring Security for authentication
@@ -53,6 +56,7 @@ public class UserService implements UserDetailsService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
+        user.setRole(User.Role.HAS_ACCOUNT);
 
         return userRepository.save(user);
     }
@@ -62,14 +66,14 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (username != null && !username.isBlank()) {
-            if (userRepository.findByUsername(username).isPresent()) {
+            if (userRepository.existsByUsernameAndIdNot(username, userId)) {
                 throw new IllegalArgumentException("Username already taken");
             }
             user.setUsername(username);
         }
 
         if (email != null && !email.isBlank()) {
-            if (userRepository.findByEmail(email).isPresent()) {
+            if (userRepository.existsByEmailAndIdNot(email, userId)) {
                 throw new IllegalArgumentException("Email already in use");
             }
             user.setEmail(email);
@@ -78,10 +82,25 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    @Transactional
+    public User upgradeUserRole(Long userId, User.Role newRole) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (newRole == User.Role.SUBSCRIBED && user.getRole() == User.Role.HAS_ACCOUNT) {
+            user.setRole(User.Role.SUBSCRIBED);
+        } else {
+            throw new IllegalArgumentException("Invalid role transition");
+        }
+
+        return userRepository.save(user);
+    }
+
+
     public Optional<User> authenticateUser(String emailOrUsername, String password) {
         Optional<User> userOpt = userRepository.findByEmail(emailOrUsername);
 
-        if (userOpt.isEmpty()) {  // Java 11+ method, might not work for Java 8
+        if (userOpt.isEmpty()) {
             userOpt = userRepository.findByUsername(emailOrUsername);
         }
 

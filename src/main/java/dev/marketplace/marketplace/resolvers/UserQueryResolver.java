@@ -29,7 +29,7 @@ public class UserQueryResolver {
         }
         return null; // If no image exists
     }
-    
+
     public UserQueryResolver(UserService userService) {
         this.userService = userService;
     }

@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.resolvers;
 
+import dev.marketplace.marketplace.dto.AuthResponseDto;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.security.JwtUtil;
 import dev.marketplace.marketplace.service.UserService;
@@ -27,12 +28,17 @@ public class AuthResolver {
     }
 
     @MutationMapping
-    public String login(@Argument String emailOrUsername, @Argument String password) {
+    public AuthResponseDto login(@Argument String emailOrUsername, @Argument String password) {
         Optional<User> userOpt = userService.authenticateUser(emailOrUsername, password);
-        if (userOpt.isPresent()) {
-            return jwtUtil.generateToken(userOpt.get().getEmail());
+
+        if (userOpt.isEmpty()) {
+            throw new BadCredentialsException("Invalid credentials");
         }
-        throw new BadCredentialsException("Invalid credentials");
+
+        User user = userOpt.get();
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponseDto(token, user.getEmail(), user.getRole().name());
     }
 
 

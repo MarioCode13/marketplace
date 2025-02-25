@@ -40,8 +40,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        return new UserService(userRepository, passwordEncoder);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+        return new UserService(userRepository, passwordEncoder, jwtUtil);
     }
 
     @Bean
@@ -64,11 +64,8 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                                .anyRequest().permitAll()
-//                        .requestMatchers("/graphql").permitAll()
-//                        .requestMatchers("/graphiql", "/playground").permitAll()
-//                        .requestMatchers("/api/users/**").permitAll()  // Allow all requests to user API
-//                        .anyRequest().authenticated()
+                        .requestMatchers("/graphql", "/graphiql", "/playground", "/api/users/**").permitAll()
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

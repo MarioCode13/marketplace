@@ -22,11 +22,12 @@ public class JwtUtil {
     }
 
 
-    public String generateToken(String email) {
+    public String generateToken(String email, String role) {
         return Jwts.builder()
                 .subject(email)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .claim("role", role)
                 .signWith(getSigningKey())
                 .serializeToJsonWith(new JacksonSerializer<>())
                 .compact();
@@ -40,6 +41,16 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    public String extractRole(String token) {  // 🔹 Extract user role from token
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .json(new JacksonDeserializer<>())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
     }
 
     public boolean validateToken(String token) {
