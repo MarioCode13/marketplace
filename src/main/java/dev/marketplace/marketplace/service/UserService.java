@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import dev.marketplace.marketplace.enums.Role;
 
 import javax.sql.rowset.serial.SerialBlob;
 import java.sql.Blob;
@@ -39,7 +40,7 @@ public class UserService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getEmail(), // Username field (email in this case)
                 user.getPassword(), // Hashed password
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")) // Default role
+                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
         );
     }
 
@@ -56,7 +57,7 @@ public class UserService implements UserDetailsService {
         user.setUsername(username);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole(User.Role.HAS_ACCOUNT);
+        user.setRole(Role.HAS_ACCOUNT);
 
         return userRepository.save(user);
     }
@@ -83,12 +84,12 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User upgradeUserRole(Long userId, User.Role newRole) {
+    public User upgradeUserRole(Long userId, Role newRole) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (newRole == User.Role.SUBSCRIBED && user.getRole() == User.Role.HAS_ACCOUNT) {
-            user.setRole(User.Role.SUBSCRIBED);
+        if (newRole == Role.SUBSCRIBED && user.getRole() == Role.HAS_ACCOUNT) {
+            user.setRole(Role.SUBSCRIBED);
         } else {
             throw new IllegalArgumentException("Invalid role transition");
         }
@@ -124,22 +125,6 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
-//    public String getUserProfileImage(Long userId) {
-//        User user = userRepository.findById(userId)
-//                .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//        return user.getProfileImage() != null
-//                ? Base64.getEncoder().encodeToString(user.getProfileImage())  // Convert to Base64
-//                : null;
-//    }
-//public String getUserProfileImage(Long userId) {
-//    User user = userRepository.findById(userId)
-//            .orElseThrow(() -> new RuntimeException("User not found"));
-//
-//    return user.getProfileImage() != null
-//            ? Base64.getEncoder().encodeToString(user.getProfileImage())
-//            : null;
-//}
 public Optional<byte[]> getUserProfileImage(Long userId) {
     return userRepository.findById(userId)
             .map(User::getProfileImage);

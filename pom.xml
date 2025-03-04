@@ -82,12 +82,39 @@
 			<version>1.18.30</version>
 			<scope>provided</scope>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-websocket</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+			<!-- B2 SDK Core -->
+			<dependency>
+				<groupId>com.backblaze.b2</groupId>
+				<artifactId>b2-sdk-core</artifactId>
+				<version>6.3.0</version>
+				<scope>compile</scope>
+			</dependency>
+			<!-- B2 SDK HTTP Client -->
+			<dependency>
+				<groupId>com.backblaze.b2</groupId>
+				<artifactId>b2-sdk-httpclient</artifactId>
+				<version>6.3.0</version>
+				<scope>compile</scope>
+			</dependency>
+
+		<dependency>
+			<groupId>com.squareup.okhttp3</groupId>
+			<artifactId>okhttp</artifactId>
+			<version>4.12.0</version>
+		</dependency>
+
+
+
+
 
 		<dependency>
 			<groupId>org.springframework</groupId>
@@ -100,11 +127,33 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-java</artifactId>
+			<version>22.3</version>
+		</dependency>
+		<dependency>
 			<groupId>com.graphql-java-kickstart</groupId>
 			<artifactId>graphql-spring-boot-starter</artifactId>
 			<version>15.1.0</version>
-
 		</dependency>
+		<dependency>
+			<groupId>com.graphql-java</groupId>
+			<artifactId>graphql-java-extended-scalars</artifactId>
+			<version>21.0</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>2.11.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+			<version>9.22.3</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

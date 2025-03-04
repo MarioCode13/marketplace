@@ -22,9 +22,12 @@ public class AuthResolver {
     }
 
     @MutationMapping
-    public String register(@Argument String username, @Argument String email, @Argument String password) {
-        userService.registerUser(username, email, password);
-        return "User registered successfully";
+    public AuthResponseDto register(@Argument String username, @Argument String email, @Argument String password) {
+        User user = userService.registerUser(username, email, password);
+
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+
+        return new AuthResponseDto(token, user.getEmail(), user.getRole().name());
     }
 
     @MutationMapping

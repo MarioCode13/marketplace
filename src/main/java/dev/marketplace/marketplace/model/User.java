@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.model;
 
+import dev.marketplace.marketplace.enums.Role;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -79,11 +80,9 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Role role; // New field
+    private Role role = Role.HAS_ACCOUNT;
 
-    public enum Role {
-        VISITOR, HAS_ACCOUNT, SUBSCRIBED
-    }
+
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Listing> listings = new ArrayList<>();
