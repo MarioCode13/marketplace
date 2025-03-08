@@ -4,22 +4,23 @@ public class AuthResponseDto {
     private String token;
     private String email;
     private String role;
+    private Long userId; // Add userId here
 
-    public AuthResponseDto(String token, String email, String role) {
+    public AuthResponseDto(String token, String email, String role, Long userId) {
         this.token = token;
         this.email = email;
         this.role = role;
+        this.userId = userId;
     }
 
-    public String getToken() {
-        return token;
+    // Getters and setters
+
+    public Long getUserId() {
+        return userId;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
-    public String getRole() {
-        return role;
+    public void setUserId(Long userId) {
+        this.userId = userId;
     }
 }
+

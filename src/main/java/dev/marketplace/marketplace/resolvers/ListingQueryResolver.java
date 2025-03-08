@@ -2,6 +2,7 @@ package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.service.ListingService;
+import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
@@ -23,11 +24,14 @@ public class ListingQueryResolver  {
         return listingService.getAllListings();
     }
     @QueryMapping
-    public Optional<Listing> getListingById(Long id) {
-        return listingService.getListingById(id);
+    public Optional<Listing> getListingById(@Argument String id) { // ✅ Use String for GraphQL ID!
+        return listingService.getListingById((id)); // Convert to Long
     }
+
     @QueryMapping
-    public List<Listing> getListingsByCategory(Long categoryId) {
-        return listingService.getListingsByCategory(categoryId);
+    public List<Listing> getListingsByCategory(@Argument Integer categoryId) { // ✅ Use Integer for GraphQL Int!
+        return listingService.getListingsByCategory(categoryId.toString()); // Convert to Long
     }
+
+
 }

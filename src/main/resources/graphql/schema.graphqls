@@ -1,9 +1,8 @@
-scalar Upload
-
 type AuthResponse {
     token: String!
     email: String!
     role: String
+    userId: ID!
 }
 
 type User {
@@ -15,11 +14,6 @@ type User {
     createdAt: String!
 }
 
-type Category {
-    id: ID!
-    name: String!
-}
-
 enum Condition {
     NEW,
     LIKE_NEW,
@@ -29,11 +23,6 @@ enum Condition {
     HEAVILY_USED,
     NEEDS_REPAIR,
     FOR_PARTS
-}
-
-type Subcategory {
-    id: ID!
-    name: String!
 }
 
 type Listing {
@@ -51,6 +40,11 @@ type Listing {
     user: User!
 }
 
+type Category {
+    id: ID!
+    name: String!
+}
+
 type Query {
     getUserById(id: ID!): User
     getAllUsers: [User!]!
@@ -59,23 +53,25 @@ type Query {
     getUserProfileImage(userId: ID!): String
     getAllListings: [Listing!]!
     getListingById(id: ID!): Listing
+    getConditions: [Condition] # No longer non-nullable list
+    getCategories: [Category]
+    getCategoryById(id: ID!): Category # Nullable return type
 }
 
 type Mutation {
     updateUser(id: ID!, username: String, email: String): User
     register(username: String!, email: String!, password: String!): AuthResponse!
     login(emailOrUsername: String!, password: String!): AuthResponse!
-    uploadListingImage(image: Upload!): String!
+    uploadListingImage(image: String!): String!
     createListing(
-        title: String!,
-        description: String!,
-        images: [String!]!,  # URLs returned from uploadListingImage
-        categoryId: ID!,
-        subcategoryIds: [ID!]!,
-        price: Float!,
-        location: String!,
+        title: String!
+        description: String!
+        price: Float!
+        location: String!
         condition: Condition!
+        images: [String!]!
+        categoryId: ID!
+        userId: ID!
     ): Listing!
     markListingAsSold(id: ID!): Listing!
 }
-

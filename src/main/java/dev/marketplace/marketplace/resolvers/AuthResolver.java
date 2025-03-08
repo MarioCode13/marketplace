@@ -25,9 +25,9 @@ public class AuthResolver {
     public AuthResponseDto register(@Argument String username, @Argument String email, @Argument String password) {
         User user = userService.registerUser(username, email, password);
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(),  user.getId());
 
-        return new AuthResponseDto(token, user.getEmail(), user.getRole().name());
+        return new AuthResponseDto(token, user.getEmail(), user.getRole().name(), user.getId());
     }
 
     @MutationMapping
@@ -39,9 +39,10 @@ public class AuthResolver {
         }
 
         User user = userOpt.get();
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
+        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(),  user.getId());
 
-        return new AuthResponseDto(token, user.getEmail(), user.getRole().name());
+        // Return userId along with other information
+        return new AuthResponseDto(token, user.getEmail(), user.getRole().name(), user.getId());
     }
 
 

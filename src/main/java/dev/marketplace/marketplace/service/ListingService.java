@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.service;
 
+import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.Category;
 import dev.marketplace.marketplace.model.Listing;
@@ -11,49 +12,74 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class ListingService {
     private final ListingRepository listingRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final B2StorageService b2StorageService;
 
-    public ListingService(ListingRepository listingRepository, CategoryRepository categoryRepository, UserRepository userRepository) {
+    public ListingService(ListingRepository listingRepository, CategoryRepository categoryRepository, UserRepository userRepository, B2StorageService b2StorageService) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
+        this.b2StorageService = b2StorageService;
     }
 
-    public List<Listing> getAllListings(){
-        return listingRepository.findAll();
+    public List<Listing> getAllListings() {
+        List<Listing> listings = listingRepository.findAll();
+
+        return listings.stream().map(listing -> {
+            List<String> preSignedUrls = listing.getImages().stream()
+                    .map(fileName -> {
+                        try {
+                            return b2StorageService.generatePreSignedUrl(fileName);
+                        } catch (B2Exception e) {
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .toList();
+
+            return new Listing.Builder() // ✅ Use "new Listing.Builder()"
+                    .id(listing.getId())
+                    .title(listing.getTitle())
+                    .description(listing.getDescription())
+                    .images(preSignedUrls) // ✅ Pre-signed URLs
+                    .category(listing.getCategory())
+                    .price(listing.getPrice())
+                    .location(listing.getLocation())
+                    .condition(listing.getCondition())
+                    .user(listing.getUser())
+                    .build();
+        }).toList();
     }
 
-    public Optional<Listing> getListingById(Long id) {
-        return listingRepository.findById(id);
-    }
-    public List<Listing> getListingsByCategory(Long categoryId) {
-        return listingRepository.findByCategoryId(categoryId);
+
+    public Optional<Listing> getListingById(String id) {
+        return listingRepository.findById(Long.parseLong(id));
     }
 
+    public List<Listing> getListingsByCategory(String categoryId) {
+        return listingRepository.findByCategoryId(Long.parseLong(categoryId));
+    }
 
-    public Listing createListing(String title, String description, List<String> imageUrls,
-                                 Long categoryId, double price, String location,
-                                 Condition condition, Long userId) {
-        // Fetch user
-        User user = userRepository.findById(userId)
+    public Listing createListing(String title, String description, List<String> imageFilenames,
+                                 String categoryId, double price, String location,
+                                 Condition condition, String userId) {
+        User user = userRepository.findById(Long.parseLong(userId))
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Fetch category
-        Category category = categoryRepository.findById(categoryId)
+        Category category = categoryRepository.findById(Long.parseLong(categoryId))
                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
-        // Build listing
-        Listing listing = Listing.builder()
+        Listing listing = new Listing.Builder() // ✅ Use manual builder
                 .title(title)
                 .description(description)
-                .images(imageUrls)
+                .images(imageFilenames)
                 .category(category)
                 .price(price)
                 .location(location)
@@ -65,36 +91,11 @@ public class ListingService {
     }
 
 
-//    public Listing updateListing(Long id, String title, String description, List<String> imageUrls,
-//                                 Long categoryId, double price, String location,
-//                                 Condition condition, boolean sold) {
-//        return listingRepository.findById(id)
-//                .map(listing -> {
-//                    listing.setTitle(title);
-//                    listing.setDescription(description);
-//                    listing.setPrice(price);
-//                    listing.setLocation(location);
-//                    listing.setCondition(condition);
-//                    listing.setSold(sold);
-//
-//                    // Update category if provided
-//                    if (categoryId != null) {
-//                        Category category = categoryRepository.findById(categoryId)
-//                                .orElseThrow(() -> new RuntimeException("Category not found"));
-//                        listing.setCategory(category);
-//                    }
-//
-//                    // Update images if provided
-//                    if (imageUrls != null && !imageUrls.isEmpty()) {
-//                        listing.setImages(imageUrls);
-//                    }
-//
-//                    return listingRepository.save(listing);
-//                }).orElseThrow(() -> new RuntimeException("Listing not found"));
-//    }
+    public void deleteListing(String id) {
+        listingRepository.deleteById(Long.parseLong(id));
+    }
 
-
-    public void deleteListing(Long id) {
-        listingRepository.deleteById(id);
+    public Listing save(Listing listing) {
+        return listingRepository.save(listing);
     }
 }

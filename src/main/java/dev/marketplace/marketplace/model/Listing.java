@@ -2,14 +2,20 @@ package dev.marketplace.marketplace.model;
 
 import dev.marketplace.marketplace.enums.Condition;
 import jakarta.persistence.*;
-import lombok.NoArgsConstructor;
+import jdk.jshell.Snippet;
+import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Entity
-@NoArgsConstructor
+@Table(name = "listing")
+@Getter
+@Setter
+@AllArgsConstructor
 public class Listing {
+    public Listing() {
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,19 +29,13 @@ public class Listing {
     private String description;
 
     @ElementCollection
+    @CollectionTable(name = "listing_image", joinColumns = @JoinColumn(name = "listing_id"))
+    @Column(name = "image")
     private List<String> images;
 
     @ManyToOne
-    @JoinColumn(name = "category_id")
+    @JoinColumn(name = "category_id", nullable = false)
     private Category category;
-
-    @ManyToMany
-    @JoinTable(
-            name = "listing_subcategories",
-            joinColumns = @JoinColumn(name = "listing_id"),
-            inverseJoinColumns = @JoinColumn(name = "subcategory_id")
-    )
-    private List<Subcategory> subcategories;
 
     private double price;
     private boolean sold = false;
@@ -47,118 +47,207 @@ public class Listing {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime expiresAt;
 
+
+
     @PrePersist
     public void setExpiration() {
         this.expiresAt = this.createdAt.plusDays(30);
     }
 
-    public Listing(Long id, User user, String title, String description, List<String> images,
-                   Category category, List<Subcategory> subcategories, double price,
-                   boolean sold, String location, Condition condition,
-                   LocalDateTime createdAt, LocalDateTime expiresAt) {
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
         this.id = id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
         this.user = user;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<String> getImages() {
+        return images;
+    }
+
+    public void setImages(List<String> images) {
         this.images = images;
+    }
+
+    public Category getCategory() {
+        return category;
+    }
+
+    public void setCategory(Category category) {
         this.category = category;
-        this.subcategories = subcategories;
+    }
+
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
         this.price = price;
+    }
+
+    public boolean isSold() {
+        return sold;
+    }
+
+    public void setSold(boolean sold) {
         this.sold = sold;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
         this.location = location;
+    }
+
+    public Condition getCondition() {
+        return condition;
+    }
+
+    public void setCondition(Condition condition) {
         this.condition = condition;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getExpiresAt() {
+        return expiresAt;
+    }
+
+    public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
     }
 
-    // ✅ Manually Implemented Builder Pattern
-    public static ListingBuilder builder() {
-        return new ListingBuilder();
+    // Private constructor to enforce the use of the builder
+    private Listing(Builder builder) {
+        this.id = builder.id;
+        this.user = builder.user;
+        this.title = builder.title;
+        this.description = builder.description;
+        this.images = builder.images;
+        this.category = builder.category;
+        this.price = builder.price;
+        this.sold = builder.sold;
+        this.location = builder.location;
+        this.condition = builder.condition;
+        this.createdAt = builder.createdAt;
+        this.expiresAt = builder.expiresAt;
     }
 
-    public static class ListingBuilder {
+    public static class Builder {
         private Long id;
         private User user;
         private String title;
         private String description;
         private List<String> images;
         private Category category;
-        private List<Subcategory> subcategories;
         private double price;
-        private boolean sold;
+        private boolean sold = false;
         private String location;
         private Condition condition;
         private LocalDateTime createdAt = LocalDateTime.now();
         private LocalDateTime expiresAt;
 
-        public ListingBuilder id(Long id) {
+        public Builder id(Long id) {
             this.id = id;
             return this;
         }
 
-        public ListingBuilder user(User user) {
+        public Builder user(User user) {
             this.user = user;
             return this;
         }
 
-        public ListingBuilder title(String title) {
+        public Builder title(String title) {
             this.title = title;
             return this;
         }
 
-        public ListingBuilder description(String description) {
+        public Builder description(String description) {
             this.description = description;
             return this;
         }
 
-        public ListingBuilder images(List<String> images) {
+        public Builder images(List<String> images) {
             this.images = images;
             return this;
         }
 
-        public ListingBuilder category(Category category) {
+        public Builder category(Category category) {
             this.category = category;
             return this;
         }
 
-        public ListingBuilder subcategories(List<Subcategory> subcategories) {
-            this.subcategories = subcategories;
-            return this;
-        }
-
-        public ListingBuilder price(double price) {
+        public Builder price(double price) {
             this.price = price;
             return this;
         }
 
-        public ListingBuilder sold(boolean sold) {
+        public Builder sold(boolean sold) {
             this.sold = sold;
             return this;
         }
 
-        public ListingBuilder location(String location) {
+        public Builder location(String location) {
             this.location = location;
             return this;
         }
 
-        public ListingBuilder condition(Condition condition) {
+        public Builder condition(Condition condition) {
             this.condition = condition;
             return this;
         }
 
-        public ListingBuilder createdAt(LocalDateTime createdAt) {
+        public Builder createdAt(LocalDateTime createdAt) {
             this.createdAt = createdAt;
             return this;
         }
 
-        public ListingBuilder expiresAt(LocalDateTime expiresAt) {
+        public Builder expiresAt(LocalDateTime expiresAt) {
             this.expiresAt = expiresAt;
             return this;
         }
 
         public Listing build() {
-            return new Listing(id, user, title, description, images, category, subcategories, price,
-                    sold, location, condition, createdAt, expiresAt);
+            if (this.expiresAt == null) {
+                this.expiresAt = this.createdAt.plusDays(30);
+            }
+            return new Listing(this);
         }
     }
+
+
 }

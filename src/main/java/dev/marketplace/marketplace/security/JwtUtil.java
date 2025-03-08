@@ -22,12 +22,14 @@ public class JwtUtil {
     }
 
 
-    public String generateToken(String email, String role) {
+    public String generateToken(String email, String role, Long userId) {
         return Jwts.builder()
                 .subject(email)
+
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .claim("role", role)
+                .claim("userId", userId)
                 .signWith(getSigningKey())
                 .serializeToJsonWith(new JacksonSerializer<>())
                 .compact();
