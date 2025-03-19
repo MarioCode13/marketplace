@@ -1,6 +1,8 @@
 package dev.marketplace.marketplace.service;
 
 import com.backblaze.b2.client.exceptions.B2Exception;
+import dev.marketplace.marketplace.dto.ListingDTO;
+import dev.marketplace.marketplace.dto.ListingPageResponse;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.Category;
 import dev.marketplace.marketplace.model.Listing;
@@ -8,7 +10,10 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,10 +34,17 @@ public class ListingService {
         this.b2StorageService = b2StorageService;
     }
 
-    public List<Listing> getAllListings() {
-        List<Listing> listings = listingRepository.findAll();
+    public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        Page<Listing> page;
 
-        return listings.stream().map(listing -> {
+        if (categoryId != null || minPrice != null || maxPrice != null) {
+            page = listingRepository.findFilteredListings(categoryId, minPrice, maxPrice, pageable);
+        } else {
+            page = listingRepository.findAll(pageable);
+        }
+
+        List<ListingDTO> listings = page.getContent().stream().map(listing -> {
             List<String> preSignedUrls = listing.getImages().stream()
                     .map(fileName -> {
                         try {
@@ -44,24 +56,57 @@ public class ListingService {
                     .filter(Objects::nonNull)
                     .toList();
 
-            return new Listing.Builder() // ✅ Use "new Listing.Builder()"
-                    .id(listing.getId())
-                    .title(listing.getTitle())
-                    .description(listing.getDescription())
-                    .images(preSignedUrls) // ✅ Pre-signed URLs
-                    .category(listing.getCategory())
-                    .price(listing.getPrice())
-                    .location(listing.getLocation())
-                    .condition(listing.getCondition())
-                    .user(listing.getUser())
-                    .build();
+            return new ListingDTO(
+                    listing.getId(),
+                    listing.getTitle(),
+                    listing.getDescription(),
+                    preSignedUrls,
+                    listing.getCategory(),
+                    listing.getPrice(),
+                    listing.getLocation(),
+                    listing.getCondition().name(),
+                    listing.getUser(),
+                    listing.getCreatedAt(),
+                    listing.isSold(),  // ✅ Ensure `sold` is included
+                    listing.getExpiresAt().toString() // ✅ Ensure `expiresAt` is included
+            );
         }).toList();
+
+        return new ListingPageResponse(listings, (int) page.getTotalElements());
     }
 
 
-    public Optional<Listing> getListingById(String id) {
-        return listingRepository.findById(Long.parseLong(id));
+    public Optional<ListingDTO> getListingById(String id) {
+        return listingRepository.findById(Long.parseLong(id))
+                .map(listing -> {
+                    List<String> preSignedUrls = listing.getImages().stream()
+                            .map(fileName -> {
+                                try {
+                                    return b2StorageService.generatePreSignedUrl(fileName);
+                                } catch (B2Exception e) {
+                                    return null;
+                                }
+                            })
+                            .filter(Objects::nonNull)
+                            .toList();
+
+                    return new ListingDTO(
+                            listing.getId(),
+                            listing.getTitle(),
+                            listing.getDescription(),
+                            preSignedUrls,
+                            listing.getCategory(),
+                            listing.getPrice(),
+                            listing.getLocation(),
+                            listing.getCondition().name(),
+                            listing.getUser(),
+                            listing.getCreatedAt(),
+                            listing.isSold(),
+                            listing.getExpiresAt().toString()
+                    );
+                });
     }
+
 
     public List<Listing> getListingsByCategory(String categoryId) {
         return listingRepository.findByCategoryId(Long.parseLong(categoryId));
@@ -76,7 +121,7 @@ public class ListingService {
         Category category = categoryRepository.findById(Long.parseLong(categoryId))
                 .orElseThrow(() -> new RuntimeException("Category not found"));
 
-        Listing listing = new Listing.Builder() // ✅ Use manual builder
+        Listing listing = new Listing.Builder()
                 .title(title)
                 .description(description)
                 .images(imageFilenames)

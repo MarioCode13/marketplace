@@ -40,6 +40,11 @@ type Listing {
     user: User!
 }
 
+type ListingPageResponse {
+    listings: [Listing!]!
+    totalCount: Int!
+}
+
 type Category {
     id: ID!
     name: String!
@@ -51,7 +56,13 @@ type Query {
     me: User
     getProfileImage(userId: ID!): String
     getUserProfileImage(userId: ID!): String
-    getAllListings: [Listing!]!
+    getListings(
+        limit: Int!
+        offset: Int!
+        categoryId: ID
+        minPrice: Float
+        maxPrice: Float
+    ): ListingPageResponse!
     getListingById(id: ID!): Listing
     getConditions: [Condition] # No longer non-nullable list
     getCategories: [Category]

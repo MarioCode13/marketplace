@@ -1,5 +1,7 @@
 package dev.marketplace.marketplace.resolvers;
 
+import dev.marketplace.marketplace.dto.ListingDTO;
+import dev.marketplace.marketplace.dto.ListingPageResponse;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.service.ListingService;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -19,14 +21,44 @@ public class ListingQueryResolver  {
     public ListingQueryResolver(ListingService listingService) {
         this.listingService = listingService;
     }
+
+
     @QueryMapping
-    public List<Listing> getAllListings() {
-        return listingService.getAllListings();
+    public ListingPageResponse getListings(
+            @Argument Integer limit,
+            @Argument Integer offset,
+            @Argument Long categoryId,
+            @Argument Double minPrice,
+            @Argument Double maxPrice
+    ) {
+        return listingService.getListings(limit, offset, categoryId, minPrice, maxPrice);
     }
+
+//    @QueryMapping
+//    public ListingDTO getListingById(@Argument String id) {
+//        return listingService.getListingById(id)
+//                .orElseThrow(() -> new RuntimeException("Listing not found"));
+//    }
     @QueryMapping
-    public Optional<Listing> getListingById(@Argument String id) { // ✅ Use String for GraphQL ID!
-        return listingService.getListingById((id)); // Convert to Long
+    public ListingDTO getListingById(@Argument String id) {
+        return listingService.getListingById(id)
+                .map(listing -> new ListingDTO(
+                        listing.id(),  // No getId(), just id()
+                        listing.title(),
+                        listing.description(),
+                        listing.images(),
+                        listing.category(),
+                        listing.price(),
+                        listing.location(),
+                        listing.condition(), // Convert enum to String
+                        listing.user(),
+                        listing.createdAt(),
+                        listing.sold(),
+                        listing.expiresAt()
+                ))
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
     }
+
 
     @QueryMapping
     public List<Listing> getListingsByCategory(@Argument Integer categoryId) { // ✅ Use Integer for GraphQL Int!
