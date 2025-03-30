@@ -67,6 +67,7 @@ type Query {
     getConditions: [Condition] # No longer non-nullable list
     getCategories: [Category]
     getCategoryById(id: ID!): Category # Nullable return type
+    myListings: [Listing!]!
 }
 
 type Mutation {
@@ -84,5 +85,6 @@ type Mutation {
         categoryId: ID!
         userId: ID!
     ): Listing!
+    deleteListing(id: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
 }

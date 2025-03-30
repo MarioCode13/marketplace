@@ -83,6 +83,13 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
+    public Long getUserIdByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+    }
+
+
     @Transactional
     public User upgradeUserRole(Long userId, Role newRole) {
         User user = userRepository.findById(userId)

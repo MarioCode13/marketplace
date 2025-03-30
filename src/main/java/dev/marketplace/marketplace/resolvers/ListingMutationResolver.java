@@ -7,8 +7,11 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.service.ListingService;
+import dev.marketplace.marketplace.service.UserService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -19,12 +22,16 @@ public class ListingMutationResolver {
     private final ListingService listingService;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final UserService userService;
 
-    public ListingMutationResolver(ListingService listingService, CategoryRepository categoryRepository, UserRepository userRepository) {
+    public ListingMutationResolver(ListingService listingService, CategoryRepository categoryRepository, UserRepository userRepository, UserService userService) {
         this.listingService = listingService;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
+        this.userService = userService;
     }
+
+
 
     @MutationMapping
     public Listing createListing(@Argument String title,
@@ -57,6 +64,11 @@ public class ListingMutationResolver {
         return listingService.save(listing);
     }
 
+    @MutationMapping
+    public boolean deleteListing(@Argument Long listingId, @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.deleteListing(listingId, userId);
+    }
 
 
 }

@@ -10,11 +10,13 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
@@ -75,9 +77,38 @@ public class ListingService {
         return new ListingPageResponse(listings, (int) page.getTotalElements());
     }
 
+    private ListingDTO convertToDTO(Listing listing) {
+        List<String> preSignedUrls = listing.getImages().stream()
+                .map(fileName -> {
+                    try {
+                        return b2StorageService.generatePreSignedUrl(fileName);
+                    } catch (B2Exception e) {
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
 
-    public Optional<ListingDTO> getListingById(String id) {
-        return listingRepository.findById(Long.parseLong(id))
+        return new ListingDTO(
+                listing.getId(),
+                listing.getTitle(),
+                listing.getDescription(),
+                preSignedUrls,
+                listing.getCategory(),
+                listing.getPrice(),
+                listing.getLocation(),
+                listing.getCondition().name(),
+                listing.getUser(),
+                listing.getCreatedAt(),
+                listing.isSold(),
+                listing.getExpiresAt().toString()
+        );
+    }
+
+
+
+    public Optional<ListingDTO> getListingById(Long id) {
+        return listingRepository.findById(id)
                 .map(listing -> {
                     List<String> preSignedUrls = listing.getImages().stream()
                             .map(fileName -> {
@@ -135,10 +166,26 @@ public class ListingService {
         return listingRepository.save(listing);
     }
 
-
-    public void deleteListing(String id) {
-        listingRepository.deleteById(Long.parseLong(id));
+    public List<ListingDTO> getListingsByUserId(Long userId) {
+        List<Listing> listings = listingRepository.findByUserId(userId);
+        return listings.stream().map(this::convertToDTO).toList();
     }
+
+
+
+    @Transactional
+    public boolean deleteListing(Long listingId, Long userId) {
+        Listing listing = listingRepository.findById(listingId)
+                .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
+
+        if (!listing.getUser().getId().equals(userId)) {
+            throw new AccessDeniedException("You can only delete your own listings");
+        }
+
+        listingRepository.delete(listing);
+        return true;
+    }
+
 
     public Listing save(Listing listing) {
         return listingRepository.save(listing);

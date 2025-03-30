@@ -15,6 +15,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findByCategoryId(Long categoryId);
     List<Listing> findBySoldFalse();
 
+
     @NotNull
     Page<Listing> findAll(@NotNull Pageable pageable);
 
