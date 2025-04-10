@@ -1,7 +1,12 @@
 package dev.marketplace.marketplace.dto;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
+@Setter
+@Getter
 public class ListingPageResponse {
     private List<ListingDTO> listings;
     private int totalCount;
@@ -11,20 +16,5 @@ public class ListingPageResponse {
         this.totalCount = totalCount;
     }
 
-    public List<ListingDTO> getListings() { // ✅ Fix return type
-        return listings;
-    }
-
-    public void setListings(List<ListingDTO> listings) {
-        this.listings = listings;
-    }
-
-    public int getTotalCount() {
-        return totalCount;
-    }
-
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-    }
 }
 
