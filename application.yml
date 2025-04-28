@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    active: dev  # default to dev locally unless overridden
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+server:
+  port: 8080
+
+allowed:
+  origins: http://localhost:3000
