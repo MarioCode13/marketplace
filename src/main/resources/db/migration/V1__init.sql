@@ -17,9 +17,9 @@ CREATE TABLE IF NOT EXISTS category (
 
 -- Listing Table
 CREATE TABLE IF NOT EXISTS listing (
-    id SERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    title VARCHAR(255) NOT NULL,
+   id SERIAL PRIMARY KEY,
+   user_id BIGINT NOT NULL,
+   title VARCHAR(255) NOT NULL,
     description TEXT,
     category_id BIGINT,
     price DOUBLE PRECISION NOT NULL,
@@ -28,10 +28,11 @@ CREATE TABLE IF NOT EXISTS listing (
     condition VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
-    CONSTRAINT fk_listing_user FOREIGN KEY (user_id) REFERENCES "user" (id) ON DELETE CASCADE,
+    CONSTRAINT fk_listing_user FOREIGN KEY (user_id) REFERENCES "users" (id) ON DELETE CASCADE,  -- Change "user" to "users"
     CONSTRAINT fk_listing_category FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE SET NULL,
     CONSTRAINT unique_user_title UNIQUE(user_id, title)  -- Added unique constraint on user_id + title
-);
+    );
+
 
 
 -- Listing Category Junction Table
