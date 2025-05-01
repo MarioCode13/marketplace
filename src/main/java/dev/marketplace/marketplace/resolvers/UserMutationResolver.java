@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.resolvers;
 
+import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.service.UserService;
@@ -30,13 +31,25 @@ public class UserMutationResolver {
     ) {
         return userService.updateUser(id, username, email);
     }
-    public String uploadProfileImage(Long userId, MultipartFile image) {
+
+    @MutationMapping
+    public String uploadProfileImage(
+            @Argument Long userId,
+            @Argument MultipartFile image
+    ) {
         try {
-            byte[] imageData = image.getBytes();
-            userService.saveUserProfileImage(userId, imageData);
-            return "Profile image uploaded successfully";
+            // Upload the image, get the file path or URL (example using Backblaze or similar)
+            String imageUrl = userService.uploadImageAndGetUrl(image);  // Assuming this method handles the upload and gets the URL
+
+            // Save the image URL in the user profile
+            userService.saveUserProfileImage(userId, imageUrl);
+
+            // Return the URL or a success message
+            return "Profile image uploaded successfully. Image URL: " + imageUrl;
         } catch (IOException e) {
             throw new RuntimeException("Error uploading profile image", e);
+        } catch (B2Exception e) {
+            throw new RuntimeException(e);
         }
     }
 }

@@ -22,12 +22,12 @@ public class UserQueryResolver {
 
     private final UserService userService;
 
-    @SchemaMapping(typeName = "User", field = "profileImage")
-    public String resolveProfileImage(User user) {
-        if (user.getProfileImage() != null) {
-            return Base64.getEncoder().encodeToString(user.getProfileImage());
+    @SchemaMapping(typeName = "User", field = "profileImageUrl")
+    public String resolveProfileImageUrl(User user) {
+        if (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty()) {
+            return user.getProfileImageUrl();
         }
-        return null; // If no image exists
+        return null;
     }
 
     public UserQueryResolver(UserService userService) {
@@ -61,8 +61,7 @@ public class UserQueryResolver {
 //    }
 
     public String getUserProfileImage(Long userId) {
-        return userService.getUserProfileImage(userId)
-                .map(bytes -> Base64.getEncoder().encodeToString(bytes))
+        return userService.getUserProfileImageUrl(userId)
                 .orElse(null);
     }
 

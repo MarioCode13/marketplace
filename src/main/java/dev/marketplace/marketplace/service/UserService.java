@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.service;
 
+import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.security.JwtUtil;
@@ -11,10 +12,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.marketplace.marketplace.enums.Role;
+import org.springframework.web.multipart.MultipartFile;
 
-import javax.sql.rowset.serial.SerialBlob;
-import java.sql.Blob;
-import java.util.Base64;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -23,12 +26,12 @@ import java.util.Optional;
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final JwtUtil jwtUtil;
+    private final B2StorageService b2StorageService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
+        this.b2StorageService = b2StorageService;
     }
 
     // Method required by Spring Security for authentication
@@ -132,26 +135,28 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
-public Optional<byte[]> getUserProfileImage(Long userId) {
-    return userRepository.findById(userId)
-            .map(User::getProfileImage);
-}
+    public Optional<String> getUserProfileImageUrl(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getProfileImageUrl);
+    }
+
 
 
 
     @Transactional
-    public void saveUserProfileImage(Long userId, byte[] imageData) {
-        System.out.println("Saving image of size: " + imageData.length);
-
+    public void saveUserProfileImage(Long userId, String imageUrl) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        System.out.println("Before saving, image data type: " + imageData.getClass().getName()); // Debugging line
-        try {
-            Blob imageBlob = new SerialBlob(imageData); // Convert to Blob
-            user.setProfileImage(imageBlob.getBytes(1, (int) imageBlob.length())); // Ensure byte[] format
-            userRepository.save(user);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to save profile image", e);
-        }
+
+        user.setProfileImageUrl(imageUrl); // set the B2 URL instead of image bytes
+        userRepository.save(user);
+    }
+
+    public String uploadImageAndGetUrl(MultipartFile image) throws IOException, B2Exception {
+        // Upload the image and get the file name
+        String uploadedFilePath = b2StorageService.uploadImage(image);
+
+        // Generate a pre-signed URL for the uploaded file
+        return b2StorageService.generatePreSignedUrl(uploadedFilePath);
     }
 }

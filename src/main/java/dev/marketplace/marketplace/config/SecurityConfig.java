@@ -3,6 +3,7 @@ package dev.marketplace.marketplace.config;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.security.JwtAuthenticationFilter;
 import dev.marketplace.marketplace.security.JwtUtil;
+import dev.marketplace.marketplace.service.B2StorageService;
 import dev.marketplace.marketplace.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -40,8 +41,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
-        return new UserService(userRepository, passwordEncoder, jwtUtil);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService) {
+        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService);
     }
 
     @Bean
@@ -75,10 +76,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // ✅ Allow Apollo Client frontend
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
+                "https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        configuration.setAllowCredentials(true); // ✅ Important for JWT cookies or tokens
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

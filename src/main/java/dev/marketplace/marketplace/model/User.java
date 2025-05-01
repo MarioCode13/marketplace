@@ -6,13 +6,10 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
 
 @Entity
 @Table(name = "users")
@@ -24,50 +21,6 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-    public Role getRole() { return role; }
-
-    public void setRole(Role role) { this.role = role; }
 
     @Column(nullable = true, unique = true)
     private String username;
@@ -82,26 +35,35 @@ public class User {
     @Column(nullable = false)
     private Role role = Role.HAS_ACCOUNT;
 
-
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Listing> listings = new ArrayList<>();
 
+    @Column(name = "profile_image_url")
+    private String profileImageUrl;
 
+    @Column(name = "first_name")
+    private String firstName;
 
-    @Lob
-    @JdbcTypeCode(SqlTypes.BINARY)
-    @Column(name = "profile_image", columnDefinition = "BYTEA")
-    private byte[] profileImage;
+    @Column(name = "last_name")
+    private String lastName;
 
-    public byte[] getProfileImage() {
-        return profileImage;
-    }
+    @Column(name = "bio")
+    private String bio;
 
-    public void setProfileImage(byte[] profileImage) {
-        this.profileImage = profileImage;
-    }
+    @Column(name = "location")
+    private String location;
 
+    @Column(name = "contact_number")
+    private String contactNumber;
+
+    @Column(name = "proof_of_address")
+    private String proofOfAddressUrl;  // URL for Proof of Address
+
+    @Column(name = "id_photo")
+    private String idPhotoUrl;  // URL for ID photo
+
+    @Column(name = "id_number")
+    private String idNumber;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

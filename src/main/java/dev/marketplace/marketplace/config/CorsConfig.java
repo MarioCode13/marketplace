@@ -13,7 +13,7 @@ import java.util.List;
 @Configuration
 public class CorsConfig {
 
-    @Value("${allowed.origins:}") // default to empty string if not provided
+    @Value("${allowed.origins:}")
     private String allowedOriginsStr;
 
     @Bean

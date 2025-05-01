@@ -10,7 +10,7 @@ type User {
     username: String!
     email: String!
     role: String!
-    profileImage: String
+    profileImageUrl: String
     createdAt: String!
 }
 
