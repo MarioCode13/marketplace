@@ -78,6 +78,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
+                "https://marketplace-fe-theta.vercel.app/",
                 "https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
