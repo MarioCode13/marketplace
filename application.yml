@@ -7,7 +7,7 @@ spring:
     password: ${DB_PASSWORD}
 
 server:
-  port: 8080
+  port: ${PORT:8080}
 
 allowed:
-  origins: http://localhost:3000
+  origins: ${ALLOWED_ORIGINS:http://localhost:3000}
