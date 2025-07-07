@@ -1,6 +1,5 @@
 package dev.marketplace.marketplace.service;
 
-import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.dto.ListingDTO;
 import dev.marketplace.marketplace.dto.ListingPageResponse;
 import dev.marketplace.marketplace.enums.Condition;
@@ -9,31 +8,34 @@ import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
-import dev.marketplace.marketplace.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 
 @Service
 public class ListingService {
     private final ListingRepository listingRepository;
     private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
-    private final B2StorageService b2StorageService;
+    private final ListingImageService imageService;
+    private final ListingValidationService validationService;
+    private final ListingAuthorizationService authorizationService;
 
-    public ListingService(ListingRepository listingRepository, CategoryRepository categoryRepository, UserRepository userRepository, B2StorageService b2StorageService) {
+    public ListingService(ListingRepository listingRepository, 
+                         CategoryRepository categoryRepository,
+                         ListingImageService imageService,
+                         ListingValidationService validationService,
+                         ListingAuthorizationService authorizationService) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
-        this.userRepository = userRepository;
-        this.b2StorageService = b2StorageService;
+        this.imageService = imageService;
+        this.validationService = validationService;
+        this.authorizationService = authorizationService;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
@@ -46,48 +48,15 @@ public class ListingService {
             page = listingRepository.findAll(pageable);
         }
 
-        List<ListingDTO> listings = page.getContent().stream().map(listing -> {
-            List<String> preSignedUrls = listing.getImages().stream()
-                    .map(fileName -> {
-                        try {
-                            return b2StorageService.generatePreSignedUrl(fileName);
-                        } catch (B2Exception e) {
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .toList();
-
-            return new ListingDTO(
-                    listing.getId(),
-                    listing.getTitle(),
-                    listing.getDescription(),
-                    preSignedUrls,
-                    listing.getCategory(),
-                    listing.getPrice(),
-                    listing.getLocation(),
-                    listing.getCondition().name(),
-                    listing.getUser(),
-                    listing.getCreatedAt(),
-                    listing.isSold(),  // ✅ Ensure `sold` is included
-                    listing.getExpiresAt().toString() // ✅ Ensure `expiresAt` is included
-            );
-        }).toList();
+        List<ListingDTO> listings = page.getContent().stream()
+                .map(this::convertToDTO)
+                .toList();
 
         return new ListingPageResponse(listings, (int) page.getTotalElements());
     }
 
     private ListingDTO convertToDTO(Listing listing) {
-        List<String> preSignedUrls = listing.getImages().stream()
-                .map(fileName -> {
-                    try {
-                        return b2StorageService.generatePreSignedUrl(fileName);
-                    } catch (B2Exception e) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
+        List<String> preSignedUrls = imageService.generatePreSignedUrls(listing.getImages());
 
         return new ListingDTO(
                 listing.getId(),
@@ -105,52 +74,26 @@ public class ListingService {
         );
     }
 
-
-
     public Optional<ListingDTO> getListingById(Long id) {
         return listingRepository.findById(id)
-                .map(listing -> {
-                    List<String> preSignedUrls = listing.getImages().stream()
-                            .map(fileName -> {
-                                try {
-                                    return b2StorageService.generatePreSignedUrl(fileName);
-                                } catch (B2Exception e) {
-                                    return null;
-                                }
-                            })
-                            .filter(Objects::nonNull)
-                            .toList();
-
-                    return new ListingDTO(
-                            listing.getId(),
-                            listing.getTitle(),
-                            listing.getDescription(),
-                            preSignedUrls,
-                            listing.getCategory(),
-                            listing.getPrice(),
-                            listing.getLocation(),
-                            listing.getCondition().name(),
-                            listing.getUser(),
-                            listing.getCreatedAt(),
-                            listing.isSold(),
-                            listing.getExpiresAt().toString()
-                    );
-                });
+                .map(this::convertToDTO);
     }
-
 
     public List<Listing> getListingsByCategory(String categoryId) {
         return listingRepository.findByCategoryId(Long.parseLong(categoryId));
     }
 
+    @Transactional
     public Listing createListing(String title, String description, List<String> imageFilenames,
                                  String categoryId, double price, String location,
                                  Condition condition, String userId) {
-        User user = userRepository.findById(Long.parseLong(userId))
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
+        validationService.validateListingCreation(title, description, price, location, condition, userId);
+        imageService.validateImages(imageFilenames);
+
+        User user = authorizationService.validateUserExists(userId);
         Category category = categoryRepository.findById(Long.parseLong(categoryId))
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
 
         Listing listing = new Listing.Builder()
                 .title(title)
@@ -171,21 +114,44 @@ public class ListingService {
         return listings.stream().map(this::convertToDTO).toList();
     }
 
-
+    @Transactional
+    private Listing updateListing(Long listingId, Long userId, Consumer<Listing> updateAction) {
+        Listing listing = authorizationService.checkUpdatePermission(listingId, userId);
+        
+        updateAction.accept(listing);
+        return listingRepository.save(listing);
+    }
 
     @Transactional
     public boolean deleteListing(Long listingId, Long userId) {
-        Listing listing = listingRepository.findById(listingId)
-                .orElseThrow(() -> new EntityNotFoundException("Listing not found"));
-
-        if (!listing.getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("You can only delete your own listings");
-        }
-
+        Listing listing = authorizationService.checkDeletePermission(listingId, userId);
+        
         listingRepository.delete(listing);
         return true;
     }
 
+    @Transactional
+    public Listing updateListingPrice(Long listingId, Long userId, double newPrice) {
+        validationService.validatePriceUpdate(newPrice);
+        return updateListing(listingId, userId, listing -> listing.setPrice(newPrice));
+    }
+
+    @Transactional
+    public Listing updateListingTitle(Long listingId, Long userId, String newTitle) {
+        validationService.validateTitleUpdate(newTitle);
+        return updateListing(listingId, userId, listing -> listing.setTitle(newTitle));
+    }
+
+    @Transactional
+    public Listing updateListingDescription(Long listingId, Long userId, String newDescription) {
+        validationService.validateDescriptionUpdate(newDescription);
+        return updateListing(listingId, userId, listing -> listing.setDescription(newDescription));
+    }
+
+    @Transactional
+    public Listing markListingAsSold(Long listingId, Long userId) {
+        return updateListing(listingId, userId, listing -> listing.setSold(true));
+    }
 
     public Listing save(Listing listing) {
         return listingRepository.save(listing);

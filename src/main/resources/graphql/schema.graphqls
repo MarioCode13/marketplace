@@ -87,4 +87,7 @@ type Mutation {
     ): Listing!
     deleteListing(id: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
+    updateListingPrice(listingId: ID!, newPrice: Float!): Listing!
+    updateListingTitle(listingId: ID!, newTitle: String!): Listing!
+    updateListingDescription(listingId: ID!, newDescription: String!): Listing!
 }

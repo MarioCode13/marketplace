@@ -62,11 +62,11 @@ CREATE TABLE IF NOT EXISTS listing_image (
 
 -- Insert Default Users
 INSERT INTO "users" (username, email, password, role) VALUES
-('admin', 'admin@example.com', '$2a$10$WjFZkFh.e/7X1SzXC1HzN.2NVcELo4FSY79URy.uXexxArYhU1B7K', 'SUBSCRIBED')
+('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED')
 ON CONFLICT (email) DO NOTHING;
 
 INSERT INTO "users" (username, email, password, role) VALUES
-('testuser', 'test@example.com', '$2a$10$WjFZkFh.e/7X1SzXC1HzN.2NVcELo4FSY79URy.uXexxArYhU1B7K', 'HAS_ACCOUNT')
+('test', 'test@test.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert Categories
@@ -77,10 +77,10 @@ INSERT INTO category (name) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert Listings (Assuming user and category IDs exist)
-INSERT INTO listing (user_id, title, description, price, condition, location, created_at, expires_at, sold)
+INSERT INTO listing (user_id, title, description, category_id, price, condition, location, created_at, expires_at, sold)
 VALUES
-(1, 'iPhone 13 Pro', 'Mint condition, barely used.', 799.99, 'NEW', 'New York', NOW(), NOW() + INTERVAL '30 days', false),
-(2, 'Gaming Laptop', 'RTX 3060, 16GB RAM, 512GB SSD.', 1299.00, 'GOOD', 'San Francisco', NOW(), NOW() + INTERVAL '30 days', false)
+(1, 'iPhone 13 Pro', 'Mint condition, barely used.', 1, 799.99, 'NEW', 'New York', NOW(), NOW() + INTERVAL '30 days', false),
+(2, 'Gaming Laptop', 'RTX 3060, 16GB RAM, 512GB SSD.', 1, 1299.00, 'GOOD', 'San Francisco', NOW(), NOW() + INTERVAL '30 days', false)
 ON CONFLICT (user_id, title) DO NOTHING;
 
 
@@ -93,6 +93,6 @@ ON CONFLICT (listing_id, category_id) DO NOTHING;
 
 -- Insert Listing Images
 INSERT INTO listing_image (listing_id, image) VALUES
-((SELECT id FROM listing WHERE title = 'iPhone 13 Pro'), 'base64-image-data-1'),
-((SELECT id FROM listing WHERE title = 'Gaming Laptop'), 'base64-image-data-2')
+((SELECT id FROM listing WHERE title = 'iPhone 13 Pro'), 'listings/268b022a-672c-4237-a391-09ba12428232_iphone-13.jpg'),
+((SELECT id FROM listing WHERE title = 'Gaming Laptop'), 'listings/0ccddbe2-0c88-47ee-b231-54150d5b4234_3kcgKLkfPRbskpsYzW239d.jpg')
 ON CONFLICT DO NOTHING;

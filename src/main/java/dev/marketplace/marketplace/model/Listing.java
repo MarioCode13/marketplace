@@ -2,21 +2,19 @@ package dev.marketplace.marketplace.model;
 
 import dev.marketplace.marketplace.enums.Condition;
 import jakarta.persistence.*;
-import jdk.jshell.Snippet;
-import lombok.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Setter
 @Getter
+@Setter
 @Entity
 @Table(name = "listing")
-@AllArgsConstructor
+@NoArgsConstructor // Only need this for JPA
 public class Listing {
-    public Listing() {
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -47,13 +45,10 @@ public class Listing {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime expiresAt;
 
-
-
     @PrePersist
     public void setExpiration() {
         this.expiresAt = this.createdAt.plusDays(30);
     }
-
 
     // Private constructor to enforce the use of the builder
     private Listing(Builder builder) {
@@ -146,12 +141,26 @@ public class Listing {
         }
 
         public Listing build() {
+            // Validation
+            if (title == null || title.trim().isEmpty()) {
+                throw new IllegalArgumentException("Title is required");
+            }
+            if (user == null) {
+                throw new IllegalArgumentException("User is required");
+            }
+            if (category == null) {
+                throw new IllegalArgumentException("Category is required");
+            }
+            if (price <= 0) {
+                throw new IllegalArgumentException("Price must be positive");
+            }
+            
+            // Set default expiration if not provided
             if (this.expiresAt == null) {
                 this.expiresAt = this.createdAt.plusDays(30);
             }
+            
             return new Listing(this);
         }
     }
-
-
 }

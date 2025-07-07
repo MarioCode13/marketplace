@@ -70,5 +70,36 @@ public class ListingMutationResolver {
         return listingService.deleteListing(listingId, userId);
     }
 
+    @MutationMapping
+    public Listing updateListingPrice(@Argument Long listingId, 
+                                     @Argument Double newPrice, 
+                                     @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.updateListingPrice(listingId, userId, newPrice);
+    }
+
+    @MutationMapping
+    public Listing updateListingTitle(@Argument Long listingId, 
+                                     @Argument String newTitle, 
+                                     @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.updateListingTitle(listingId, userId, newTitle);
+    }
+
+    @MutationMapping
+    public Listing updateListingDescription(@Argument Long listingId, 
+                                           @Argument String newDescription, 
+                                           @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.updateListingDescription(listingId, userId, newDescription);
+    }
+
+    @MutationMapping
+    public Listing markListingAsSold(@Argument Long listingId, 
+                                    @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.markListingAsSold(listingId, userId);
+    }
+
 
 }
