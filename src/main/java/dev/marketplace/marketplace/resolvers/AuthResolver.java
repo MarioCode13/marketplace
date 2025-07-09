@@ -41,7 +41,6 @@ public class AuthResolver {
         User user = userOpt.get();
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(),  user.getId());
 
-        // Return userId along with other information
         return new AuthResponseDto(token, user.getEmail(), user.getRole().name(), user.getId());
     }
 

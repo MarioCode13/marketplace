@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name = "listing")
-@NoArgsConstructor // Only need this for JPA
+@NoArgsConstructor
 public class Listing {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,7 +50,6 @@ public class Listing {
         this.expiresAt = this.createdAt.plusDays(30);
     }
 
-    // Private constructor to enforce the use of the builder
     private Listing(Builder builder) {
         this.id = builder.id;
         this.user = builder.user;
@@ -141,7 +140,6 @@ public class Listing {
         }
 
         public Listing build() {
-            // Validation
             if (title == null || title.trim().isEmpty()) {
                 throw new IllegalArgumentException("Title is required");
             }
@@ -155,7 +153,6 @@ public class Listing {
                 throw new IllegalArgumentException("Price must be positive");
             }
             
-            // Set default expiration if not provided
             if (this.expiresAt == null) {
                 this.expiresAt = this.createdAt.plusDays(30);
             }

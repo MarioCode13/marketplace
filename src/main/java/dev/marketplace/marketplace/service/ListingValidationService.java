@@ -6,11 +6,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class ListingValidationService {
 
-    /**
-     * Validates listing creation data (excluding images)
-     */
     public void validateListingCreation(String title, String description, double price, 
-                                       String location, Condition condition, String userId) {
+                                       String location, Condition condition, Long userId) {
         validateTitle(title);
         validateDescription(description);
         validatePrice(price);
@@ -19,36 +16,23 @@ public class ListingValidationService {
         validateUserId(userId);
     }
 
-    /**
-     * Validates listing update data
-     */
     public void validateListingUpdate(Long listingId, Long userId) {
         validateListingId(listingId);
         validateUserId(userId);
     }
 
-    /**
-     * Validates price updates
-     */
     public void validatePriceUpdate(double newPrice) {
         validatePrice(newPrice);
     }
 
-    /**
-     * Validates title updates
-     */
     public void validateTitleUpdate(String newTitle) {
         validateTitle(newTitle);
     }
 
-    /**
-     * Validates description updates
-     */
     public void validateDescriptionUpdate(String newDescription) {
         validateDescription(newDescription);
     }
 
-    // Private validation methods
     private void validateTitle(String title) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("Title is required");
@@ -103,15 +87,13 @@ public class ListingValidationService {
         }
     }
 
-    private void validateUserId(String userId) {
-        if (userId == null || userId.trim().isEmpty()) {
+    private void validateUserId(Long userId) {
+        if (userId == null) {
             throw new IllegalArgumentException("User ID is required");
         }
         
-        try {
-            Long.parseLong(userId);
-        } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Invalid user ID format");
+        if (userId <= 0) {
+            throw new IllegalArgumentException("Invalid user ID");
         }
     }
 
@@ -122,16 +104,6 @@ public class ListingValidationService {
         
         if (listingId <= 0) {
             throw new IllegalArgumentException("Invalid listing ID");
-        }
-    }
-
-    private void validateUserId(Long userId) {
-        if (userId == null) {
-            throw new IllegalArgumentException("User ID is required");
-        }
-        
-        if (userId <= 0) {
-            throw new IllegalArgumentException("Invalid user ID");
         }
     }
 } 

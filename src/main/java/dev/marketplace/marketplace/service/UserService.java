@@ -21,6 +21,8 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.Base64;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -34,17 +36,16 @@ public class UserService implements UserDetailsService {
         this.b2StorageService = b2StorageService;
     }
 
-    // Method required by Spring Security for authentication
     @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + username));
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(), // Username field (email in this case)
-                user.getPassword(), // Hashed password
-                Collections.singletonList(new SimpleGrantedAuthority(user.getRole().name()))
-        );
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getEmail())
+                .password(user.getPassword())
+                .authorities(user.getRole().name())
+                .build();
     }
 
     public User registerUser(String username, String email, String password) {
@@ -148,15 +149,20 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        user.setProfileImageUrl(imageUrl); // set the B2 URL instead of image bytes
-        userRepository.save(user);
+        user.setProfileImageUrl(imageUrl);
+
+        return userRepository.save(user);
     }
 
-    public String uploadImageAndGetUrl(MultipartFile image) throws IOException, B2Exception {
-        // Upload the image and get the file name
-        String uploadedFilePath = b2StorageService.uploadImage(image);
+    public String uploadImageAndGetUrl(String base64Image) {
+        String fileName = "profiles/" + UUID.randomUUID() + ".jpg";
+        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
 
-        // Generate a pre-signed URL for the uploaded file
-        return b2StorageService.generatePreSignedUrl(uploadedFilePath);
+        try {
+            String uploadedFileName = b2StorageService.uploadImage(fileName, imageBytes);
+            return b2StorageService.generatePreSignedUrl(uploadedFileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload image", e);
+        }
     }
 }

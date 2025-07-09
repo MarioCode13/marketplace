@@ -46,8 +46,8 @@ public class ListingQueryResolver {
     }
 
     @QueryMapping
-    public List<Listing> getListingsByCategory(@Argument Long categoryId) {
-        return listingService.getListingsByCategory(categoryId.toString());
+    public List<ListingDTO> getListingsByCategory(@Argument Long categoryId) {
+        return listingService.getListingsByCategory(categoryId);
     }
 
     @QueryMapping

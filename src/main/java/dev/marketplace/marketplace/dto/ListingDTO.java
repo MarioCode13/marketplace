@@ -10,13 +10,13 @@ public record ListingDTO(
         Long id,
         String title,
         String description,
-        List<String> images,  // ✅ Pre-signed image URLs
+        List<String> images,
         Category category,
         double price,
         String location,
         String condition,
         User user,
         LocalDateTime createdAt,
-        boolean sold, // ✅ Now included
-        String expiresAt // ✅ Now included
+        boolean sold,
+        String expiresAt
 ) {}

@@ -40,10 +40,9 @@ public class ListingFileUploadController {
             }
             return ResponseEntity.ok(imageUrls);
         } catch (Exception e) {
-            System.err.println("🔥 Image upload failed!");
-            e.printStackTrace();  // Full error log
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error uploading images: " + e.getMessage());
+                    .body("Error uploading image: " + e.getMessage());
         }
     }
 }

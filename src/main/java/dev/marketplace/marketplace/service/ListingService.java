@@ -79,20 +79,21 @@ public class ListingService {
                 .map(this::convertToDTO);
     }
 
-    public List<Listing> getListingsByCategory(String categoryId) {
-        return listingRepository.findByCategoryId(Long.parseLong(categoryId));
+    public List<ListingDTO> getListingsByCategory(Long categoryId) {
+        List<Listing> listings = listingRepository.findByCategoryId(categoryId);
+        return listings.stream().map(this::convertToDTO).toList();
     }
 
     @Transactional
     public Listing createListing(String title, String description, List<String> imageFilenames,
-                                 String categoryId, double price, String location,
-                                 Condition condition, String userId) {
+                                 Long categoryId, double price, String location,
+                                 Condition condition, Long userId) {
 
         validationService.validateListingCreation(title, description, price, location, condition, userId);
         imageService.validateImages(imageFilenames);
 
         User user = authorizationService.validateUserExists(userId);
-        Category category = categoryRepository.findById(Long.parseLong(categoryId))
+        Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
 
         Listing listing = new Listing.Builder()

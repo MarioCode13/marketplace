@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
@@ -22,26 +23,17 @@ public class FileUploadController {
         this.b2StorageService = b2StorageService;
     }
 
-    @PostMapping("/{userId}/profile-image")
-    public ResponseEntity<?> uploadProfileImage(
-            @PathVariable Long userId,
-            @RequestParam("image") MultipartFile image) {
+    @PostMapping("/upload")
+    public ResponseEntity<String> uploadImage(@RequestParam("image") MultipartFile image) {
         try {
-            // Upload image and get the file path (e.g., listings/uuid_filename.png)
-            String filePath = b2StorageService.uploadImage(image);
+            String fileName = "listings/" + UUID.randomUUID() + "_" + image.getOriginalFilename();
+            String uploadedFileName = b2StorageService.uploadImage(fileName, image.getBytes());
+            String preSignedUrl = b2StorageService.generatePreSignedUrl(uploadedFileName);
 
-            // Generate a pre-signed URL to access it (optional: use permanent public link instead if you prefer)
-            String imageUrl = b2StorageService.generatePreSignedUrl(filePath);
-
-            // Save the image URL in your DB (not byte[])
-            userService.saveUserProfileImage(userId, imageUrl);
-
-            return ResponseEntity.ok("Profile image uploaded successfully");
-
-        } catch (IOException | B2Exception e) {
-            e.printStackTrace();
+            return ResponseEntity.ok(preSignedUrl);
+        } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error uploading profile image");
+                    .body("Failed to upload image: " + e.getMessage());
         }
     }
 }

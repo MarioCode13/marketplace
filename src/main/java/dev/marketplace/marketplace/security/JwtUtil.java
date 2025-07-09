@@ -11,48 +11,55 @@ import java.util.Date;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import org.springframework.beans.factory.annotation.Value;
+import io.jsonwebtoken.Claims;
 
 @Component
 public class JwtUtil {
-    private static final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS256);
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24; // 24 hours
+    @Value("${jwt.secret}")
+    private String secret;
 
-    private SecretKey getSigningKey() {
-        return SECRET_KEY;
-    }
-
+    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24;
 
     public String generateToken(String email, String role, Long userId) {
         return Jwts.builder()
                 .subject(email)
-
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .claim("role", role)
                 .claim("userId", userId)
-                .signWith(getSigningKey())
-                .serializeToJsonWith(new JacksonSerializer<>())
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
     }
 
     public String extractEmail(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKey())
-                .json(new JacksonDeserializer<>())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
+        return extractClaim(token, Claims::getSubject);
     }
 
-    public String extractRole(String token) {  // 🔹 Extract user role from token
-        return Jwts.parser()
+    public Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public String extractRole(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    }
+
+    private SecretKey getSigningKey() {
+        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+    }
+
+    private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .json(new JacksonDeserializer<>())
                 .build()
                 .parseSignedClaims(token)
-                .getPayload()
-                .get("role", String.class);
+                .getPayload();
+        return claimsResolver.apply(claims);
     }
 
     public boolean validateToken(String token) {

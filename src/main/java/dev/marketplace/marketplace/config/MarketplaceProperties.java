@@ -16,7 +16,7 @@ public class MarketplaceProperties {
     @Data
     public static class Security {
         private String jwtSecret;
-        private long jwtExpirationMs = 86400000; // 24 hours
+        private long jwtExpirationMs = 86400000;
         private String corsAllowedOrigins = "http://localhost:3000";
     }
     

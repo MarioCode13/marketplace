@@ -49,23 +49,10 @@ public class UserQueryResolver {
         return userOpt.orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-//    public Optional<byte[]> getProfileImage(Long userId) {
-//        return userService.getUserProfileImage(userId);
-//    }
-
-//    public String getUserProfileImage(Long userId) {
-//        Optional<byte[]> imageData = userService.getUserProfileImage(userId);
-//
-//        return imageData.map(bytes -> Base64.getEncoder().encodeToString(bytes))
-//                .orElse(null);
-//    }
-
-    public String getUserProfileImage(Long userId) {
-        return userService.getUserProfileImageUrl(userId)
-                .orElse(null);
+    @QueryMapping
+    public String getProfileImage(@Argument Long userId) {
+        return userService.getProfileImageUrl(userId);
     }
-
-
 
 
     @QueryMapping

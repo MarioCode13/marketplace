@@ -25,10 +25,4 @@ public class CategoryQueryResolver {
     public List<Category> getCategories() {
         return categoryService.getAllCategories();
     }
-
-//    @QueryMapping
-//    public Category getCategoryById(@Argument Long id) {
-//        return categoryService.getCategoryById(id)
-//                .orElseThrow(() -> new RuntimeException("Category not found"));
-//    }
 }

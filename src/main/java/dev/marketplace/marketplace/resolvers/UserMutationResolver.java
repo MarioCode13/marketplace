@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 
 @CrossOrigin(origins = "http://localhost:3000")
@@ -33,23 +35,12 @@ public class UserMutationResolver {
     }
 
     @MutationMapping
-    public String uploadProfileImage(
-            @Argument Long userId,
-            @Argument MultipartFile image
-    ) {
-        try {
-            // Upload the image, get the file path or URL (example using Backblaze or similar)
-            String imageUrl = userService.uploadImageAndGetUrl(image);  // Assuming this method handles the upload and gets the URL
+    public String uploadProfileImage(@Argument String image, @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        String imageUrl = userService.uploadImageAndGetUrl(image);
 
-            // Save the image URL in the user profile
-            userService.saveUserProfileImage(userId, imageUrl);
+        userService.updateProfileImage(userId, imageUrl);
 
-            // Return the URL or a success message
-            return "Profile image uploaded successfully. Image URL: " + imageUrl;
-        } catch (IOException e) {
-            throw new RuntimeException("Error uploading profile image", e);
-        } catch (B2Exception e) {
-            throw new RuntimeException(e);
-        }
+        return imageUrl;
     }
 }

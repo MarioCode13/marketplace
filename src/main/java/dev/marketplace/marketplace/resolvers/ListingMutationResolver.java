@@ -1,11 +1,7 @@
 package dev.marketplace.marketplace.resolvers;
-import com.backblaze.b2.client.exceptions.B2Exception;
+
 import dev.marketplace.marketplace.enums.Condition;
-import dev.marketplace.marketplace.model.Category;
 import dev.marketplace.marketplace.model.Listing;
-import dev.marketplace.marketplace.model.User;
-import dev.marketplace.marketplace.repository.CategoryRepository;
-import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -20,14 +16,10 @@ import java.util.List;
 public class ListingMutationResolver {
 
     private final ListingService listingService;
-    private final CategoryRepository categoryRepository;
-    private final UserRepository userRepository;
     private final UserService userService;
 
-    public ListingMutationResolver(ListingService listingService, CategoryRepository categoryRepository, UserRepository userRepository, UserService userService) {
+    public ListingMutationResolver(ListingService listingService, UserService userService) {
         this.listingService = listingService;
-        this.categoryRepository = categoryRepository;
-        this.userRepository = userRepository;
         this.userService = userService;
     }
 
@@ -42,26 +34,7 @@ public class ListingMutationResolver {
                                  @Argument Condition condition,
                                  @Argument Long categoryId,
                                  @Argument Long userId) {
-        // Fetch category and user
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
-
-        // Create the Listing using the builder
-        Listing listing = new Listing.Builder()
-                .title(title)
-                .price(price)
-                .description(description)
-                .location(location)
-                .images(images)
-                .condition(condition)
-                .category(category)
-                .user(user)
-                .build();
-
-        return listingService.save(listing);
+        return listingService.createListing(title, description, images, categoryId, price, location, condition, userId);
     }
 
     @MutationMapping

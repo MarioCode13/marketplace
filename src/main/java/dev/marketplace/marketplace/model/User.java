@@ -57,10 +57,10 @@ public class User {
     private String contactNumber;
 
     @Column(name = "proof_of_address")
-    private String proofOfAddressUrl;  // URL for Proof of Address
+    private String proofOfAddressUrl;
 
     @Column(name = "id_photo")
-    private String idPhotoUrl;  // URL for ID photo
+    private String idPhotoUrl;
 
     @Column(name = "id_number")
     private String idNumber;
