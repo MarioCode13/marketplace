@@ -7,6 +7,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.jackson.io.JacksonSerializer;
 import io.jsonwebtoken.jackson.io.JacksonDeserializer;
 import java.util.Date;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Component;
 

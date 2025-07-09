@@ -20,23 +20,18 @@ import java.util.UUID;
 public class B2StorageService {
 
     private final B2StorageClient client;
-
     private final String bucketId;
     private final String bucketName;
 
-    public B2StorageService(String applicationKeyId, String applicationKey, String bucketId, String bucketName) {
-        this.applicationKeyId = applicationKeyId;
-        this.applicationKey = applicationKey;
+    public B2StorageService(@Value("${b2.application.key.id}") String applicationKeyId, 
+                           @Value("${b2.application.key}") String applicationKey, 
+                           @Value("${b2.bucket.id}") String bucketId, 
+                           @Value("${b2.bucket.name}") String bucketName) {
         this.bucketId = bucketId;
         this.bucketName = bucketName;
 
-        B2StorageClient client = B2StorageClient.builder()
-                .setApplicationKeyId(applicationKeyId)
-                .setApplicationKey(applicationKey)
-                .build();
-
-        this.client = client;
-        this.bucketId = bucketId;
+        this.client = B2StorageClientFactory.createDefaultFactory()
+                .create(applicationKeyId, applicationKey, "marketplace-app");
     }
 
     public String uploadImage(String fileName, byte[] imageData) throws B2Exception {
@@ -51,12 +46,21 @@ public class B2StorageService {
         return uploadedFile.getFileName();
     }
 
+    public String uploadImage(MultipartFile file) throws B2Exception, IOException {
+        String fileName = "listings/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+        byte[] imageData = file.getBytes();
+        return uploadImage(fileName, imageData);
+    }
+
     public String generatePreSignedUrl(String fileName) throws B2Exception {
         int validDurationSeconds = 86400;
 
-        B2DownloadAuthorization auth = client.getDownloadAuthorization(bucketId, fileName, validDurationSeconds);
+        B2GetDownloadAuthorizationRequest request = B2GetDownloadAuthorizationRequest
+                .builder(bucketId, fileName, validDurationSeconds)
+                .build();
+
+        B2DownloadAuthorization auth = client.getDownloadAuthorization(request);
 
         return "https://f003.backblazeb2.com/file/" + bucketName + "/" + fileName + "?Authorization=" + auth.getAuthorizationToken();
     }
-
 }

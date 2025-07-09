@@ -145,13 +145,24 @@ public class UserService implements UserDetailsService {
 
 
     @Transactional
-    public void saveUserProfileImage(Long userId, String imageUrl) {
+    public User saveUserProfileImage(Long userId, String imageUrl) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setProfileImageUrl(imageUrl);
 
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateProfileImage(Long userId, String imageUrl) {
+        return saveUserProfileImage(userId, imageUrl);
+    }
+
+    public String getProfileImageUrl(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getProfileImageUrl)
+                .orElse(null);
     }
 
     public String uploadImageAndGetUrl(String base64Image) {
