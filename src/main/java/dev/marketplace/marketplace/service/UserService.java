@@ -66,7 +66,7 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
-    public User updateUser(Long userId, String username, String email) {
+    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, String location) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -82,6 +82,19 @@ public class UserService implements UserDetailsService {
                 throw new IllegalArgumentException("Email already in use");
             }
             user.setEmail(email);
+        }
+
+        if (firstName != null) {
+            user.setFirstName(firstName);
+        }
+        if (lastName != null) {
+            user.setLastName(lastName);
+        }
+        if (bio != null) {
+            user.setBio(bio);
+        }
+        if (location != null) {
+            user.setLocation(location);
         }
 
         return userRepository.save(user);
@@ -174,6 +187,66 @@ public class UserService implements UserDetailsService {
             return b2StorageService.generatePreSignedUrl(uploadedFileName);
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload image", e);
+        }
+    }
+
+    @Transactional
+    public User uploadIdPhoto(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            String fileName = "documents/id_photos/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
+            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
+            user.setIdPhotoUrl(url);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload ID photo", e);
+        }
+    }
+
+    @Transactional
+    public User uploadDriversLicense(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            String fileName = "documents/drivers_licenses/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
+            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
+            user.setDriversLicenseUrl(url);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload driver's license", e);
+        }
+    }
+
+    @Transactional
+    public User uploadProofOfAddress(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            String fileName = "documents/proof_of_address/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
+            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
+            user.setProofOfAddressUrl(url);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload proof of address", e);
+        }
+    }
+
+    @Transactional
+    public User uploadProfileImage(Long userId, MultipartFile file) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        try {
+            String fileName = "profiles/" + userId + "/profile.jpg";
+            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
+            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
+            user.setProfileImageUrl(url);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload profile image", e);
         }
     }
 }

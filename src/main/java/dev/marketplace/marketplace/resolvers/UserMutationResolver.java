@@ -29,9 +29,13 @@ public class UserMutationResolver {
     public User updateUser(
             @Argument Long id,
             @Argument String username,
-            @Argument String email
+            @Argument String email,
+            @Argument String firstName,
+            @Argument String lastName,
+            @Argument String bio,
+            @Argument String location
     ) {
-        return userService.updateUser(id, username, email);
+        return userService.updateUser(id, username, email, firstName, lastName, bio, location);
     }
 
     @MutationMapping

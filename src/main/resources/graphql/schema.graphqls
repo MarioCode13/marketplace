@@ -12,6 +12,13 @@ type User {
     role: String!
     profileImageUrl: String
     createdAt: String!
+    firstName: String
+    lastName: String
+    bio: String
+    location: String
+    idPhotoUrl: String
+    driversLicenseUrl: String
+    proofOfAddressUrl: String
 }
 
 enum Condition {
@@ -71,7 +78,7 @@ type Query {
 }
 
 type Mutation {
-    updateUser(id: ID!, username: String, email: String): User
+    updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, location: String): User
     register(username: String!, email: String!, password: String!): AuthResponse!
     login(emailOrUsername: String!, password: String!): AuthResponse!
     uploadListingImage(image: String!): String!

@@ -6,13 +6,14 @@ CREATE TABLE IF NOT EXISTS "users" (
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'HAS_ACCOUNT',
     profile_image_url TEXT,
+    drivers_license_url TEXT,
+    id_photo_url TEXT,
+    proof_of_address_url TEXT,
     first_name VARCHAR(255),
     last_name VARCHAR(255),
     bio TEXT,
     location VARCHAR(255),
     contact_number VARCHAR(255),
-    proof_of_address TEXT,
-    id_photo TEXT,
     id_number VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

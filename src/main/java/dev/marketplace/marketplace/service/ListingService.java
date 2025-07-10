@@ -79,6 +79,11 @@ public class ListingService {
                 .map(this::convertToDTO);
     }
 
+    public Listing getListingByIdRaw(Long id) {
+        return listingRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Listing not found with ID: " + id));
+    }
+
     public List<ListingDTO> getListingsByCategory(Long categoryId) {
         List<Listing> listings = listingRepository.findByCategoryId(categoryId);
         return listings.stream().map(this::convertToDTO).toList();
