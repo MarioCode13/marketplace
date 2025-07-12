@@ -11,7 +11,9 @@ import java.util.List;
 
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, Long> {
+    @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE l.user.id = :userId")
     List<Listing> findByUserId(Long userId);
+    @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE l.category.id = :categoryId")
     List<Listing> findByCategoryId(Long categoryId);
     List<Listing> findBySoldFalse();
 
@@ -24,5 +26,11 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             + "AND (:minPrice IS NULL OR l.price >= :minPrice) "
             + "AND (:maxPrice IS NULL OR l.price <= :maxPrice)")
     Page<Listing> findFilteredListings(Long categoryId, Double minPrice, Double maxPrice, Pageable pageable);
+
+    @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE "
+            + "(:categoryId IS NULL OR l.category.id = :categoryId) "
+            + "AND (:minPrice IS NULL OR l.price >= :minPrice) "
+            + "AND (:maxPrice IS NULL OR l.price <= :maxPrice)")
+    List<Listing> findFilteredListingsWithUser(Long categoryId, Double minPrice, Double maxPrice);
 }
 

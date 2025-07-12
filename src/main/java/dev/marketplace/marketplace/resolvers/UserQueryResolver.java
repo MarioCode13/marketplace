@@ -1,7 +1,9 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.model.TrustRating;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.service.TrustRatingService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -21,6 +23,7 @@ import java.util.Optional;
 public class UserQueryResolver {
 
     private final UserService userService;
+    private final TrustRatingService trustRatingService;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(User user) {
@@ -30,8 +33,38 @@ public class UserQueryResolver {
         return null;
     }
 
-    public UserQueryResolver(UserService userService) {
+    @SchemaMapping(typeName = "User", field = "idPhotoUrl")
+    public String resolveIdPhotoUrl(User user) {
+        if (user.getIdPhotoUrl() != null && !user.getIdPhotoUrl().isEmpty()) {
+            return user.getIdPhotoUrl();
+        }
+        return null;
+    }
+
+    @SchemaMapping(typeName = "User", field = "driversLicenseUrl")
+    public String resolveDriversLicenseUrl(User user) {
+        if (user.getDriversLicenseUrl() != null && !user.getDriversLicenseUrl().isEmpty()) {
+            return user.getDriversLicenseUrl();
+        }
+        return null;
+    }
+
+    @SchemaMapping(typeName = "User", field = "proofOfAddressUrl")
+    public String resolveProofOfAddressUrl(User user) {
+        if (user.getProofOfAddressUrl() != null && !user.getProofOfAddressUrl().isEmpty()) {
+            return user.getProofOfAddressUrl();
+        }
+        return null;
+    }
+
+    @SchemaMapping(typeName = "User", field = "trustRating")
+    public TrustRating resolveTrustRating(User user) {
+        return trustRatingService.getTrustRating(user.getId());
+    }
+
+    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService) {
         this.userService = userService;
+        this.trustRatingService = trustRatingService;
     }
 
     @QueryMapping
@@ -43,6 +76,11 @@ public class UserQueryResolver {
     public List<User> getAllUsers() {
         return userService.getAllUsers();
     }
+    
+    @QueryMapping
+    public List<User> searchUsers(@Argument String searchTerm) {
+        return userService.searchUsers(searchTerm);
+    }
 
     public User getUserByEmail(@Argument String email) {
         Optional<User> userOpt = userService.getUserByEmail(email);
@@ -51,6 +89,11 @@ public class UserQueryResolver {
 
     @QueryMapping
     public String getProfileImage(@Argument Long userId) {
+        return userService.getProfileImageUrl(userId);
+    }
+
+    @QueryMapping
+    public String getUserProfileImage(@Argument Long userId) {
         return userService.getProfileImageUrl(userId);
     }
 

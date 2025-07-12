@@ -25,27 +25,52 @@ public class ListingFileUploadController {
         this.listingService = listingService;
     }
 
+    @PostMapping("/upload-images")
+    public ResponseEntity<?> uploadImages(@RequestParam("images") MultipartFile[] images) {
+        if (images == null || images.length == 0) {
+            return ResponseEntity.badRequest().body("No images uploaded!");
+        }
+        List<String> uploadedUrls = new ArrayList<>();
+        try {
+            for (int i = 0; i < images.length; i++) {
+                MultipartFile image = images[i];
+                String fileName = "listings/temp/" + System.currentTimeMillis() + "_" + image.getOriginalFilename();
+                String uploadedFileName = b2StorageService.uploadImage(fileName, image.getBytes());
+                String preSignedUrl = b2StorageService.generatePreSignedUrl(uploadedFileName);
+                uploadedUrls.add(preSignedUrl);
+            }
+            return ResponseEntity.ok(uploadedUrls);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error uploading image: " + e.getMessage());
+        }
+    }
+
     @PostMapping("/{listingId}/upload-images")
     public ResponseEntity<?> uploadListingImages(@PathVariable Long listingId, @RequestParam("images") MultipartFile[] images) {
         if (images == null || images.length == 0) {
             return ResponseEntity.badRequest().body("No images uploaded!");
         }
         List<String> uploadedFilenames = new ArrayList<>();
+        List<String> uploadedUrls = new ArrayList<>();
         try {
             for (int i = 0; i < images.length; i++) {
                 MultipartFile image = images[i];
                 String fileName = "listings/" + listingId + "/image" + (i + 1) + "_" + image.getOriginalFilename();
                 String uploadedFileName = b2StorageService.uploadImage(fileName, image.getBytes());
-                uploadedFilenames.add(uploadedFileName);
+                String preSignedUrl = b2StorageService.generatePreSignedUrl(uploadedFileName);
+                uploadedFilenames.add(uploadedFileName); // Store filename in database
+                uploadedUrls.add(preSignedUrl); // Return URL to frontend
             }
-            // Update the listing's images
+            // Update the listing's images with filenames
             Listing listing = listingService.getListingByIdRaw(listingId);
             List<String> currentImages = listing.getImages();
             if (currentImages == null) currentImages = new ArrayList<>();
             currentImages.addAll(uploadedFilenames);
             listing.setImages(currentImages);
             listingService.save(listing);
-            return ResponseEntity.ok(uploadedFilenames);
+            return ResponseEntity.ok(uploadedUrls); // Return URLs to frontend
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

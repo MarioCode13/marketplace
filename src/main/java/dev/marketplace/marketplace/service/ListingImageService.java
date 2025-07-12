@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.ArrayList;
 
 @Service
 public class ListingImageService {
@@ -57,15 +58,73 @@ public class ListingImageService {
     }
 
     /**
-     * Validates a single image filename
+     * Validates a single image filename or URL
      */
     private void validateImageFilename(String filename) {
         if (filename == null || filename.trim().isEmpty()) {
             throw new IllegalArgumentException("Image filename cannot be empty");
         }
         
-        if (!filename.matches("^[a-zA-Z0-9._-]+$")) {
+        // Check if it's a URL (starts with http/https)
+        if (filename.startsWith("http://") || filename.startsWith("https://")) {
+            // Validate URL format
+            try {
+                new java.net.URL(filename);
+                return; // Valid URL
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid image URL format");
+            }
+        }
+        
+        // Check if it's a valid filename format
+        if (!filename.matches("^[a-zA-Z0-9._/-]+$")) {
             throw new IllegalArgumentException("Invalid image filename format");
         }
+    }
+
+    /**
+     * Extracts filename from a B2 pre-signed URL
+     * Example: https://f003.backblazeb2.com/file/bucket-name/listings/temp/123456_image.jpg?Authorization=...
+     * Returns: listings/temp/123456_image.jpg
+     */
+    public String extractFilenameFromUrl(String url) {
+        if (url == null || url.trim().isEmpty()) {
+            throw new IllegalArgumentException("URL cannot be empty");
+        }
+        
+        try {
+            java.net.URL parsedUrl = new java.net.URL(url);
+            String path = parsedUrl.getPath();
+            
+            // Remove the leading slash and bucket name
+            // Path format: /file/bucket-name/filename
+            String[] pathParts = path.split("/");
+            if (pathParts.length >= 4) {
+                // Skip "file" and bucket name, take the rest
+                StringBuilder filename = new StringBuilder();
+                for (int i = 3; i < pathParts.length; i++) {
+                    if (i > 3) filename.append("/");
+                    filename.append(pathParts[i]);
+                }
+                return filename.toString();
+            }
+            
+            throw new IllegalArgumentException("Invalid B2 URL format");
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid URL format: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Converts a list of URLs to filenames for database storage
+     */
+    public List<String> convertUrlsToFilenames(List<String> urls) {
+        if (urls == null || urls.isEmpty()) {
+            return new ArrayList<>();
+        }
+        
+        return urls.stream()
+                .map(this::extractFilenameFromUrl)
+                .toList();
     }
 } 

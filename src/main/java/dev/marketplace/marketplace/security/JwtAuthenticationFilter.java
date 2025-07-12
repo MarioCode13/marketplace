@@ -39,23 +39,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String jwt = authHeader.substring(7);
-        String email = jwtUtil.extractEmail(jwt);
-        System.out.println("Extracted email from token: " + email);
+        
+        try {
+            String email = jwtUtil.extractEmail(jwt);
+            System.out.println("Extracted email from token: " + email);
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-            if (jwtUtil.validateToken(jwt)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                if (jwtUtil.validateToken(jwt)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
 
-                System.out.println("User authenticated: " + userDetails.getUsername());
-            }else {
-                System.out.println("Invalid JWT token");
+                    System.out.println("User authenticated: " + userDetails.getUsername());
+                } else {
+                    System.out.println("Invalid JWT token");
+                }
             }
+        } catch (Exception e) {
+            System.out.println("Error processing JWT token: " + e.getMessage());
+            // Don't throw the exception, just continue with the filter chain
         }
 
         filterChain.doFilter(request, response);

@@ -63,4 +63,18 @@ public class B2StorageService {
 
         return "https://f003.backblazeb2.com/file/" + bucketName + "/" + fileName + "?Authorization=" + auth.getAuthorizationToken();
     }
+    
+    public void deleteImage(String fileName) throws B2Exception {
+        B2DeleteFileVersionRequest request = B2DeleteFileVersionRequest
+                .builder(fileName, null) // We'll need the fileId for deletion, but fileName should work for most cases
+                .build();
+        
+        try {
+            client.deleteFileVersion(request);
+        } catch (B2Exception e) {
+            // Log the error but don't throw it to avoid breaking the application
+            // if the file doesn't exist or can't be deleted
+            System.err.println("Failed to delete file from B2: " + fileName + ", error: " + e.getMessage());
+        }
+    }
 }

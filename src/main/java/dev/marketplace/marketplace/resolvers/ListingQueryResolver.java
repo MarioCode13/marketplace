@@ -9,6 +9,7 @@ import dev.marketplace.marketplace.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -57,4 +58,6 @@ public class ListingQueryResolver {
 
         return listingService.getListingsByUserId(user.getId());
     }
+
+
 }

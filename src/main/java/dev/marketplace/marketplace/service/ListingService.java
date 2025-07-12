@@ -8,6 +8,7 @@ import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
+import dev.marketplace.marketplace.service.TransactionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,17 +26,20 @@ public class ListingService {
     private final ListingImageService imageService;
     private final ListingValidationService validationService;
     private final ListingAuthorizationService authorizationService;
+    private final TransactionService transactionService;
 
     public ListingService(ListingRepository listingRepository, 
                          CategoryRepository categoryRepository,
                          ListingImageService imageService,
                          ListingValidationService validationService,
-                         ListingAuthorizationService authorizationService) {
+                         ListingAuthorizationService authorizationService,
+                         TransactionService transactionService) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
         this.imageService = imageService;
         this.validationService = validationService;
         this.authorizationService = authorizationService;
+        this.transactionService = transactionService;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
@@ -90,12 +94,15 @@ public class ListingService {
     }
 
     @Transactional
-    public Listing createListing(String title, String description, List<String> imageFilenames,
+    public Listing createListing(String title, String description, List<String> imageUrls,
                                  Long categoryId, double price, String location,
                                  Condition condition, Long userId) {
 
         validationService.validateListingCreation(title, description, price, location, condition, userId);
-        imageService.validateImages(imageFilenames);
+        imageService.validateImages(imageUrls);
+
+        // Convert URLs to filenames for database storage
+        List<String> imageFilenames = imageService.convertUrlsToFilenames(imageUrls);
 
         User user = authorizationService.validateUserExists(userId);
         Category category = categoryRepository.findById(categoryId)
@@ -156,7 +163,24 @@ public class ListingService {
 
     @Transactional
     public Listing markListingAsSold(Long listingId, Long userId) {
+        // This method is deprecated - use createTransaction instead
+        // Keeping for backward compatibility but it should not be used
         return updateListing(listingId, userId, listing -> listing.setSold(true));
+    }
+    
+    /**
+     * Mark a listing as sold to a specific buyer (creates a transaction)
+     */
+    @Transactional
+    public Listing sellListingToBuyer(Long listingId, Long sellerId, Long buyerId, 
+                                     java.math.BigDecimal salePrice, String paymentMethod, String notes) {
+        // Validate seller owns the listing
+        Listing listing = authorizationService.checkUpdatePermission(listingId, sellerId);
+        
+        // Create transaction
+        transactionService.createTransaction(listingId, buyerId, salePrice, paymentMethod, notes);
+        
+        return listing;
     }
 
     public Listing save(Listing listing) {

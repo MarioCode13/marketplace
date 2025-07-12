@@ -19,6 +19,7 @@ type User {
     idPhotoUrl: String
     driversLicenseUrl: String
     proofOfAddressUrl: String
+    trustRating: TrustRating
 }
 
 enum Condition {
@@ -57,6 +58,124 @@ type Category {
     name: String!
 }
 
+enum TransactionStatus {
+    PENDING
+    COMPLETED
+    CANCELLED
+    DISPUTED
+}
+
+type Transaction {
+    id: ID!
+    listing: Listing!
+    seller: User!
+    buyer: User!
+    salePrice: Float!
+    saleDate: String!
+    status: TransactionStatus!
+    paymentMethod: String
+    notes: String
+    createdAt: String!
+    updatedAt: String!
+}
+
+type Review {
+    id: ID!
+    reviewer: User!
+    reviewedUser: User!
+    transaction: Transaction!
+    rating: Float!
+    comment: String
+    isPositive: Boolean!
+    createdAt: String!
+    updatedAt: String!
+}
+
+enum PlanType {
+    BASIC_MONTHLY
+    BASIC_YEARLY
+    PREMIUM_MONTHLY
+    PREMIUM_YEARLY
+}
+
+enum BillingCycle {
+    MONTHLY
+    YEARLY
+}
+
+enum SubscriptionStatus {
+    ACTIVE
+    PAST_DUE
+    CANCELLED
+    UNPAID
+    TRIAL
+}
+
+type Subscription {
+    id: ID!
+    user: User!
+    stripeSubscriptionId: String
+    stripeCustomerId: String
+    planType: PlanType!
+    status: SubscriptionStatus!
+    amount: Float!
+    currency: String!
+    billingCycle: BillingCycle!
+    currentPeriodStart: String
+    currentPeriodEnd: String
+    cancelAtPeriodEnd: Boolean!
+    cancelledAt: String
+    createdAt: String!
+    updatedAt: String!
+}
+
+type SubscriptionStats {
+    activeSubscriptions: Int!
+    totalSubscriptions: Int!
+}
+
+enum DocumentType {
+    ID_CARD
+    PROOF_OF_ADDRESS
+    PROFILE_PHOTO
+}
+
+enum VerificationStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+type VerificationDocument {
+    id: ID!
+    userId: ID!
+    documentType: DocumentType!
+    documentUrl: String!
+    status: VerificationStatus!
+    uploadedAt: String!
+    verifiedAt: String
+    notes: String
+}
+
+type TrustRating {
+    id: ID!
+    userId: ID!
+    overallScore: Float!
+    documentScore: Float!
+    profileScore: Float!
+    reviewScore: Float!
+    transactionScore: Float!
+    totalReviews: Int!
+    positiveReviews: Int!
+    totalTransactions: Int!
+    successfulTransactions: Int!
+    lastCalculated: String!
+    createdAt: String!
+    updatedAt: String!
+    starRating: Float!
+    trustLevel: String!
+}
+
 type Query {
     getUserById(id: ID!): User
     getAllUsers: [User!]!
@@ -75,6 +194,36 @@ type Query {
     getCategories: [Category]
     getCategoryById(id: ID!): Category # Nullable return type
     myListings: [Listing!]!
+    myPurchases: [Transaction!]!
+    mySales: [Transaction!]!
+    myCompletedPurchases: [Transaction!]!
+    myCompletedSales: [Transaction!]!
+    getTransaction(transactionId: ID!): Transaction!
+    getListingTransactions(listingId: ID!): [Transaction!]!
+    hasBoughtListing(listingId: ID!): Boolean!
+    getBuyerForListing(listingId: ID!): String
+    getUserReviews(userId: ID!): [Review!]!
+    getUserPositiveReviews(userId: ID!): [Review!]!
+    getUserNegativeReviews(userId: ID!): [Review!]!
+    getTransactionReviews(transactionId: ID!): [Review!]!
+    getReview(reviewId: ID!): Review!
+    getMyReviewForTransaction(transactionId: ID!): Review
+    getUserAverageRating(userId: ID!): Float!
+    getUserReviewCount(userId: ID!): Int!
+    getUserPositiveReviewCount(userId: ID!): Int!
+    getRecentUserReviews(userId: ID!, limit: Int): [Review!]!
+    getReviewsByMinimumRating(minRating: Float!): [Review!]!
+    searchUsers(searchTerm: String!): [User!]!
+    mySubscription: Subscription
+    mySubscriptionHistory: [Subscription!]!
+    hasActiveSubscription: Boolean!
+    canContactSellers: Boolean!
+    getAvailablePlans: [String!]!
+    getSubscriptionStats: SubscriptionStats!
+    getExpiringSubscriptions(daysAhead: Int): [Subscription!]!
+    getTrustRating(userId: ID!): TrustRating
+    getUserVerificationDocuments(userId: ID!): [VerificationDocument!]!
+    getUserDocumentByType(userId: ID!, documentType: DocumentType!): VerificationDocument
 }
 
 type Mutation {
@@ -94,6 +243,15 @@ type Mutation {
     ): Listing!
     deleteListing(id: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
+    createTransaction(listingId: ID!, buyerId: ID!, salePrice: Float!, paymentMethod: String, notes: String): Transaction!
+    completeTransaction(transactionId: ID!): Transaction!
+    cancelTransaction(transactionId: ID!, reason: String!): Transaction!
+    createReview(transactionId: ID!, reviewedUserId: ID!, rating: Float!, comment: String): Review!
+    updateReview(reviewId: ID!, rating: Float!, comment: String): Review!
+    deleteReview(reviewId: ID!): Boolean!
+    createCheckoutSession(planType: String!, billingCycle: String!): String!
+    cancelSubscription: Subscription!
+    reactivateSubscription: Subscription!
     updateListingPrice(listingId: ID!, newPrice: Float!): Listing!
     updateListingTitle(listingId: ID!, newTitle: String!): Listing!
     updateListingDescription(listingId: ID!, newDescription: String!): Listing!
