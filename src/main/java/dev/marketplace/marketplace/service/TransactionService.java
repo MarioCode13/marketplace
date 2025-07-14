@@ -6,6 +6,8 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.TransactionRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
+import dev.marketplace.marketplace.dto.TransactionDTO;
+import dev.marketplace.marketplace.dto.ListingDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
+    private final ListingImageService imageService;
     
     /**
      * Create a transaction when a listing is sold to a specific buyer
@@ -220,5 +223,83 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public long getUserSaleCount(Long userId) {
         return transactionRepository.countBySellerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED);
+    }
+    
+    /**
+     * Convert a transaction to DTO with proper image URLs
+     */
+    private TransactionDTO convertToDTO(Transaction transaction) {
+        Listing listing = transaction.getListing();
+        List<String> preSignedUrls = imageService.generatePreSignedUrls(listing.getImages());
+        
+        ListingDTO listingDTO = new ListingDTO(
+                listing.getId(),
+                listing.getTitle(),
+                listing.getDescription(),
+                preSignedUrls,
+                listing.getCategory(),
+                listing.getPrice(),
+                listing.getLocation(),
+                listing.getCondition().name(),
+                listing.getUser(),
+                listing.getCreatedAt(),
+                listing.isSold(),
+                listing.getExpiresAt().toString()
+        );
+        
+        return TransactionDTO.fromTransaction(transaction, listingDTO);
+    }
+    
+    /**
+     * Get all transactions for a user as buyer (with DTOs)
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getUserBuyingHistoryDTO(Long userId) {
+        return transactionRepository.findByBuyerId(userId)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+    
+    /**
+     * Get all transactions for a user as seller (with DTOs)
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getUserSellingHistoryDTO(Long userId) {
+        return transactionRepository.findBySellerId(userId)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+    
+    /**
+     * Get completed transactions for a user as buyer (with DTOs)
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getUserCompletedPurchasesDTO(Long userId) {
+        return transactionRepository.findByBuyerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+    
+    /**
+     * Get completed transactions for a user as seller (with DTOs)
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getUserCompletedSalesDTO(Long userId) {
+        return transactionRepository.findBySellerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
+    }
+    
+    /**
+     * Get transaction by ID (with DTO)
+     */
+    @Transactional(readOnly = true)
+    public Optional<TransactionDTO> getTransactionDTO(Long transactionId) {
+        return transactionRepository.findById(transactionId)
+                .map(this::convertToDTO);
     }
 } 

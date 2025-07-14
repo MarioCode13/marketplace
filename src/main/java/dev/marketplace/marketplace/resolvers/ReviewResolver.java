@@ -148,4 +148,12 @@ public class ReviewResolver {
     public List<Review> getReviewsByMinimumRating(@Argument BigDecimal minRating) {
         return reviewService.getReviewsByMinimumRating(minRating);
     }
+    
+    /**
+     * Get reviews for a user (reviews they received)
+     */
+    @QueryMapping
+    public List<Review> reviewsByUser(@Argument Long userId) {
+        return reviewService.getUserReviews(userId);
+    }
 } 

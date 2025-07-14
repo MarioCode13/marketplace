@@ -43,11 +43,37 @@ public class ListingService {
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
-        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return getListingsWithFilters(limit, offset, categoryId, minPrice, maxPrice, null, null, null, null, null, null, null);
+    }
+
+    public ListingPageResponse getListingsWithFilters(Integer limit, Integer offset, 
+                                                    Long categoryId, Double minPrice, Double maxPrice,
+                                                    Condition condition, String location, String searchTerm,
+                                                    java.time.LocalDateTime minDate, java.time.LocalDateTime maxDate,
+                                                    String sortBy, String sortOrder) {
+        // Create pageable with sorting
+        Pageable pageable;
+        if (sortBy != null && !sortBy.isEmpty()) {
+            org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
+                "desc".equalsIgnoreCase(sortOrder) ? 
+                org.springframework.data.domain.Sort.Direction.DESC : 
+                org.springframework.data.domain.Sort.Direction.ASC,
+                sortBy
+            );
+            pageable = PageRequest.of(offset / limit, limit, sort);
+        } else {
+            pageable = PageRequest.of(offset / limit, limit);
+        }
+        
         Page<Listing> page;
 
-        if (categoryId != null || minPrice != null || maxPrice != null) {
-            page = listingRepository.findFilteredListings(categoryId, minPrice, maxPrice, pageable);
+        // Use enhanced filtering if any new filters are provided
+        if (categoryId != null || minPrice != null || maxPrice != null || 
+            condition != null || location != null || searchTerm != null || 
+            minDate != null || maxDate != null) {
+            page = listingRepository.findFilteredListings(
+                categoryId, minPrice, maxPrice, condition, location, 
+                searchTerm, pageable);
         } else {
             page = listingRepository.findAll(pageable);
         }
@@ -126,6 +152,8 @@ public class ListingService {
         List<Listing> listings = listingRepository.findByUserId(userId);
         return listings.stream().map(this::convertToDTO).toList();
     }
+
+
 
     @Transactional
     private Listing updateListing(Long listingId, Long userId, Consumer<Listing> updateAction) {

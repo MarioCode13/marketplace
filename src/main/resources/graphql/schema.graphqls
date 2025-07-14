@@ -16,10 +16,14 @@ type User {
     lastName: String
     bio: String
     location: String
+    contactNumber: String
     idPhotoUrl: String
     driversLicenseUrl: String
     proofOfAddressUrl: String
     trustRating: TrustRating
+    profileCompletion: ProfileCompletion
+    verificationDocuments: [VerificationDocument!]
+    subscription: Subscription
 }
 
 enum Condition {
@@ -138,6 +142,7 @@ enum DocumentType {
     ID_CARD
     PROOF_OF_ADDRESS
     PROFILE_PHOTO
+    DRIVERS_LICENSE
 }
 
 enum VerificationStatus {
@@ -176,8 +181,26 @@ type TrustRating {
     trustLevel: String!
 }
 
+type ProfileCompletion {
+    id: ID!
+    userId: ID!
+    hasProfilePhoto: Boolean!
+    hasBio: Boolean!
+    hasContactNumber: Boolean!
+    hasLocation: Boolean!
+    hasVerifiedEmail: Boolean!
+    hasVerifiedPhone: Boolean!
+    hasIdVerification: Boolean!
+    hasAddressVerification: Boolean!
+    completionPercentage: Float!
+    lastCalculated: String!
+    createdAt: String!
+    updatedAt: String!
+}
+
 type Query {
     getUserById(id: ID!): User
+    user(id: ID!): User
     getAllUsers: [User!]!
     me: User
     getProfileImage(userId: ID!): String
@@ -188,12 +211,19 @@ type Query {
         categoryId: ID
         minPrice: Float
         maxPrice: Float
+        condition: Condition
+        location: String
+        searchTerm: String
+        minDate: String
+        maxDate: String
+        sortBy: String
+        sortOrder: String
     ): ListingPageResponse!
     getListingById(id: ID!): Listing
     getConditions: [Condition] # No longer non-nullable list
     getCategories: [Category]
     getCategoryById(id: ID!): Category # Nullable return type
-    myListings: [Listing!]!
+    myListings(limit: Int, offset: Int): ListingPageResponse!
     myPurchases: [Transaction!]!
     mySales: [Transaction!]!
     myCompletedPurchases: [Transaction!]!
@@ -224,6 +254,8 @@ type Query {
     getTrustRating(userId: ID!): TrustRating
     getUserVerificationDocuments(userId: ID!): [VerificationDocument!]!
     getUserDocumentByType(userId: ID!, documentType: DocumentType!): VerificationDocument
+    reviewsByUser(userId: ID!): [Review!]!
+    listingsByUser(userId: ID!): [Listing!]!
 }
 
 type Mutation {

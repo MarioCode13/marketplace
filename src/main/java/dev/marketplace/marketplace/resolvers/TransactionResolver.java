@@ -4,6 +4,7 @@ import dev.marketplace.marketplace.model.Transaction;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.service.TransactionService;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.dto.TransactionDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -61,44 +62,44 @@ public class TransactionResolver {
      * Get user's buying history
      */
     @QueryMapping
-    public List<Transaction> myPurchases(@AuthenticationPrincipal UserDetails userDetails) {
+    public List<TransactionDTO> myPurchases(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.getUserBuyingHistory(userId);
+        return transactionService.getUserBuyingHistoryDTO(userId);
     }
     
     /**
      * Get user's selling history
      */
     @QueryMapping
-    public List<Transaction> mySales(@AuthenticationPrincipal UserDetails userDetails) {
+    public List<TransactionDTO> mySales(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.getUserSellingHistory(userId);
+        return transactionService.getUserSellingHistoryDTO(userId);
     }
     
     /**
      * Get completed purchases for a user
      */
     @QueryMapping
-    public List<Transaction> myCompletedPurchases(@AuthenticationPrincipal UserDetails userDetails) {
+    public List<TransactionDTO> myCompletedPurchases(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.getUserCompletedPurchases(userId);
+        return transactionService.getUserCompletedPurchasesDTO(userId);
     }
     
     /**
      * Get completed sales for a user
      */
     @QueryMapping
-    public List<Transaction> myCompletedSales(@AuthenticationPrincipal UserDetails userDetails) {
+    public List<TransactionDTO> myCompletedSales(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.getUserCompletedSales(userId);
+        return transactionService.getUserCompletedSalesDTO(userId);
     }
     
     /**
      * Get transaction by ID
      */
     @QueryMapping
-    public Transaction getTransaction(@Argument Long transactionId) {
-        return transactionService.getTransaction(transactionId)
+    public TransactionDTO getTransaction(@Argument Long transactionId) {
+        return transactionService.getTransactionDTO(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found with ID: " + transactionId));
     }
     

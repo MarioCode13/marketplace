@@ -139,7 +139,6 @@ public class VerificationDocumentService {
             log.warn("Failed to delete document from storage: {}", document.getDocumentUrl(), e);
         }
         
-        // Delete from database
         verificationDocumentRepository.delete(document);
         
         // Update trust rating (removing document reduces points)

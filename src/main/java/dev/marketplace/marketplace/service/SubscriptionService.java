@@ -110,7 +110,6 @@ public class SubscriptionService {
         if (status == Subscription.SubscriptionStatus.CANCELLED) {
             subscription.setCancelledAt(LocalDateTime.now());
             
-            // Downgrade user role if no other active subscriptions
             User user = subscription.getUser();
             if (!hasActiveSubscription(user.getId())) {
                 user.setRole(Role.HAS_ACCOUNT);

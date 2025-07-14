@@ -2,8 +2,12 @@ package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.model.TrustRating;
+import dev.marketplace.marketplace.model.VerificationDocument;
+import dev.marketplace.marketplace.model.ProfileCompletion;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.service.TrustRatingService;
+import dev.marketplace.marketplace.service.VerificationDocumentService;
+import dev.marketplace.marketplace.repository.ProfileCompletionRepository;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -24,6 +28,8 @@ public class UserQueryResolver {
 
     private final UserService userService;
     private final TrustRatingService trustRatingService;
+    private final VerificationDocumentService verificationDocumentService;
+    private final ProfileCompletionRepository profileCompletionRepository;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(User user) {
@@ -62,13 +68,30 @@ public class UserQueryResolver {
         return trustRatingService.getTrustRating(user.getId());
     }
 
-    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService) {
+    @SchemaMapping(typeName = "User", field = "verificationDocuments")
+    public List<VerificationDocument> resolveVerificationDocuments(User user) {
+        return verificationDocumentService.getUserDocuments(user.getId());
+    }
+
+    @SchemaMapping(typeName = "User", field = "profileCompletion")
+    public ProfileCompletion resolveProfileCompletion(User user) {
+        return profileCompletionRepository.findByUserId(user.getId()).orElse(null);
+    }
+
+    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService, VerificationDocumentService verificationDocumentService, ProfileCompletionRepository profileCompletionRepository) {
         this.userService = userService;
         this.trustRatingService = trustRatingService;
+        this.verificationDocumentService = verificationDocumentService;
+        this.profileCompletionRepository = profileCompletionRepository;
     }
 
     @QueryMapping
     public User getUserById(@Argument Long id) {
+        return userService.getUserById(id);
+    }
+
+    @QueryMapping
+    public User user(@Argument Long id) {
         return userService.getUserById(id);
     }
 

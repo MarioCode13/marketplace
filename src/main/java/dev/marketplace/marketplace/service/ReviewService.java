@@ -135,7 +135,6 @@ public class ReviewService {
         
         Long reviewedUserId = review.getReviewedUser().getId();
         
-        // Delete review
         reviewRepository.delete(review);
         
         // Update trust rating for the reviewed user

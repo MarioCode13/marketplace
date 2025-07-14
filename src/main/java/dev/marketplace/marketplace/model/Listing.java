@@ -23,7 +23,10 @@ public class Listing {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(columnDefinition = "TEXT")
     private String title;
+    
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @ElementCollection
@@ -37,6 +40,7 @@ public class Listing {
 
     private double price;
     private boolean sold = false;
+    @Column(columnDefinition = "TEXT")
     private String location;
 
     @Enumerated(EnumType.STRING)

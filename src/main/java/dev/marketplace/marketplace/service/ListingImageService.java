@@ -31,9 +31,15 @@ public class ListingImageService {
     }
 
     /**
-     * Generates a pre-signed URL for a single image filename
+     * Generates a pre-signed URL for a single image filename or URL
      */
     public String generatePreSignedUrl(String fileName) {
+        // If it's already a pre-signed URL, return it as-is
+        if (fileName != null && (fileName.startsWith("http://") || fileName.startsWith("https://"))) {
+            return fileName;
+        }
+        
+        // If it's a relative filename, generate a pre-signed URL
         try {
             return b2StorageService.generatePreSignedUrl(fileName);
         } catch (B2Exception e) {
@@ -90,6 +96,11 @@ public class ListingImageService {
     public String extractFilenameFromUrl(String url) {
         if (url == null || url.trim().isEmpty()) {
             throw new IllegalArgumentException("URL cannot be empty");
+        }
+        
+        // If it's already a filename (not a URL), return it as-is
+        if (!url.startsWith("http://") && !url.startsWith("https://")) {
+            return url;
         }
         
         try {
