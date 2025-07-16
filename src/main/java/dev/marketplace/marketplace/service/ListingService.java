@@ -18,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import dev.marketplace.marketplace.model.City;
+import dev.marketplace.marketplace.repository.CityRepository;
 
 @Service
 public class ListingService {
@@ -27,19 +29,22 @@ public class ListingService {
     private final ListingValidationService validationService;
     private final ListingAuthorizationService authorizationService;
     private final TransactionService transactionService;
+    private final CityRepository cityRepository;
 
     public ListingService(ListingRepository listingRepository, 
                          CategoryRepository categoryRepository,
                          ListingImageService imageService,
                          ListingValidationService validationService,
                          ListingAuthorizationService authorizationService,
-                         TransactionService transactionService) {
+                         TransactionService transactionService,
+                         CityRepository cityRepository) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
         this.imageService = imageService;
         this.validationService = validationService;
         this.authorizationService = authorizationService;
         this.transactionService = transactionService;
+        this.cityRepository = cityRepository;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
@@ -48,7 +53,7 @@ public class ListingService {
 
     public ListingPageResponse getListingsWithFilters(Integer limit, Integer offset, 
                                                     Long categoryId, Double minPrice, Double maxPrice,
-                                                    Condition condition, String location, String searchTerm,
+                                                    Condition condition, Long cityId, String searchTerm,
                                                     java.time.LocalDateTime minDate, java.time.LocalDateTime maxDate,
                                                     String sortBy, String sortOrder) {
         // Create pageable with sorting
@@ -67,12 +72,16 @@ public class ListingService {
         
         Page<Listing> page;
 
+        // Ensure searchTerm is never null for LIKE queries
+        if (searchTerm == null) {
+            searchTerm = "";
+        }
         // Use enhanced filtering if any new filters are provided
         if (categoryId != null || minPrice != null || maxPrice != null || 
-            condition != null || location != null || searchTerm != null || 
+            condition != null || cityId != null || searchTerm != null || 
             minDate != null || maxDate != null) {
             page = listingRepository.findFilteredListings(
-                categoryId, minPrice, maxPrice, condition, location, 
+                categoryId, minPrice, maxPrice, condition, cityId, 
                 searchTerm, pageable);
         } else {
             page = listingRepository.findAll(pageable);
@@ -95,12 +104,13 @@ public class ListingService {
                 preSignedUrls,
                 listing.getCategory(),
                 listing.getPrice(),
-                listing.getLocation(),
+                listing.getCity(),
+                listing.getCustomCity(),
                 listing.getCondition().name(),
                 listing.getUser(),
                 listing.getCreatedAt(),
                 listing.isSold(),
-                listing.getExpiresAt().toString()
+                listing.getExpiresAt() != null ? listing.getExpiresAt().toString() : null
         );
     }
 
@@ -121,10 +131,10 @@ public class ListingService {
 
     @Transactional
     public Listing createListing(String title, String description, List<String> imageUrls,
-                                 Long categoryId, double price, String location,
+                                 Long categoryId, double price, Long cityId, String customCity,
                                  Condition condition, Long userId) {
 
-        validationService.validateListingCreation(title, description, price, location, condition, userId);
+        validationService.validateListingCreation(title, description, price, cityId, condition, userId);
         imageService.validateImages(imageUrls);
 
         // Convert URLs to filenames for database storage
@@ -134,13 +144,20 @@ public class ListingService {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
 
+        City city = null;
+        if (cityId != null) {
+            city = cityRepository.findById(cityId)
+                .orElseThrow(() -> new IllegalArgumentException("City not found with ID: " + cityId));
+        }
+
         Listing listing = new Listing.Builder()
                 .title(title)
                 .description(description)
                 .images(imageFilenames)
                 .category(category)
                 .price(price)
-                .location(location)
+                .city(city)
+                .customCity(customCity)
                 .condition(condition)
                 .user(user)
                 .build();

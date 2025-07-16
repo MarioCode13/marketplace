@@ -1,25 +1,18 @@
 -- Comprehensive Development Data Script (NOT a Flyway migration)
 -- This script should be run manually for development purposes only
 
--- Insert Original Users (for backward compatibility)
-INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, location, contact_number, profile_image_url) VALUES
-('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.', 'New York, NY', '+1-555-0100', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
-ON CONFLICT (email) DO NOTHING;
-
-INSERT INTO "users" (username, email, password, role, profile_image_url) VALUES
-('test', 'test@test.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'profiles/10/profile.jpg')
-ON CONFLICT (email) DO NOTHING;
-
--- Insert Additional Test Users with rich profiles
-INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, location, contact_number, profile_image_url) VALUES
-('john_doe', 'john@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'John', 'Doe', 'Tech enthusiast and software developer. Love collecting vintage electronics and gaming gear.', 'San Francisco, CA', '+1-555-0101', 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('sarah_smith', 'sarah@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Sarah', 'Smith', 'Fashion designer with 10+ years experience. Specializing in vintage and designer pieces.', 'Los Angeles, CA', '+1-555-0102', 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('mike_wilson', 'mike@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Mike', 'Wilson', 'Home improvement expert and furniture restorer. Quality craftsmanship guaranteed.', 'Chicago, IL', '+1-555-0103', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('emma_davis', 'emma@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Emma', 'Davis', 'Book lover and rare book collector. PhD in Literature with extensive collection.', 'Boston, MA', '+1-555-0104', 'https://images.unsplash.com/photo-1479936343636-73cdc5aae0c3?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('alex_chen', 'alex@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Alex', 'Chen', 'Sports equipment dealer and outdoor enthusiast. Certified in sports equipment maintenance.', 'Seattle, WA', '+1-555-0105', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('lisa_johnson', 'lisa@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Lisa', 'Johnson', 'Art collector and gallery owner. Specializing in contemporary and modern art.', 'Miami, FL', '+1-555-0106', 'https://images.unsplash.com/photo-1515138692129-197a2c608cfd?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('david_brown', 'david@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'David', 'Brown', 'Musician and instrument dealer. Professional guitarist with 15 years experience.', 'Nashville, TN', '+1-555-0107', 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('maria_garcia', 'maria@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Maria', 'Garcia', 'Jewelry designer and gemologist. Certified appraiser with GIA credentials.', 'Phoenix, AZ', '+1-555-0108', 'https://images.unsplash.com/photo-1508185140592-283327020902?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
+-- Update users: use city_id for known cities, custom_city for others
+INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, city_id, custom_city, contact_number, profile_image_url) VALUES
+('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.', 1, NULL, '+27-10-555-0100', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('test', 'test@test.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', NULL, NULL, NULL, 3, NULL, NULL, 'profiles/10/profile.jpg'),
+('john_doe', 'john@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'John', 'Doe', 'Tech enthusiast and software developer. Love collecting vintage electronics and gaming gear.', 1, NULL, '+27-10-555-0101', 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('sarah_smith', 'sarah@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Sarah', 'Smith', 'Fashion designer with 10+ years experience. Specializing in vintage and designer pieces.', 3, NULL, '+27-21-555-0102', 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('mike_wilson', 'mike@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Mike', 'Wilson', 'Home improvement expert and furniture restorer. Quality craftsmanship guaranteed.', 6, NULL, '+27-51-555-0103', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('emma_davis', 'emma@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Emma', 'Davis', 'Book lover and rare book collector. PhD in Literature with extensive collection.', 5, NULL, '+27-41-555-0104', 'https://images.unsplash.com/photo-1479936343636-73cdc5aae0c3?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('alex_chen', 'alex@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Alex', 'Chen', 'Sports equipment dealer and outdoor enthusiast. Certified in sports equipment maintenance.', 4, NULL, '+27-31-555-0105', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('lisa_johnson', 'lisa@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Lisa', 'Johnson', 'Art collector and gallery owner. Specializing in contemporary and modern art.', 3, NULL, '+27-21-555-0106', 'https://images.unsplash.com/photo-1515138692129-197a2c608cfd?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('david_brown', 'david@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'David', 'Brown', 'Musician and instrument dealer. Professional guitarist with 15 years experience.', 2, NULL, '+27-12-555-0107', 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+('maria_garcia', 'maria@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Maria', 'Garcia', 'Jewelry designer and gemologist. Certified appraiser with GIA credentials.', 10, NULL, '+27-53-555-0108', 'https://images.unsplash.com/photo-1508185140592-283327020902?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert Profile Completion records for all users
@@ -124,7 +117,7 @@ WHERE u.email IN ('admin@admin.com', 'test@test.com', 'john@example.com', 'sarah
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Admin's Listings with real B2 photos
-INSERT INTO listing (user_id, title, description, category_id, price, condition, location, created_at, expires_at, sold) 
+INSERT INTO listing (user_id, title, description, category_id, price, condition, city_id, custom_city, created_at, expires_at, sold) 
 SELECT 
     u.id,
     l.title,
@@ -132,24 +125,25 @@ SELECT
     c.id,
     l.price,
     l.condition,
-    l.location,
+    l.city_id,
+    l.custom_city,
     l.created_at,
     l.expires_at,
     l.sold
 FROM (
     VALUES 
-    ('admin@admin.com', 'iPhone 13 Pro - Mint Condition', 'Excellent condition iPhone 13 Pro, 256GB, Sierra Blue. Includes original box, charger, and all accessories. Barely used, perfect for anyone looking for a premium phone.', 'Electronics', 799.99, 'EXCELLENT', 'New York, NY', NOW() - INTERVAL '30 days', NOW() + INTERVAL '30 days', false),
-    ('admin@admin.com', 'Gaming Laptop - RTX 3060', 'Powerful gaming laptop with RTX 3060, 16GB RAM, 512GB SSD. Perfect for gaming and work. Runs all modern games at high settings.', 'Electronics', 1299.00, 'GOOD', 'New York, NY', NOW() - INTERVAL '25 days', NOW() + INTERVAL '35 days', false),
-    ('admin@admin.com', 'Vintage Wolf Art Print', 'Beautiful black and white wolf art print. High quality, perfect for home or office decoration. Framed and ready to hang.', 'Art & Collectibles', 150.00, 'EXCELLENT', 'New York, NY', NOW() - INTERVAL '20 days', NOW() + INTERVAL '40 days', false),
-    ('admin@admin.com', 'Professional Camera Lens', 'High-quality camera lens, perfect for professional photography. Includes carrying case and lens caps.', 'Electronics', 450.00, 'LIKE_NEW', 'New York, NY', NOW() - INTERVAL '15 days', NOW() + INTERVAL '45 days', false),
-    ('admin@admin.com', 'iPhone 13 Pro Max - Space Gray', 'Like new iPhone 13 Pro Max, 512GB, Space Gray. Complete with box and all original accessories. Perfect condition.', 'Electronics', 999.99, 'LIKE_NEW', 'New York, NY', NOW() - INTERVAL '10 days', NOW() + INTERVAL '50 days', false)
-) AS l(user_email, title, description, category_name, price, condition, location, created_at, expires_at, sold)
+    ('admin@admin.com', 'iPhone 13 Pro - Mint Condition', 'Excellent condition iPhone 13 Pro, 256GB, Sierra Blue. Includes original box, charger, and all accessories. Barely used, perfect for anyone looking for a premium phone.', 'Electronics', 799.99, 'EXCELLENT', 1, NULL, NOW() - INTERVAL '30 days', NOW() + INTERVAL '30 days', false),
+    ('admin@admin.com', 'Gaming Laptop - RTX 3060', 'Powerful gaming laptop with RTX 3060, 16GB RAM, 512GB SSD. Perfect for gaming and work. Runs all modern games at high settings.', 'Electronics', 1299.00, 'GOOD', 1, NULL, NOW() - INTERVAL '25 days', NOW() + INTERVAL '35 days', false),
+    ('admin@admin.com', 'Vintage Wolf Art Print', 'Beautiful black and white wolf art print. High quality, perfect for home or office decoration. Framed and ready to hang.', 'Art & Collectibles', 150.00, 'EXCELLENT', 1, NULL, NOW() - INTERVAL '20 days', NOW() + INTERVAL '40 days', false),
+    ('admin@admin.com', 'Professional Camera Lens', 'High-quality camera lens, perfect for professional photography. Includes carrying case and lens caps.', 'Electronics', 450.00, 'LIKE_NEW', 1, NULL, NOW() - INTERVAL '15 days', NOW() + INTERVAL '45 days', false),
+    ('admin@admin.com', 'iPhone 13 Pro Max - Space Gray', 'Like new iPhone 13 Pro Max, 512GB, Space Gray. Complete with box and all original accessories. Perfect condition.', 'Electronics', 999.99, 'LIKE_NEW', 1, NULL, NOW() - INTERVAL '10 days', NOW() + INTERVAL '50 days', false)
+) AS l(user_email, title, description, category_name, price, condition, city_id, custom_city, created_at, expires_at, sold)
 JOIN "users" u ON u.email = l.user_email
 JOIN category c ON c.name = l.category_name
 ON CONFLICT (user_id, title) DO NOTHING;
 
 -- Insert Other Users' Listings
-INSERT INTO listing (user_id, title, description, category_id, price, condition, location, created_at, expires_at, sold)
+INSERT INTO listing (user_id, title, description, category_id, price, condition, city_id, custom_city, created_at, expires_at, sold)
 SELECT
     u.id,
     l.title,
@@ -157,21 +151,22 @@ SELECT
     c.id,
     l.price,
     l.condition,
-    l.location,
+    l.city_id,
+    l.custom_city,
     l.created_at,
     l.expires_at,
     l.sold
 FROM (
          VALUES
-             ('john@example.com', 'MacBook Air M2', 'Like new MacBook Air with M2 chip, 8GB RAM, 256GB SSD. Perfect for work and study. Includes original box and charger.', 'Electronics', 1099.00, 'LIKE_NEW', 'San Francisco, CA', NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false),
-             ('sarah@example.com', 'Vintage Chanel Bag', 'Authentic vintage Chanel bag from 1990s. Classic black leather with gold hardware. Excellent condition with original dust bag.', 'Fashion & Accessories', 2500.00, 'EXCELLENT', 'Los Angeles, CA', NOW() - INTERVAL '7 days', NOW() + INTERVAL '23 days', false),
-             ('mike@example.com', 'Vintage Dining Table Set', 'Solid oak dining table with 6 chairs. Beautiful craftsmanship from the 1960s. Perfect for family gatherings.', 'Home & Garden', 800.00, 'EXCELLENT', 'Chicago, IL', NOW() - INTERVAL '6 days', NOW() + INTERVAL '24 days', false),
-             ('alex@example.com', 'Mountain Bike', 'Trek mountain bike with 21-speed gears. Great for trails and city riding. Recently serviced and ready to ride.', 'Sports & Outdoors', 350.00, 'GOOD', 'Seattle, WA', NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false),
-             ('emma@example.com', 'Rare Book Collection', 'Collection of 10 rare first edition books from the 1800s. Includes works by Dickens, Twain, and other classics.', 'Books & Media', 500.00, 'EXCELLENT', 'Boston, MA', NOW() - INTERVAL '4 days', NOW() + INTERVAL '26 days', false),
-             ('lisa@example.com', 'Contemporary Art Painting', 'Original acrylic painting by local artist. Abstract composition with vibrant colors. 24x36 inches, ready to hang.', 'Art & Collectibles', 1200.00, 'EXCELLENT', 'Miami, FL', NOW() - INTERVAL '5 days', NOW() + INTERVAL '25 days', false),
-             ('david@example.com', 'Fender Stratocaster Guitar', 'Vintage Fender Stratocaster from 1985. Excellent condition with original pickups. Perfect for collectors and players.', 'Musical Instruments', 1800.00, 'EXCELLENT', 'Nashville, TN', NOW() - INTERVAL '8 days', NOW() + INTERVAL '22 days', false),
-             ('maria@example.com', '5 x Bananas', '5 x premium bananas for sale', 'Food & Beverages', 8.00, 'EXCELLENT', 'Phoenix, AZ', NOW() - INTERVAL '2 days', NOW() + INTERVAL '28 days', false)
-     ) AS l(user_email, title, description, category_name, price, condition, location, created_at, expires_at, sold)
+             ('john@example.com', 'MacBook Air M2', 'Like new MacBook Air with M2 chip, 8GB RAM, 256GB SSD. Perfect for work and study. Includes original box and charger.', 'Electronics', 1099.00, 'LIKE_NEW', 1, NULL, NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false),
+             ('sarah@example.com', 'Vintage Chanel Bag', 'Authentic vintage Chanel bag from 1990s. Classic black leather with gold hardware. Excellent condition with original dust bag.', 'Fashion & Accessories', 2500.00, 'EXCELLENT', 3, NULL, NOW() - INTERVAL '7 days', NOW() + INTERVAL '23 days', false),
+             ('mike@example.com', 'Vintage Dining Table Set', 'Solid oak dining table with 6 chairs. Beautiful craftsmanship from the 1960s. Perfect for family gatherings.', 'Home & Garden', 800.00, 'EXCELLENT', 6, NULL, NOW() - INTERVAL '6 days', NOW() + INTERVAL '24 days', false),
+             ('alex@example.com', 'Mountain Bike', 'Trek mountain bike with 21-speed gears. Great for trails and city riding. Recently serviced and ready to ride.', 'Sports & Outdoors', 350.00, 'GOOD', 4, NULL, NOW() - INTERVAL '3 days', NOW() + INTERVAL '27 days', false),
+             ('emma@example.com', 'Rare Book Collection', 'Collection of 10 rare first edition books from the 1800s. Includes works by Dickens, Twain, and other classics.', 'Books & Media', 500.00, 'EXCELLENT', 5, NULL, NOW() - INTERVAL '4 days', NOW() + INTERVAL '26 days', false),
+             ('lisa@example.com', 'Contemporary Art Painting', 'Original acrylic painting by local artist. Abstract composition with vibrant colors. 24x36 inches, ready to hang.', 'Art & Collectibles', 1200.00, 'EXCELLENT', 3, NULL, NOW() - INTERVAL '5 days', NOW() + INTERVAL '25 days', false),
+             ('david@example.com', 'Fender Stratocaster Guitar', 'Vintage Fender Stratocaster from 1985. Excellent condition with original pickups. Perfect for collectors and players.', 'Musical Instruments', 1800.00, 'EXCELLENT', 2, NULL, NOW() - INTERVAL '8 days', NOW() + INTERVAL '22 days', false),
+             ('maria@example.com', '5 x Bananas', '5 x premium bananas for sale', 'Food & Beverages', 8.00, 'EXCELLENT', 10, NULL, NOW() - INTERVAL '2 days', NOW() + INTERVAL '28 days', false)
+     ) AS l(user_email, title, description, category_name, price, condition, city_id, custom_city, created_at, expires_at, sold)
          JOIN "users" u ON u.email = l.user_email
          JOIN category c ON c.name = l.category_name
 ON CONFLICT (user_id, title) DO NOTHING;

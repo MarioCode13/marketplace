@@ -35,13 +35,15 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             + "AND (:minPrice IS NULL OR l.price >= :minPrice) "
             + "AND (:maxPrice IS NULL OR l.price <= :maxPrice) "
             + "AND (:condition IS NULL OR l.condition = :condition) "
+            + "AND (:cityId IS NULL OR l.city.id = :cityId) "
+            + "AND (:searchTerm = '' OR l.title LIKE CONCAT('%', :searchTerm, '%') OR l.description LIKE CONCAT('%', :searchTerm, '%')) "
             + "AND l.sold = false")
     Page<Listing> findFilteredListings(
             @Param("categoryId") Long categoryId, 
             @Param("minPrice") Double minPrice, 
             @Param("maxPrice") Double maxPrice,
             @Param("condition") Condition condition,
-            @Param("location") String location,
+            @Param("cityId") Long cityId,
             @Param("searchTerm") String searchTerm,
             Pageable pageable);
 
@@ -62,10 +64,6 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     // Find listings by condition
     @Query("SELECT l FROM Listing l WHERE l.condition = :condition AND l.sold = false")
     Page<Listing> findByCondition(@Param("condition") Condition condition, Pageable pageable);
-
-    // Find listings by location
-    @Query("SELECT l FROM Listing l WHERE l.location LIKE CONCAT('%', :location, '%') AND l.sold = false")
-    Page<Listing> findByLocationContaining(@Param("location") String location, Pageable pageable);
 
     // Find recent listings
     @Query("SELECT l FROM Listing l WHERE l.createdAt >= :since AND l.sold = false")

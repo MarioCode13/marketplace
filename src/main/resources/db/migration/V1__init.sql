@@ -1,3 +1,26 @@
+-- Country Table
+CREATE TABLE IF NOT EXISTS country (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(10) NOT NULL UNIQUE
+);
+
+-- Region Table
+CREATE TABLE IF NOT EXISTS region (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    country_id INTEGER REFERENCES country(id),
+    CONSTRAINT unique_region_per_country UNIQUE (name, country_id)
+);
+
+-- City Table
+CREATE TABLE IF NOT EXISTS city (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    region_id INTEGER REFERENCES region(id),
+    CONSTRAINT unique_city_per_region UNIQUE (name, region_id)
+);
+
 -- User Table
 CREATE TABLE IF NOT EXISTS "users" (
    id SERIAL PRIMARY KEY,
@@ -12,7 +35,8 @@ CREATE TABLE IF NOT EXISTS "users" (
     first_name VARCHAR(255),
     last_name VARCHAR(255),
     bio TEXT,
-    location VARCHAR(255),
+    city_id INTEGER REFERENCES city(id),
+    custom_city VARCHAR(100),
     contact_number VARCHAR(255),
     id_number VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -23,6 +47,45 @@ CREATE TABLE IF NOT EXISTS category (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE
 );
+
+-- Seed Countries
+
+INSERT INTO country (name, code) VALUES
+  ('South Africa', 'ZA'),
+  ('United States', 'US')
+ON CONFLICT (code) DO NOTHING;
+
+-- South African provinces (regions)
+INSERT INTO region ( name, country_id) VALUES
+                                              ( 'Gauteng', 1),
+                                              ( 'Western Cape', 1),
+                                              ( 'KwaZulu-Natal', 1),
+                                              ( 'Eastern Cape', 1),
+                                              ( 'Free State', 1),
+                                              ( 'Limpopo', 1),
+                                              ( 'Mpumalanga', 1),
+                                              ( 'North West', 1),
+                                              ( 'Northern Cape', 1),
+                                              ('California', (SELECT id FROM country WHERE code = 'US')),
+                                              ('New York', (SELECT id FROM country WHERE code = 'US'))
+ON CONFLICT (name, country_id) DO NOTHING;
+
+-- Seed Cities
+INSERT INTO city (name, region_id) VALUES
+  ('Johannesburg', (SELECT id FROM region WHERE name = 'Gauteng')),
+  ('Pretoria', (SELECT id FROM region WHERE name = 'Gauteng')),
+  ('Cape Town', (SELECT id FROM region WHERE name = 'Western Cape')),
+  ('Durban', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+  ( 'Port Elizabeth', 4),
+  ( 'Bloemfontein', 5),
+  ( 'Polokwane', 6),
+  ( 'Nelspruit', 7),
+  ( 'Mahikeng', 8),
+  ( 'Kimberley', 9),
+  ('Los Angeles', (SELECT id FROM region WHERE name = 'California')),
+  ('San Francisco', (SELECT id FROM region WHERE name = 'California')),
+  ('New York City', (SELECT id FROM region WHERE name = 'New York'))
+ON CONFLICT (name, region_id) DO NOTHING;
 
 -- Insert Core Categories
 INSERT INTO category (name) VALUES
@@ -52,7 +115,8 @@ CREATE TABLE IF NOT EXISTS listing (
     category_id BIGINT,
     price DOUBLE PRECISION NOT NULL,
     sold BOOLEAN DEFAULT FALSE,
-    location VARCHAR(255),
+    city_id INTEGER REFERENCES city(id),
+    custom_city VARCHAR(100),
     condition VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,

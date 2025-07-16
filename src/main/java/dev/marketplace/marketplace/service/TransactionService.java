@@ -239,12 +239,13 @@ public class TransactionService {
                 preSignedUrls,
                 listing.getCategory(),
                 listing.getPrice(),
-                listing.getLocation(),
+                listing.getCity(),
+                listing.getCustomCity(),
                 listing.getCondition().name(),
                 listing.getUser(),
                 listing.getCreatedAt(),
                 listing.isSold(),
-                listing.getExpiresAt().toString()
+                listing.getExpiresAt() != null ? listing.getExpiresAt().toString() : null
         );
         
         return TransactionDTO.fromTransaction(transaction, listingDTO);

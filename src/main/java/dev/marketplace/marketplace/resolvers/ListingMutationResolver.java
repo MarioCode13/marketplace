@@ -29,12 +29,13 @@ public class ListingMutationResolver {
     public Listing createListing(@Argument String title,
                                  @Argument Double price,
                                  @Argument String description,
-                                 @Argument String location,
                                  @Argument List<String> images,
                                  @Argument Condition condition,
                                  @Argument Long categoryId,
-                                 @Argument Long userId) {
-        return listingService.createListing(title, description, images, categoryId, price, location, condition, userId);
+                                 @Argument Long userId,
+                                 @Argument Long cityId,
+                                 @Argument String customCity) {
+        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId);
     }
 
     @MutationMapping

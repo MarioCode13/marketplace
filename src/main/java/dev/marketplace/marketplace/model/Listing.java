@@ -40,8 +40,12 @@ public class Listing {
 
     private double price;
     private boolean sold = false;
-    @Column(columnDefinition = "TEXT")
-    private String location;
+    @ManyToOne
+    @JoinColumn(name = "city_id")
+    private City city;
+
+    @Column(name = "custom_city")
+    private String customCity;
 
     @Enumerated(EnumType.STRING)
     private Condition condition;
@@ -63,7 +67,8 @@ public class Listing {
         this.category = builder.category;
         this.price = builder.price;
         this.sold = builder.sold;
-        this.location = builder.location;
+        this.city = builder.city;
+        this.customCity = builder.customCity;
         this.condition = builder.condition;
         this.createdAt = builder.createdAt;
         this.expiresAt = builder.expiresAt;
@@ -78,7 +83,8 @@ public class Listing {
         private Category category;
         private double price;
         private boolean sold = false;
-        private String location;
+        private City city;
+        private String customCity;
         private Condition condition;
         private LocalDateTime createdAt = LocalDateTime.now();
         private LocalDateTime expiresAt;
@@ -123,8 +129,13 @@ public class Listing {
             return this;
         }
 
-        public Builder location(String location) {
-            this.location = location;
+        public Builder city(City city) {
+            this.city = city;
+            return this;
+        }
+
+        public Builder customCity(String customCity) {
+            this.customCity = customCity;
             return this;
         }
 

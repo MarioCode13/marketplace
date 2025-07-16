@@ -50,8 +50,12 @@ public class User {
     @Column(name = "bio")
     private String bio;
 
-    @Column(name = "location")
-    private String location;
+    @ManyToOne
+    @JoinColumn(name = "city_id")
+    private City city;
+
+    @Column(name = "custom_city")
+    private String customCity;
 
     @Column(name = "contact_number")
     private String contactNumber;

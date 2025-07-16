@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 public class ListingValidationService {
 
     public void validateListingCreation(String title, String description, double price, 
-                                       String location, Condition condition, Long userId) {
+                                       Long cityId, Condition condition, Long userId) {
         validateTitle(title);
         validateDescription(description);
         validatePrice(price);
-        validateLocation(location);
+        validateCityId(cityId);
         validateCondition(condition);
         validateUserId(userId);
     }
@@ -104,6 +104,12 @@ public class ListingValidationService {
         
         if (listingId <= 0) {
             throw new IllegalArgumentException("Invalid listing ID");
+        }
+    }
+
+    private void validateCityId(Long cityId) {
+        if (cityId == null) {
+            throw new IllegalArgumentException("City is required");
         }
     }
 } 

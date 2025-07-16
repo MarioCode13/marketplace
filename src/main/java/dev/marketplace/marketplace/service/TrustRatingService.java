@@ -219,7 +219,8 @@ public class TrustRatingService {
         profileCompletion.setHasProfilePhoto(user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty());
         profileCompletion.setHasBio(user.getBio() != null && !user.getBio().isEmpty());
         profileCompletion.setHasContactNumber(user.getContactNumber() != null && !user.getContactNumber().isEmpty());
-        profileCompletion.setHasLocation(user.getLocation() != null && !user.getLocation().isEmpty());
+        boolean hasLocation = (user.getCity() != null) || (user.getCustomCity() != null && !user.getCustomCity().isEmpty());
+        profileCompletion.setHasLocation(hasLocation);
         profileCompletion.setHasVerifiedEmail(true); // Assuming email is verified if user exists
         profileCompletion.setHasVerifiedPhone(false); // Will be updated when phone verification is implemented
         

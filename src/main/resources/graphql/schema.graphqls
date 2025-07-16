@@ -15,7 +15,8 @@ type User {
     firstName: String
     lastName: String
     bio: String
-    location: String
+    city: City
+    customCity: String
     contactNumber: String
     idPhotoUrl: String
     driversLicenseUrl: String
@@ -45,7 +46,8 @@ type Listing {
     category: Category
     price: Float!
     sold: Boolean!
-    location: String!
+    city: City
+    customCity: String
     condition: Condition!
     createdAt: String!
     expiresAt: String!
@@ -212,7 +214,7 @@ type Query {
         minPrice: Float
         maxPrice: Float
         condition: Condition
-        location: String
+        cityId: ID
         searchTerm: String
         minDate: String
         maxDate: String
@@ -256,10 +258,11 @@ type Query {
     getUserDocumentByType(userId: ID!, documentType: DocumentType!): VerificationDocument
     reviewsByUser(userId: ID!): [Review!]!
     listingsByUser(userId: ID!): [Listing!]!
+    searchCities(query: String!): [City!]!
 }
 
 type Mutation {
-    updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, location: String): User
+    updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, cityId: ID, customCity: String): User
     register(username: String!, email: String!, password: String!): AuthResponse!
     login(emailOrUsername: String!, password: String!): AuthResponse!
     uploadListingImage(image: String!): String!
@@ -267,7 +270,8 @@ type Mutation {
         title: String!
         description: String!
         price: Float!
-        location: String!
+        cityId: ID!
+        customCity: String!
         condition: Condition!
         images: [String!]!
         categoryId: ID!
@@ -287,4 +291,22 @@ type Mutation {
     updateListingPrice(listingId: ID!, newPrice: Float!): Listing!
     updateListingTitle(listingId: ID!, newTitle: String!): Listing!
     updateListingDescription(listingId: ID!, newDescription: String!): Listing!
+}
+
+type Country {
+    id: ID!
+    name: String!
+    code: String!
+}
+
+type Region {
+    id: ID!
+    name: String!
+    country: Country!
+}
+
+type City {
+    id: ID!
+    name: String!
+    region: Region!
 }

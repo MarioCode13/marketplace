@@ -33,9 +33,10 @@ public class UserMutationResolver {
             @Argument String firstName,
             @Argument String lastName,
             @Argument String bio,
-            @Argument String location
+            @Argument Long cityId,
+            @Argument String customCity
     ) {
-        return userService.updateUser(id, username, email, firstName, lastName, bio, location);
+        return userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity);
     }
 
     @MutationMapping

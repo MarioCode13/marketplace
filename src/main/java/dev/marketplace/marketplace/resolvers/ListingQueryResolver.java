@@ -37,7 +37,7 @@ public class ListingQueryResolver {
             @Argument Double minPrice,
             @Argument Double maxPrice,
             @Argument String condition,
-            @Argument String location,
+            @Argument Long cityId,
             @Argument String searchTerm,
             @Argument String minDate,
             @Argument String maxDate,
@@ -93,7 +93,7 @@ public class ListingQueryResolver {
 
         return listingService.getListingsWithFilters(
             limit, offset, categoryIdLong, minPrice, maxPrice, 
-            conditionEnum, location, searchTerm, minDateTime, maxDateTime, sortBy, sortOrder);
+            conditionEnum, cityId, searchTerm, minDateTime, maxDateTime, sortBy, sortOrder);
     }
 
     @QueryMapping

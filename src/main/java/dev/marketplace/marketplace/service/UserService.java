@@ -19,6 +19,8 @@ import dev.marketplace.marketplace.exceptions.ValidationException;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import dev.marketplace.marketplace.model.City;
+import dev.marketplace.marketplace.repository.CityRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -38,11 +40,13 @@ public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final B2StorageService b2StorageService;
+    private final CityRepository cityRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.b2StorageService = b2StorageService;
+        this.cityRepository = cityRepository;
     }
 
     @Override
@@ -115,7 +119,7 @@ public class UserService implements UserDetailsService {
         return savedUser;
     }
 
-    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, String location) {
+    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, Long cityId, String customCity) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -142,8 +146,13 @@ public class UserService implements UserDetailsService {
         if (bio != null) {
             user.setBio(bio);
         }
-        if (location != null) {
-            user.setLocation(location);
+        if (cityId != null) {
+            City city = cityRepository.findById(cityId)
+                .orElseThrow(() -> new IllegalArgumentException("City not found with ID: " + cityId));
+            user.setCity(city);
+        }
+        if (customCity != null) {
+            user.setCustomCity(customCity);
         }
 
         return userRepository.save(user);

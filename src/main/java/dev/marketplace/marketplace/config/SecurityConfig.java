@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.config;
 
+import dev.marketplace.marketplace.repository.CityRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.security.JwtAuthenticationFilter;
 import dev.marketplace.marketplace.security.JwtUtil;
@@ -41,8 +42,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService) {
-        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository) {
+        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService, cityRepository);
     }
 
     @Bean
