@@ -4,10 +4,14 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.model.TrustRating;
 import dev.marketplace.marketplace.model.VerificationDocument;
 import dev.marketplace.marketplace.model.ProfileCompletion;
+import dev.marketplace.marketplace.model.Listing;
+import dev.marketplace.marketplace.dto.ListingDTO;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.service.TrustRatingService;
 import dev.marketplace.marketplace.service.VerificationDocumentService;
+import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.repository.ProfileCompletionRepository;
+import dev.marketplace.marketplace.repository.StoreBrandingRepository;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import dev.marketplace.marketplace.model.StoreBranding;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @Controller
@@ -30,6 +35,8 @@ public class UserQueryResolver {
     private final TrustRatingService trustRatingService;
     private final VerificationDocumentService verificationDocumentService;
     private final ProfileCompletionRepository profileCompletionRepository;
+    private final StoreBrandingRepository storeBrandingRepository;
+    private final ListingService listingService;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(User user) {
@@ -78,11 +85,33 @@ public class UserQueryResolver {
         return profileCompletionRepository.findByUserId(user.getId()).orElse(null);
     }
 
-    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService, VerificationDocumentService verificationDocumentService, ProfileCompletionRepository profileCompletionRepository) {
+    @SchemaMapping(typeName = "User", field = "planType")
+    public String resolvePlanType(User user) {
+        return user.getPlanType();
+    }
+
+    @SchemaMapping(typeName = "User", field = "storeBranding")
+    public dev.marketplace.marketplace.model.StoreBranding resolveStoreBranding(User user) {
+        return user.getStoreBranding();
+    }
+
+    @SchemaMapping(typeName = "StoreBranding", field = "storeName")
+    public String resolveStoreName(StoreBranding branding) {
+        return branding.getStoreName();
+    }
+
+    @SchemaMapping(typeName = "User", field = "listings")
+    public List<ListingDTO> getListings(User user) {
+        return listingService.getListingsByUserId(user.getId());
+    }
+
+    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService, VerificationDocumentService verificationDocumentService, ProfileCompletionRepository profileCompletionRepository, StoreBrandingRepository storeBrandingRepository, ListingService listingService) {
         this.userService = userService;
         this.trustRatingService = trustRatingService;
         this.verificationDocumentService = verificationDocumentService;
         this.profileCompletionRepository = profileCompletionRepository;
+        this.storeBrandingRepository = storeBrandingRepository;
+        this.listingService = listingService;
     }
 
     @QueryMapping
@@ -120,6 +149,12 @@ public class UserQueryResolver {
         return userService.getProfileImageUrl(userId);
     }
 
+    @QueryMapping
+    public User storeBySlug(@Argument String slug) {
+        return storeBrandingRepository.findBySlug(slug)
+                .map(dev.marketplace.marketplace.model.StoreBranding::getUser)
+                .orElse(null);
+    }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")

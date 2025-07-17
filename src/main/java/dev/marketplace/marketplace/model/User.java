@@ -10,6 +10,9 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.JoinColumn;
 
 @Entity
 @Table(name = "users")
@@ -75,8 +78,19 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "plan_type")
+    private String planType; // FREE, VERIFIED, RESELLER, PRO_STORE
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private StoreBranding storeBranding;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
+
+    public String getPlanType() { return planType; }
+    public void setPlanType(String planType) { this.planType = planType; }
+    public StoreBranding getStoreBranding() { return storeBranding; }
+    public void setStoreBranding(StoreBranding storeBranding) { this.storeBranding = storeBranding; }
 }

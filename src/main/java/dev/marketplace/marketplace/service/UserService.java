@@ -119,7 +119,7 @@ public class UserService implements UserDetailsService {
         return savedUser;
     }
 
-    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, Long cityId, String customCity) {
+    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, Long cityId, String customCity, String contactNumber) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -153,6 +153,9 @@ public class UserService implements UserDetailsService {
         }
         if (customCity != null) {
             user.setCustomCity(customCity);
+        }
+        if (contactNumber != null) {
+            user.setContactNumber(contactNumber);
         }
 
         return userRepository.save(user);
@@ -240,7 +243,7 @@ public class UserService implements UserDetailsService {
     }
 
     public User getUserById(Long id) {
-        return userRepository.findById(id)
+        return userRepository.findByIdWithCity(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
@@ -343,5 +346,32 @@ public class UserService implements UserDetailsService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload profile image", e);
         }
+    }
+
+    @Transactional
+    public User updateUserPlanType(Long userId, String planType) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        user.setPlanType(planType);
+        return userRepository.save(user);
+    }
+
+    @Transactional
+    public User updateStoreBranding(Long userId, String slug, String logoUrl, String bannerUrl, String themeColor, String about) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        dev.marketplace.marketplace.model.StoreBranding branding = user.getStoreBranding();
+        if (branding == null) {
+            branding = new dev.marketplace.marketplace.model.StoreBranding();
+            branding.setUser(user);
+            branding.setUserId(userId);
+        }
+        branding.setSlug(slug);
+        branding.setLogoUrl(logoUrl);
+        branding.setBannerUrl(bannerUrl);
+        branding.setThemeColor(themeColor);
+        branding.setAbout(about);
+        user.setStoreBranding(branding);
+        return userRepository.save(user);
     }
 }

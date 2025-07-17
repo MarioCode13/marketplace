@@ -25,6 +25,18 @@ type User {
     profileCompletion: ProfileCompletion
     verificationDocuments: [VerificationDocument!]
     subscription: Subscription
+    planType: String
+    storeBranding: StoreBranding
+    listings: [Listing!]!
+}
+
+type StoreBranding {
+    slug: String
+    logoUrl: String
+    bannerUrl: String
+    themeColor: String
+    about: String
+    storeName: String
 }
 
 enum Condition {
@@ -259,6 +271,7 @@ type Query {
     reviewsByUser(userId: ID!): [Review!]!
     listingsByUser(userId: ID!): [Listing!]!
     searchCities(query: String!): [City!]!
+    storeBySlug(slug: String!): User
 }
 
 type Mutation {
@@ -291,6 +304,8 @@ type Mutation {
     updateListingPrice(listingId: ID!, newPrice: Float!): Listing!
     updateListingTitle(listingId: ID!, newTitle: String!): Listing!
     updateListingDescription(listingId: ID!, newDescription: String!): Listing!
+    updateUserPlanType(id: ID!, planType: String!): User
+    updateStoreBranding(id: ID!, slug: String, logoUrl: String, bannerUrl: String, themeColor: String, about: String): User
 }
 
 type Country {

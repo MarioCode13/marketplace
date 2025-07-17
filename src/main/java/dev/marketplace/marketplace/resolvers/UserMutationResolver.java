@@ -34,9 +34,10 @@ public class UserMutationResolver {
             @Argument String lastName,
             @Argument String bio,
             @Argument Long cityId,
-            @Argument String customCity
+            @Argument String customCity,
+            @Argument String contactNumber
     ) {
-        return userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity);
+        return userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity, contactNumber);
     }
 
     @MutationMapping
@@ -47,5 +48,22 @@ public class UserMutationResolver {
         userService.updateProfileImage(userId, imageUrl);
 
         return imageUrl;
+    }
+
+    @MutationMapping
+    public User updateUserPlanType(@Argument Long id, @Argument String planType) {
+        return userService.updateUserPlanType(id, planType);
+    }
+
+    @MutationMapping
+    public User updateStoreBranding(
+            @Argument Long id,
+            @Argument String slug,
+            @Argument String logoUrl,
+            @Argument String bannerUrl,
+            @Argument String themeColor,
+            @Argument String about
+    ) {
+        return userService.updateStoreBranding(id, slug, logoUrl, bannerUrl, themeColor, about);
     }
 }

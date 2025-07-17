@@ -1,19 +1,53 @@
 -- Comprehensive Development Data Script (NOT a Flyway migration)
 -- This script should be run manually for development purposes only
 
--- Update users: use city_id for known cities, custom_city for others
-INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, city_id, custom_city, contact_number, profile_image_url) VALUES
-('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.', 1, NULL, '+27-10-555-0100', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('test', 'test@test.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', NULL, NULL, NULL, 3, NULL, NULL, 'profiles/10/profile.jpg'),
-('john_doe', 'john@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'John', 'Doe', 'Tech enthusiast and software developer. Love collecting vintage electronics and gaming gear.', 1, NULL, '+27-10-555-0101', 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('sarah_smith', 'sarah@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Sarah', 'Smith', 'Fashion designer with 10+ years experience. Specializing in vintage and designer pieces.', 3, NULL, '+27-21-555-0102', 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('mike_wilson', 'mike@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Mike', 'Wilson', 'Home improvement expert and furniture restorer. Quality craftsmanship guaranteed.', 6, NULL, '+27-51-555-0103', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('emma_davis', 'emma@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Emma', 'Davis', 'Book lover and rare book collector. PhD in Literature with extensive collection.', 5, NULL, '+27-41-555-0104', 'https://images.unsplash.com/photo-1479936343636-73cdc5aae0c3?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('alex_chen', 'alex@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Alex', 'Chen', 'Sports equipment dealer and outdoor enthusiast. Certified in sports equipment maintenance.', 4, NULL, '+27-31-555-0105', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('lisa_johnson', 'lisa@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Lisa', 'Johnson', 'Art collector and gallery owner. Specializing in contemporary and modern art.', 3, NULL, '+27-21-555-0106', 'https://images.unsplash.com/photo-1515138692129-197a2c608cfd?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('david_brown', 'david@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'David', 'Brown', 'Musician and instrument dealer. Professional guitarist with 15 years experience.', 2, NULL, '+27-12-555-0107', 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('maria_garcia', 'maria@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Maria', 'Garcia', 'Jewelry designer and gemologist. Certified appraiser with GIA credentials.', 10, NULL, '+27-53-555-0108', 'https://images.unsplash.com/photo-1508185140592-283327020902?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
+-- Update users: use city_id for known cities, custom_city for others, and set planType
+INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, city_id, custom_city, contact_number, profile_image_url, plan_type) VALUES
+('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.', 1, NULL, '+27-10-555-0100', 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'PRO_STORE'),
+('test', 'test@test.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', NULL, NULL, NULL, 3, NULL, NULL, 'profiles/10/profile.jpg', 'FREE'),
+('john_doe', 'john@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'John', 'Doe', 'Tech enthusiast and software developer. Love collecting vintage electronics and gaming gear.', 1, NULL, '+27-10-555-0101', 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'VERIFIED'),
+('sarah_smith', 'sarah@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Sarah', 'Smith', 'Fashion designer with 10+ years experience. Specializing in vintage and designer pieces.', 3, NULL, '+27-21-555-0102', 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'RESELLER'),
+('mike_wilson', 'mike@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Mike', 'Wilson', 'Home improvement expert and furniture restorer. Quality craftsmanship guaranteed.', 6, NULL, '+27-51-555-0103', 'https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE'),
+('emma_davis', 'emma@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Emma', 'Davis', 'Book lover and rare book collector. PhD in Literature with extensive collection.', 5, NULL, '+27-41-555-0104', 'https://images.unsplash.com/photo-1479936343636-73cdc5aae0c3?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE'),
+('alex_chen', 'alex@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Alex', 'Chen', 'Sports equipment dealer and outdoor enthusiast. Certified in sports equipment maintenance.', 4, NULL, '+27-31-555-0105', 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE'),
+('lisa_johnson', 'lisa@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Lisa', 'Johnson', 'Art collector and gallery owner. Specializing in contemporary and modern art.', 3, NULL, '+27-21-555-0106', 'https://images.unsplash.com/photo-1515138692129-197a2c608cfd?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE'),
+('david_brown', 'david@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'David', 'Brown', 'Musician and instrument dealer. Professional guitarist with 15 years experience.', 2, NULL, '+27-12-555-0107', 'https://images.unsplash.com/photo-1504257432389-52343af06ae3?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE'),
+('maria_garcia', 'maria@example.com', '$2a$10$79.l8wpc.yZ6CnXz6a18H.dM3Jb47V8HIfd44Xm57GvS1O8o2jMAC', 'HAS_ACCOUNT', 'Maria', 'Garcia', 'Jewelry designer and gemologist. Certified appraiser with GIA credentials.', 10, NULL, '+27-53-555-0108', 'https://images.unsplash.com/photo-1508185140592-283327020902?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'FREE')
 ON CONFLICT (email) DO NOTHING;
+
+-- Add reseller user
+INSERT INTO "users" (username, email, password, role, plan_type, first_name, last_name, bio, city_id, contact_number, created_at)
+VALUES (
+  'resellerjoe',
+  'reseller@marketplace.com',
+  '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQwQw', -- bcrypt for 'password'
+  'HAS_ACCOUNT',
+  'RESELLER',
+  'Joe',
+  'Reseller',
+  'We sell the best gadgets and accessories!',
+  (SELECT id FROM city WHERE name = 'Cape Town'),
+  '+27111222333',
+  NOW()
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- Add store branding for reseller
+INSERT INTO store_branding (user_id, slug, store_name, logo_url, banner_url, theme_color, about)
+SELECT id, 'reseller-joe',
+  'Joe''s Gadget Store',
+  'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
+  'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
+  '#e53e3e',
+  'Welcome to Joe''s Reseller Store! Find top gadgets and more.'
+FROM "users" WHERE email = 'reseller@marketplace.com'
+ON CONFLICT (user_id) DO NOTHING;
+
+-- Store branding for admin (pro store)
+INSERT INTO store_branding (user_id, slug, store_name, logo_url, banner_url, theme_color, about)
+SELECT id, 'admin-pro', 'ProStore', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#1a202c', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.'
+FROM "users" WHERE email = 'admin@admin.com'
+ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Profile Completion records for all users
 INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_verified_email, has_verified_phone, has_id_verification, has_address_verification, completion_percentage) 
@@ -197,7 +231,55 @@ JOIN (
     ('5 x Bananas', 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ) AS li(listing_title, image_path) ON l.title = li.listing_title;
 
+-- ResellerJoe's Listings
+INSERT INTO listing (user_id, title, description, category_id, price, condition, city_id, custom_city, created_at, expires_at, sold)
+SELECT
+    u.id,
+    'Wireless Earbuds Pro',
+    'Brand new wireless earbuds with noise cancellation, 24h battery, and fast charging. Includes case and all accessories.',
+    c.id,
+    89.99,
+    'NEW',
+    city.id,
+    NULL,
+    NOW() - INTERVAL '2 days',
+    NOW() + INTERVAL '28 days',
+    false
+FROM "users" u
+JOIN category c ON c.name = 'Electronics'
+JOIN city ON city.name = 'Cape Town'
+WHERE u.email = 'reseller@marketplace.com';
 
+INSERT INTO listing (user_id, title, description, category_id, price, condition, city_id, custom_city, created_at, expires_at, sold)
+SELECT
+    u.id,
+    'Smart LED Desk Lamp',
+    'Modern LED desk lamp with adjustable brightness, color temperature, and USB charging port. Perfect for home or office.',
+    c.id,
+    39.99,
+    'NEW',
+    city.id,
+    NULL,
+    NOW() - INTERVAL '1 days',
+    NOW() + INTERVAL '29 days',
+    false
+FROM "users" u
+JOIN category c ON c.name = 'Home & Garden'
+JOIN city ON city.name = 'Cape Town'
+WHERE u.email = 'reseller@marketplace.com';
+
+-- Images for ResellerJoe's Listings
+INSERT INTO listing_image (listing_id, image)
+SELECT l.id, 'https://images.unsplash.com/photo-1722439667098-f32094e3b1d4?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+FROM listing l
+JOIN "users" u ON l.user_id = u.id
+WHERE l.title = 'Wireless Earbuds Pro' AND u.email = 'reseller@marketplace.com';
+
+INSERT INTO listing_image (listing_id, image)
+SELECT l.id, 'https://plus.unsplash.com/premium_photo-1672166939372-5b16118eee45?q=80&w=627&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+FROM listing l
+JOIN "users" u ON l.user_id = u.id
+WHERE l.title = 'Smart LED Desk Lamp' AND u.email = 'reseller@marketplace.com';
 
 -- Insert verification documents for admin (verified)
 INSERT INTO verification_document (user_id, document_type, document_url, status, verified_at, verified_by) 
@@ -349,3 +431,20 @@ FROM "transaction" t
 WHERE t.status = 'COMPLETED'
 AND t.id NOT IN (SELECT transaction_id FROM review)
 LIMIT 3; 
+
+-- Admin purchases (admin@admin.com as buyer)
+INSERT INTO "transaction" (buyer_id, seller_id, listing_id, sale_price, sale_date, status, payment_method, notes)
+SELECT 
+    admin.id,
+    seller.id,
+    l.id,
+    l.price,
+    NOW() - INTERVAL '2 days',
+    'COMPLETED',
+    'CREDIT_CARD',
+    'Admin purchase for dev data'
+FROM listing l
+JOIN "users" seller ON l.user_id = seller.id
+JOIN "users" admin ON admin.email = 'admin@admin.com'
+WHERE l.title IN ('MacBook Air M2', 'Vintage Chanel Bag', 'Mountain Bike')
+  AND seller.email != 'admin@admin.com'; 

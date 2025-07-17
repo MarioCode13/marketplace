@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS "users" (
     custom_city VARCHAR(100),
     contact_number VARCHAR(255),
     id_number VARCHAR(255),
+    plan_type VARCHAR(32),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -256,6 +257,16 @@ CREATE TABLE subscription (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- StoreBranding Table
+CREATE TABLE IF NOT EXISTS store_branding (
+    user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    slug VARCHAR(100) UNIQUE,
+    logo_url TEXT,
+    banner_url TEXT,
+    theme_color VARCHAR(20),
+    about TEXT
+);
+
 -- Indexes for performance
 CREATE INDEX idx_trust_rating_user_id ON trust_rating(user_id);
 CREATE INDEX idx_verification_document_user_id ON verification_document(user_id);
@@ -271,3 +282,32 @@ CREATE INDEX idx_profile_completion_user_id ON profile_completion(user_id);
 CREATE INDEX idx_subscription_user_id ON subscription(user_id);
 CREATE INDEX idx_subscription_status ON subscription(status);
 CREATE INDEX idx_subscription_stripe_id ON subscription(stripe_subscription_id);
+
+-- Add reseller user
+INSERT INTO "users" (username, email, password, role, plan_type, first_name, last_name, bio, city_id, contact_number, created_at)
+VALUES (
+  'resellerjoe',
+  'reseller@marketplace.com',
+  '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQwQw', -- bcrypt for 'password'
+  'HAS_ACCOUNT',
+  'RESELLER',
+  'Joe',
+  'Reseller',
+  'We sell the best gadgets and accessories!',
+  (SELECT id FROM city WHERE name = 'Cape Town'),
+  '+27111222333',
+  NOW()
+)
+ON CONFLICT (email) DO NOTHING;
+
+-- Add store branding for reseller
+INSERT INTO store_branding (user_id, slug, logo_url, banner_url, theme_color, about)
+SELECT id, 'reseller-joe',
+  'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
+  'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
+  '#e53e3e',
+  'Welcome to Joe''s Reseller Store! Find top gadgets and more.'
+FROM "users" WHERE email = 'reseller@marketplace.com'
+ON CONFLICT (user_id) DO NOTHING;
+
+ALTER TABLE store_branding ADD COLUMN store_name VARCHAR(100);

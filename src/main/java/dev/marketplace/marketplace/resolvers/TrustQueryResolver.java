@@ -7,6 +7,7 @@ import dev.marketplace.marketplace.service.VerificationDocumentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -24,6 +25,14 @@ public class TrustQueryResolver {
     @QueryMapping
     public TrustRating getTrustRating(@Argument Long userId) {
         return trustRatingService.getTrustRating(userId);
+    }
+    
+    /**
+     * Resolve userId field for TrustRating
+     */
+    @SchemaMapping(typeName = "TrustRating", field = "userId")
+    public Long resolveUserId(TrustRating trustRating) {
+        return trustRating.getUser() != null ? trustRating.getUser().getId() : null;
     }
     
     /**
