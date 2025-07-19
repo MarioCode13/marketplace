@@ -33,119 +33,45 @@ VALUES (
 ON CONFLICT (email) DO NOTHING;
 
 -- Add store branding for reseller
-INSERT INTO store_branding (user_id, slug, store_name, logo_url, banner_url, theme_color, about)
+INSERT INTO store_branding (user_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
 SELECT id, 'reseller-joe',
-  'Joe''s Gadget Store',
   'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
   '#e53e3e',
-  'Welcome to Joe''s Reseller Store! Find top gadgets and more.'
+  '#e53e3e',
+  '#ffffff',
+  'light',
+  'Welcome to Joe''s Reseller Store! Find top gadgets and more.',
+  'Joe''s Reseller Store'
 FROM "users" WHERE email = 'reseller@marketplace.com'
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Store branding for admin (pro store)
-INSERT INTO store_branding (user_id, slug, store_name, logo_url, banner_url, theme_color, about)
-SELECT id, 'admin-pro', 'ProStore', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#1a202c', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.'
+INSERT INTO store_branding (user_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT id, 'admin-pro', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#6470ff', '#ff131a', '#ffffff', 'light', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.', 'Admin Pro Store'
 FROM "users" WHERE email = 'admin@admin.com'
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Profile Completion records for all users
-INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_verified_email, has_verified_phone, has_id_verification, has_address_verification, completion_percentage) 
-SELECT id, false, true, true, true, true, true, true, true, 87.50
+INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_id_document, has_drivers_license, has_proof_of_address, completion_percentage) 
+SELECT id, true, true, true, true, true, true, true, 100.00
 FROM "users"
 WHERE email IN ('admin@admin.com', 'test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com', 'lisa@example.com', 'david@example.com', 'maria@example.com')
 ON CONFLICT (user_id) DO NOTHING;
 
--- Insert Trust Ratings with varied scores
-INSERT INTO trust_rating (user_id, overall_score, document_score, profile_score, review_score, transaction_score, total_reviews, positive_reviews, total_transactions, successful_transactions) 
+-- Insert Trust Ratings with visually accurate demo scores
+INSERT INTO trust_rating (user_id, overall_score, verification_score, profile_score, review_score, transaction_score, total_reviews, positive_reviews, total_transactions, successful_transactions) 
 SELECT 
     u.id,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 98.00
-        WHEN u.email = 'sarah@example.com' THEN 96.00
-        WHEN u.email = 'emma@example.com' THEN 94.00
-        WHEN u.email = 'john@example.com' THEN 92.00
-        WHEN u.email = 'mike@example.com' THEN 90.00
-        WHEN u.email = 'alex@example.com' THEN 88.00
-        WHEN u.email = 'lisa@example.com' THEN 95.00
-        WHEN u.email = 'david@example.com' THEN 93.00
-        WHEN u.email = 'maria@example.com' THEN 97.00
-        ELSE 85.00
-    END as overall_score,
-    100.00 as document_score,
-    87.50 as profile_score,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 95.00
-        WHEN u.email = 'sarah@example.com' THEN 96.00
-        WHEN u.email = 'emma@example.com' THEN 94.00
-        WHEN u.email = 'john@example.com' THEN 92.00
-        WHEN u.email = 'mike@example.com' THEN 90.00
-        WHEN u.email = 'alex@example.com' THEN 88.00
-        WHEN u.email = 'lisa@example.com' THEN 95.00
-        WHEN u.email = 'david@example.com' THEN 93.00
-        WHEN u.email = 'maria@example.com' THEN 97.00
-        ELSE 85.00
-    END as review_score,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 98.00
-        WHEN u.email = 'sarah@example.com' THEN 96.00
-        WHEN u.email = 'emma@example.com' THEN 94.00
-        WHEN u.email = 'john@example.com' THEN 92.00
-        WHEN u.email = 'mike@example.com' THEN 90.00
-        WHEN u.email = 'alex@example.com' THEN 88.00
-        WHEN u.email = 'lisa@example.com' THEN 95.00
-        WHEN u.email = 'david@example.com' THEN 93.00
-        WHEN u.email = 'maria@example.com' THEN 97.00
-        ELSE 85.00
-    END as transaction_score,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 25
-        WHEN u.email = 'sarah@example.com' THEN 18
-        WHEN u.email = 'emma@example.com' THEN 15
-        WHEN u.email = 'john@example.com' THEN 12
-        WHEN u.email = 'mike@example.com' THEN 10
-        WHEN u.email = 'alex@example.com' THEN 8
-        WHEN u.email = 'lisa@example.com' THEN 20
-        WHEN u.email = 'david@example.com' THEN 14
-        WHEN u.email = 'maria@example.com' THEN 22
-        ELSE 5
-    END as total_reviews,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 24
-        WHEN u.email = 'sarah@example.com' THEN 17
-        WHEN u.email = 'emma@example.com' THEN 14
-        WHEN u.email = 'john@example.com' THEN 11
-        WHEN u.email = 'mike@example.com' THEN 9
-        WHEN u.email = 'alex@example.com' THEN 7
-        WHEN u.email = 'lisa@example.com' THEN 19
-        WHEN u.email = 'david@example.com' THEN 13
-        WHEN u.email = 'maria@example.com' THEN 21
-        ELSE 4
-    END as positive_reviews,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 35
-        WHEN u.email = 'sarah@example.com' THEN 28
-        WHEN u.email = 'emma@example.com' THEN 22
-        WHEN u.email = 'john@example.com' THEN 18
-        WHEN u.email = 'mike@example.com' THEN 15
-        WHEN u.email = 'alex@example.com' THEN 12
-        WHEN u.email = 'lisa@example.com' THEN 30
-        WHEN u.email = 'david@example.com' THEN 25
-        WHEN u.email = 'maria@example.com' THEN 32
-        ELSE 8
-    END as total_transactions,
-    CASE 
-        WHEN u.email = 'admin@admin.com' THEN 34
-        WHEN u.email = 'sarah@example.com' THEN 27
-        WHEN u.email = 'emma@example.com' THEN 21
-        WHEN u.email = 'john@example.com' THEN 17
-        WHEN u.email = 'mike@example.com' THEN 14
-        WHEN u.email = 'alex@example.com' THEN 11
-        WHEN u.email = 'lisa@example.com' THEN 29
-        WHEN u.email = 'david@example.com' THEN 24
-        WHEN u.email = 'maria@example.com' THEN 31
-        ELSE 7
-    END as successful_transactions
+    98.00 as overall_score,
+    100.00 as verification_score,
+    100.00 as profile_score,
+    95.00 as review_score,
+    90.00 as transaction_score,
+    25 as total_reviews,
+    24 as positive_reviews,
+    35 as total_transactions,
+    34 as successful_transactions
 FROM "users" u
 WHERE u.email IN ('admin@admin.com', 'test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com', 'lisa@example.com', 'david@example.com', 'maria@example.com')
 ON CONFLICT (user_id) DO NOTHING;

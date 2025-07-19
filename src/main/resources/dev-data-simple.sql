@@ -21,28 +21,28 @@ INSERT INTO "users" (username, email, password, role, first_name, last_name, bio
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert Profile Completion for Admin
-INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_verified_email, has_verified_phone, has_id_verification, has_address_verification, completion_percentage) 
-SELECT id, false, true, true, true, true, true, true, true, 87.50
+INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_id_document, has_drivers_license, has_proof_of_address, completion_percentage) 
+SELECT id, true, true, true, true, true, true, true, 100.00
 FROM "users"
 WHERE email = 'admin@admin.com'
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Profile Completion for Test Users
-INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_verified_email, has_verified_phone, has_id_verification, has_address_verification, completion_percentage) 
-SELECT id, false, true, true, true, true, true, true, true, 87.50
+INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_id_document, has_drivers_license, has_proof_of_address, completion_percentage) 
+SELECT id, true, true, true, true, true, true, true, 100.00
 FROM "users"
 WHERE email IN ('test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Trust Rating for Admin
 INSERT INTO trust_rating (user_id, overall_score, document_score, profile_score, review_score, transaction_score, total_reviews, positive_reviews, total_transactions, successful_transactions) 
-SELECT id, 98.00, 100.00, 87.50, 95.00, 98.00, 25, 24, 35, 34
+SELECT id, 98.00, 100.00, 100.00, 95.00, 90.00, 25, 24, 35, 34
 FROM "users"
 WHERE email = 'admin@admin.com';
 
 -- Insert Trust Ratings for Other Users
 INSERT INTO trust_rating (user_id, overall_score, document_score, profile_score, review_score, transaction_score, total_reviews, positive_reviews, total_transactions, successful_transactions) 
-SELECT id, 90.00, 100.00, 87.50, 85.00, 90.00, 10, 8, 15, 13
+SELECT id, 90.00, 100.00, 100.00, 85.00, 80.00, 10, 8, 15, 13
 FROM "users"
 WHERE email IN ('test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com');
 

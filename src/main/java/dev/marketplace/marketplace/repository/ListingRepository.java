@@ -37,6 +37,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             + "AND (:condition IS NULL OR l.condition = :condition) "
             + "AND (:cityId IS NULL OR l.city.id = :cityId) "
             + "AND (:searchTerm = '' OR l.title LIKE CONCAT('%', :searchTerm, '%') OR l.description LIKE CONCAT('%', :searchTerm, '%')) "
+            + "AND (:userId IS NULL OR l.user.id = :userId) "
             + "AND l.sold = false")
     Page<Listing> findFilteredListings(
             @Param("categoryId") Long categoryId, 
@@ -45,6 +46,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             @Param("condition") Condition condition,
             @Param("cityId") Long cityId,
             @Param("searchTerm") String searchTerm,
+            @Param("userId") Long userId,
             Pageable pageable);
 
     // Legacy method for backward compatibility

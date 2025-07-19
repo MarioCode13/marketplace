@@ -62,8 +62,12 @@ public class UserMutationResolver {
             @Argument String logoUrl,
             @Argument String bannerUrl,
             @Argument String themeColor,
-            @Argument String about
+            @Argument String primaryColor,
+            @Argument String secondaryColor,
+            @Argument String lightOrDark,
+            @Argument String about,
+            @Argument String storeName
     ) {
-        return userService.updateStoreBranding(id, slug, logoUrl, bannerUrl, themeColor, about);
+        return userService.updateStoreBranding(id, slug, logoUrl, bannerUrl, themeColor, primaryColor, secondaryColor, lightOrDark, about, storeName);
     }
 }

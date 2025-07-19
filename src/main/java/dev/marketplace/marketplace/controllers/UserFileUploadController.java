@@ -14,13 +14,13 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
-public class FileUploadController {
+public class UserFileUploadController {
 
     private final UserService userService;
     private final B2StorageService b2StorageService;
     private final JwtUtil jwtUtil;
 
-    public FileUploadController(UserService userService, B2StorageService b2StorageService, JwtUtil jwtUtil) {
+    public UserFileUploadController(UserService userService, B2StorageService b2StorageService, JwtUtil jwtUtil) {
         this.userService = userService;
         this.b2StorageService = b2StorageService;
         this.jwtUtil = jwtUtil;

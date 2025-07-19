@@ -19,6 +19,15 @@ public class StoreBranding {
     private String about;
     private String storeName;
 
+    @Column(name = "primary_color")
+    private String primaryColor;
+
+    @Column(name = "secondary_color")
+    private String secondaryColor;
+
+    @Column(name = "light_or_dark")
+    private String lightOrDark;
+
     // Getters and setters
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
@@ -36,4 +45,10 @@ public class StoreBranding {
     public void setAbout(String about) { this.about = about; }
     public String getStoreName() { return storeName; }
     public void setStoreName(String storeName) { this.storeName = storeName; }
+    public String getPrimaryColor() { return primaryColor; }
+    public void setPrimaryColor(String primaryColor) { this.primaryColor = primaryColor; }
+    public String getSecondaryColor() { return secondaryColor; }
+    public void setSecondaryColor(String secondaryColor) { this.secondaryColor = secondaryColor; }
+    public String getLightOrDark() { return lightOrDark; }
+    public void setLightOrDark(String lightOrDark) { this.lightOrDark = lightOrDark; }
 } 

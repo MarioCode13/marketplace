@@ -48,14 +48,14 @@ public class ListingService {
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
-        return getListingsWithFilters(limit, offset, categoryId, minPrice, maxPrice, null, null, null, null, null, null, null);
+        return getListingsWithFilters(limit, offset, categoryId, minPrice, maxPrice, null, null, null, null, null, null, null, null);
     }
 
     public ListingPageResponse getListingsWithFilters(Integer limit, Integer offset, 
                                                     Long categoryId, Double minPrice, Double maxPrice,
                                                     Condition condition, Long cityId, String searchTerm,
                                                     java.time.LocalDateTime minDate, java.time.LocalDateTime maxDate,
-                                                    String sortBy, String sortOrder) {
+                                                    String sortBy, String sortOrder, Long userId) {
         // Create pageable with sorting
         Pageable pageable;
         if (sortBy != null && !sortBy.isEmpty()) {
@@ -79,10 +79,10 @@ public class ListingService {
         // Use enhanced filtering if any new filters are provided
         if (categoryId != null || minPrice != null || maxPrice != null || 
             condition != null || cityId != null || searchTerm != null || 
-            minDate != null || maxDate != null) {
+            minDate != null || maxDate != null || userId != null) {
             page = listingRepository.findFilteredListings(
                 categoryId, minPrice, maxPrice, condition, cityId, 
-                searchTerm, pageable);
+                searchTerm, userId, pageable);
         } else {
             page = listingRepository.findAll(pageable);
         }

@@ -35,6 +35,9 @@ type StoreBranding {
     logoUrl: String
     bannerUrl: String
     themeColor: String
+    primaryColor: String
+    secondaryColor: String
+    lightOrDark: String
     about: String
     storeName: String
 }
@@ -180,7 +183,7 @@ type TrustRating {
     id: ID!
     userId: ID!
     overallScore: Float!
-    documentScore: Float!
+    verificationScore: Float!
     profileScore: Float!
     reviewScore: Float!
     transactionScore: Float!
@@ -202,10 +205,9 @@ type ProfileCompletion {
     hasBio: Boolean!
     hasContactNumber: Boolean!
     hasLocation: Boolean!
-    hasVerifiedEmail: Boolean!
-    hasVerifiedPhone: Boolean!
-    hasIdVerification: Boolean!
-    hasAddressVerification: Boolean!
+    hasIdDocument: Boolean!
+    hasDriversLicense: Boolean!
+    hasProofOfAddress: Boolean!
     completionPercentage: Float!
     lastCalculated: String!
     createdAt: String!
@@ -232,6 +234,7 @@ type Query {
         maxDate: String
         sortBy: String
         sortOrder: String
+        userId: ID # Optional: filter by user/store
     ): ListingPageResponse!
     getListingById(id: ID!): Listing
     getConditions: [Condition] # No longer non-nullable list
@@ -275,7 +278,7 @@ type Query {
 }
 
 type Mutation {
-    updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, cityId: ID, customCity: String): User
+    updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, cityId: ID, customCity: String, contactNumber: String): User
     register(username: String!, email: String!, password: String!): AuthResponse!
     login(emailOrUsername: String!, password: String!): AuthResponse!
     uploadListingImage(image: String!): String!
@@ -305,7 +308,18 @@ type Mutation {
     updateListingTitle(listingId: ID!, newTitle: String!): Listing!
     updateListingDescription(listingId: ID!, newDescription: String!): Listing!
     updateUserPlanType(id: ID!, planType: String!): User
-    updateStoreBranding(id: ID!, slug: String, logoUrl: String, bannerUrl: String, themeColor: String, about: String): User
+    updateStoreBranding(
+        id: ID!
+        slug: String
+        logoUrl: String
+        bannerUrl: String
+        themeColor: String
+        primaryColor: String
+        secondaryColor: String
+        lightOrDark: String
+        about: String
+        storeName: String
+    ): User
 }
 
 type Country {

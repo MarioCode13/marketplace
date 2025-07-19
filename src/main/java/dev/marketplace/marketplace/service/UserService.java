@@ -357,7 +357,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User updateStoreBranding(Long userId, String slug, String logoUrl, String bannerUrl, String themeColor, String about) {
+    public User updateStoreBranding(Long userId, String slug, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         dev.marketplace.marketplace.model.StoreBranding branding = user.getStoreBranding();
@@ -370,7 +370,11 @@ public class UserService implements UserDetailsService {
         branding.setLogoUrl(logoUrl);
         branding.setBannerUrl(bannerUrl);
         branding.setThemeColor(themeColor);
+        branding.setPrimaryColor(primaryColor);
+        branding.setSecondaryColor(secondaryColor);
+        branding.setLightOrDark(lightOrDark);
         branding.setAbout(about);
+        branding.setStoreName(storeName);
         user.setStoreBranding(branding);
         return userRepository.save(user);
     }

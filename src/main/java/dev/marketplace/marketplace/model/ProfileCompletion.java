@@ -41,21 +41,17 @@ public class ProfileCompletion {
     @Builder.Default
     private Boolean hasLocation = false;
     
-    @Column(name = "has_verified_email", nullable = false)
+    @Column(name = "has_id_document", nullable = false)
     @Builder.Default
-    private Boolean hasVerifiedEmail = false;
-    
-    @Column(name = "has_verified_phone", nullable = false)
+    private Boolean hasIdDocument = false;
+
+    @Column(name = "has_drivers_license", nullable = false)
     @Builder.Default
-    private Boolean hasVerifiedPhone = false;
-    
-    @Column(name = "has_id_verification", nullable = false)
+    private Boolean hasDriversLicense = false;
+
+    @Column(name = "has_proof_of_address", nullable = false)
     @Builder.Default
-    private Boolean hasIdVerification = false;
-    
-    @Column(name = "has_address_verification", nullable = false)
-    @Builder.Default
-    private Boolean hasAddressVerification = false;
+    private Boolean hasProofOfAddress = false;
     
     @Column(name = "completion_percentage", nullable = false, precision = 5, scale = 2)
     @Builder.Default
@@ -84,22 +80,23 @@ public class ProfileCompletion {
     
     // Helper method to calculate completion percentage
     public void calculateCompletionPercentage() {
-        int totalFields = 8; // Total number of completion fields
+        int totalFields = 4; // user info fields: photo, bio, contact, location
         int completedFields = 0;
-        
         if (Boolean.TRUE.equals(hasProfilePhoto)) completedFields++;
         if (Boolean.TRUE.equals(hasBio)) completedFields++;
         if (Boolean.TRUE.equals(hasContactNumber)) completedFields++;
         if (Boolean.TRUE.equals(hasLocation)) completedFields++;
-        if (Boolean.TRUE.equals(hasVerifiedEmail)) completedFields++;
-        if (Boolean.TRUE.equals(hasVerifiedPhone)) completedFields++;
-        if (Boolean.TRUE.equals(hasIdVerification)) completedFields++;
-        if (Boolean.TRUE.equals(hasAddressVerification)) completedFields++;
-        
-        this.completionPercentage = BigDecimal.valueOf(completedFields)
+        // Uploaded docs (ID, driver's license, proof of address)
+        int totalDocs = 3;
+        int uploadedDocs = 0;
+        if (Boolean.TRUE.equals(hasIdDocument)) uploadedDocs++;
+        if (Boolean.TRUE.equals(hasDriversLicense)) uploadedDocs++;
+        if (Boolean.TRUE.equals(hasProofOfAddress)) uploadedDocs++;
+        int total = totalFields + totalDocs;
+        int complete = completedFields + uploadedDocs;
+        this.completionPercentage = BigDecimal.valueOf(complete)
                 .multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(totalFields), 2, BigDecimal.ROUND_HALF_UP);
-        
+                .divide(BigDecimal.valueOf(total), 2, BigDecimal.ROUND_HALF_UP);
         this.lastCalculated = LocalDateTime.now();
     }
     

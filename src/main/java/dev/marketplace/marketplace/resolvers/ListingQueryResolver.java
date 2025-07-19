@@ -42,7 +42,8 @@ public class ListingQueryResolver {
             @Argument String minDate,
             @Argument String maxDate,
             @Argument String sortBy,
-            @Argument String sortOrder
+            @Argument String sortOrder,
+            @Argument Long userId // new argument
     ) {
         // Convert condition string to enum if provided
         dev.marketplace.marketplace.enums.Condition conditionEnum = null;
@@ -93,7 +94,7 @@ public class ListingQueryResolver {
 
         return listingService.getListingsWithFilters(
             limit, offset, categoryIdLong, minPrice, maxPrice, 
-            conditionEnum, cityId, searchTerm, minDateTime, maxDateTime, sortBy, sortOrder);
+            conditionEnum, cityId, searchTerm, minDateTime, maxDateTime, sortBy, sortOrder, userId);
     }
 
     @QueryMapping

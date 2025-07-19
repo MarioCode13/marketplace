@@ -29,10 +29,6 @@ public class TrustRating {
     @Builder.Default
     private BigDecimal overallScore = BigDecimal.ZERO;
     
-    @Column(name = "document_score", nullable = false, precision = 5, scale = 2)
-    @Builder.Default
-    private BigDecimal documentScore = BigDecimal.ZERO;
-    
     @Column(name = "profile_score", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal profileScore = BigDecimal.ZERO;
@@ -44,6 +40,10 @@ public class TrustRating {
     @Column(name = "transaction_score", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal transactionScore = BigDecimal.ZERO;
+    
+    @Column(name = "verification_score", nullable = false, precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal verificationScore = BigDecimal.ZERO;
     
     @Column(name = "total_reviews", nullable = false)
     @Builder.Default

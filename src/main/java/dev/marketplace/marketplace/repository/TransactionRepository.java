@@ -49,4 +49,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("SELECT t FROM Transaction t WHERE t.saleDate BETWEEN :startDate AND :endDate")
     List<Transaction> findBySaleDateBetween(@Param("startDate") java.time.LocalDateTime startDate, 
                                            @Param("endDate") java.time.LocalDateTime endDate);
+
+    // Get transaction count for a user as seller (all statuses)
+    long countBySellerId(Long sellerId);
+    // Get transaction count for a user as buyer (all statuses)
+    long countByBuyerId(Long buyerId);
 } 

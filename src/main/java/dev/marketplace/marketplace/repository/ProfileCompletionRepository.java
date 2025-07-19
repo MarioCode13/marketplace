@@ -27,17 +27,5 @@ public interface ProfileCompletionRepository extends JpaRepository<ProfileComple
     @Query("SELECT COUNT(pc) FROM ProfileCompletion pc WHERE pc.completionPercentage >= :minPercentage")
     Long countByMinimumCompletionPercentage(@Param("minPercentage") BigDecimal minPercentage);
     
-    @Query("SELECT pc FROM ProfileCompletion pc WHERE pc.hasIdVerification = true")
-    List<ProfileCompletion> findUsersWithIdVerification();
-    
-    @Query("SELECT pc FROM ProfileCompletion pc WHERE pc.hasAddressVerification = true")
-    List<ProfileCompletion> findUsersWithAddressVerification();
-    
-    @Query("SELECT pc FROM ProfileCompletion pc WHERE pc.hasVerifiedEmail = true")
-    List<ProfileCompletion> findUsersWithVerifiedEmail();
-    
-    @Query("SELECT pc FROM ProfileCompletion pc WHERE pc.hasVerifiedPhone = true")
-    List<ProfileCompletion> findUsersWithVerifiedPhone();
-    
     boolean existsByUserId(Long userId);
 } 
