@@ -7,11 +7,11 @@ import org.springframework.stereotype.Service;
 public class ListingValidationService {
 
     public void validateListingCreation(String title, String description, double price, 
-                                       Long cityId, Condition condition, Long userId) {
+                                       Long cityId, Condition condition, Long userId, String customCity) {
         validateTitle(title);
         validateDescription(description);
         validatePrice(price);
-        validateCityId(cityId);
+        validateCity(cityId, customCity);
         validateCondition(condition);
         validateUserId(userId);
     }
@@ -81,6 +81,33 @@ public class ListingValidationService {
         }
     }
 
+    private void validateListingId(Long listingId) {
+        if (listingId == null) {
+            throw new IllegalArgumentException("Listing ID is required");
+        }
+
+        if (listingId <= 0) {
+            throw new IllegalArgumentException("Invalid listing ID");
+        }
+    }
+
+    private void validateCity(Long cityId, String customCity) {
+        boolean hasCityId = cityId != null;
+        boolean hasCustomCity = customCity != null && !customCity.trim().isEmpty();
+
+        if (!hasCityId && !hasCustomCity) {
+            throw new IllegalArgumentException("Either a city or a custom city must be provided.");
+        }
+
+        if (hasCityId && hasCustomCity) {
+            throw new IllegalArgumentException("Provide either a city or a custom city, not both.");
+        }
+
+        if (hasCustomCity && customCity.length() > 100) {
+            throw new IllegalArgumentException("Custom city must be less than 100 characters.");
+        }
+    }
+
     private void validateCondition(Condition condition) {
         if (condition == null) {
             throw new IllegalArgumentException("Condition is required");
@@ -97,19 +124,5 @@ public class ListingValidationService {
         }
     }
 
-    private void validateListingId(Long listingId) {
-        if (listingId == null) {
-            throw new IllegalArgumentException("Listing ID is required");
-        }
-        
-        if (listingId <= 0) {
-            throw new IllegalArgumentException("Invalid listing ID");
-        }
-    }
 
-    private void validateCityId(Long cityId) {
-        if (cityId == null) {
-            throw new IllegalArgumentException("City is required");
-        }
-    }
 } 

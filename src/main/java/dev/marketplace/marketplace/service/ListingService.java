@@ -134,7 +134,7 @@ public class ListingService {
                                  Long categoryId, double price, Long cityId, String customCity,
                                  Condition condition, Long userId) {
 
-        validationService.validateListingCreation(title, description, price, cityId, condition, userId);
+        validationService.validateListingCreation(title, description, price, cityId, condition, userId, customCity);
         imageService.validateImages(imageUrls);
 
         // Convert URLs to filenames for database storage

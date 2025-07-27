@@ -23,8 +23,6 @@ public class ListingMutationResolver {
         this.userService = userService;
     }
 
-
-
     @MutationMapping
     public Listing createListing(@Argument String title,
                                  @Argument Double price,
