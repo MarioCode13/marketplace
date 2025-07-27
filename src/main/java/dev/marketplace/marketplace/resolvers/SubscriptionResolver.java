@@ -4,7 +4,6 @@ import dev.marketplace.marketplace.model.Subscription;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.SubscriptionService;
 import dev.marketplace.marketplace.service.SubscriptionService.SubscriptionStats;
-import dev.marketplace.marketplace.service.StripeService;
 import dev.marketplace.marketplace.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -21,37 +20,7 @@ import java.util.List;
 public class SubscriptionResolver {
     
     private final SubscriptionService subscriptionService;
-    private final StripeService stripeService;
     private final UserService userService;
-    
-    /**
-     * Create checkout session for subscription
-     */
-    @MutationMapping
-    public String createCheckoutSession(@Argument String planType,
-                                      @Argument String billingCycle,
-                                      @AuthenticationPrincipal UserDetails userDetails) {
-        try {
-            Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-            User user = userService.getUserById(userId);
-            
-            Subscription.PlanType plan = Subscription.PlanType.valueOf(planType);
-            Subscription.BillingCycle cycle = Subscription.BillingCycle.valueOf(billingCycle);
-            
-            var session = stripeService.createCheckoutSession(
-                    userId,
-                    user.getEmail(),
-                    user.getUsername() != null ? user.getUsername() : user.getEmail(),
-                    plan,
-                    cycle
-            );
-            
-            return session.getUrl();
-            
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create checkout session: " + e.getMessage());
-        }
-    }
     
     /**
      * Cancel subscription at period end

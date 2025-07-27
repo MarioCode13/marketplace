@@ -3,10 +3,12 @@ package dev.marketplace.marketplace.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-@Entity
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
+@Entity
 @Table(name = "category", schema = "public")
 public class Category {
 
@@ -16,6 +18,14 @@ public class Category {
 
     @Column(nullable = false, unique = true)
     private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Category parent;
+
+    @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
+    private java.util.Set<Category> children = new java.util.HashSet<>();
 
     public Long getId() {
         return id;
@@ -33,11 +43,8 @@ public class Category {
         this.name = name;
     }
 
-    public Category() {
-    }
-
-    public Category(Long id, String name) {
-        this.id = id;
-        this.name = name;
+    // Expose parentId for GraphQL
+    public Long getParentId() {
+        return parent != null ? parent.getId() : null;
     }
 }

@@ -164,6 +164,35 @@ public class SubscriptionService {
     }
     
     /**
+     * Create or activate a PayFast subscription for the user and plan type
+     */
+    @Transactional
+    public void createOrActivatePayFastSubscription(Long userId, Subscription.PlanType planType) {
+        if (!hasActiveSubscription(userId)) {
+            User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime periodEnd = now.plusMonths(1);
+            Subscription subscription = Subscription.builder()
+                .user(user)
+                .planType(planType)
+                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .amount(planType.getPrice())
+                .currency("ZAR")
+                .billingCycle(Subscription.BillingCycle.MONTHLY)
+                .currentPeriodStart(now)
+                .currentPeriodEnd(periodEnd)
+                .cancelAtPeriodEnd(false)
+                .build();
+            subscriptionRepository.save(subscription);
+            user.setRole(Role.SUBSCRIBED);
+            userRepository.save(user);
+            trustRatingService.addSubscriptionBonus(userId);
+            log.info("PayFast subscription created for user: {} with plan: {}", userId, planType);
+        }
+    }
+    
+    /**
      * Get all subscriptions for a user
      */
     @Transactional(readOnly = true)

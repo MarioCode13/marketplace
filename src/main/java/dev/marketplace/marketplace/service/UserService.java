@@ -21,6 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import dev.marketplace.marketplace.model.City;
 import dev.marketplace.marketplace.repository.CityRepository;
+import dev.marketplace.marketplace.repository.SubscriptionRepository;
+import dev.marketplace.marketplace.model.Subscription.SubscriptionStatus;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -41,12 +43,14 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final B2StorageService b2StorageService;
     private final CityRepository cityRepository;
+    private final SubscriptionRepository subscriptionRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.b2StorageService = b2StorageService;
         this.cityRepository = cityRepository;
+        this.subscriptionRepository = subscriptionRepository;
     }
 
     @Override
@@ -377,5 +381,9 @@ public class UserService implements UserDetailsService {
         branding.setStoreName(storeName);
         user.setStoreBranding(branding);
         return userRepository.save(user);
+    }
+
+    public boolean hasActiveSubscription(Long userId) {
+        return subscriptionRepository.existsByUserIdAndStatusIn(userId, java.util.Arrays.asList(SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL));
     }
 }

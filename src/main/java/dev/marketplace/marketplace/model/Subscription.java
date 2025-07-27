@@ -81,23 +81,22 @@ public class Subscription {
     }
     
     public enum PlanType {
-        BASIC_MONTHLY("Basic Monthly", new BigDecimal("1.00")),
-        BASIC_YEARLY("Basic Yearly", new BigDecimal("10.00")),
-        PREMIUM_MONTHLY("Premium Monthly", new BigDecimal("5.00")),
-        PREMIUM_YEARLY("Premium Yearly", new BigDecimal("50.00"));
-        
+        VERIFIED_USER("Verified User", new BigDecimal("50.00")),
+        RESELLER("Reseller", new BigDecimal("150.00")),
+        PRO_STORE("Pro Store", new BigDecimal("300.00"));
+
         private final String displayName;
         private final BigDecimal price;
-        
+
         PlanType(String displayName, BigDecimal price) {
             this.displayName = displayName;
             this.price = price;
         }
-        
+
         public String getDisplayName() {
             return displayName;
         }
-        
+
         public BigDecimal getPrice() {
             return price;
         }

@@ -77,6 +77,7 @@ type ListingPageResponse {
 type Category {
     id: ID!
     name: String!
+    parentId: String
 }
 
 enum TransactionStatus {
@@ -286,8 +287,8 @@ type Mutation {
         title: String!
         description: String!
         price: Float!
-        cityId: ID!
-        customCity: String!
+        cityId: ID
+        customCity: String
         condition: Condition!
         images: [String!]!
         categoryId: ID!
@@ -295,7 +296,13 @@ type Mutation {
     ): Listing!
     deleteListing(id: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
-    createTransaction(listingId: ID!, buyerId: ID!, salePrice: Float!, paymentMethod: String, notes: String): Transaction!
+    createTransaction(
+        listingId: ID!,
+        buyerId: ID!,
+        salePrice: Float!,
+        paymentMethod: String,
+        notes: String
+    ): Transaction!
     completeTransaction(transactionId: ID!): Transaction!
     cancelTransaction(transactionId: ID!, reason: String!): Transaction!
     createReview(transactionId: ID!, reviewedUserId: ID!, rating: Float!, comment: String): Review!

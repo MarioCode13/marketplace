@@ -46,7 +46,8 @@ CREATE TABLE IF NOT EXISTS "users" (
 -- Category Table
 CREATE TABLE IF NOT EXISTS category (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE
+    name VARCHAR(255) NOT NULL UNIQUE,
+    parent_id INTEGER REFERENCES category(id) ON DELETE SET NULL
 );
 
 -- Seed Countries
@@ -89,23 +90,59 @@ INSERT INTO city (name, region_id) VALUES
 ON CONFLICT (name, region_id) DO NOTHING;
 
 -- Insert Core Categories
-INSERT INTO category (name) VALUES
-('Electronics'),
-('Fashion & Accessories'),
-('Home & Garden'),
-('Sports & Outdoors'),
-('Books & Media'),
-('Automotive'),
-('Toys & Games'),
-('Health & Beauty'),
-('Art & Collectibles'),
-('Musical Instruments'),
-('Tools & Hardware'),
-('Pet Supplies'),
-('Baby & Kids'),
-('Office & Business'),
-('Food & Beverages')
-ON CONFLICT (name) DO NOTHING;
+INSERT INTO category (id, name, parent_id) VALUES
+(1, 'Electronics', NULL),
+(2, 'Fashion & Accessories', NULL),
+(3, 'Home & Garden', NULL),
+(4, 'Sports & Outdoors', NULL),
+(5, 'Books & Media', NULL),
+(6, 'Automotive', NULL),
+(7, 'Toys & Games', NULL),
+(8, 'Health & Beauty', NULL),
+(9, 'Art & Collectibles', NULL),
+(10, 'Musical Instruments', NULL),
+(11, 'Tools & Hardware', NULL),
+(12, 'Pet Supplies', NULL),
+(13, 'Baby & Kids', NULL),
+(14, 'Office & Business', NULL),
+(15, 'Food & Beverages', NULL)
+ON CONFLICT (id) DO NOTHING;
+
+-- Electronics subcategories
+INSERT INTO category (id, name, parent_id) VALUES
+(101, 'Computers & Tablets', 1),
+(102, 'Phones & Accessories', 1),
+(103, 'TV, Audio & Video', 1)
+ON CONFLICT (id) DO NOTHING;
+
+-- Electronics sub-subcategories
+INSERT INTO category (id, name, parent_id) VALUES
+(201, 'Laptops', 101),
+(202, 'Desktops', 101),
+(203, 'Tablets', 101),
+(204, 'Smartphones', 102),
+(205, 'Phone Cases', 102),
+(206, 'Headphones', 103),
+(207, 'Speakers', 103)
+ON CONFLICT (id) DO NOTHING;
+
+-- Fashion & Accessories subcategories
+INSERT INTO category (id, name, parent_id) VALUES
+(301, 'Men''s Fashion', 2),
+(302, 'Women''s Fashion', 2),
+(303, 'Jewelry & Watches', 2),
+(304, 'Bags & Luggage', 2)
+ON CONFLICT (id) DO NOTHING;
+
+-- Fashion & Accessories sub-subcategories
+INSERT INTO category (id, name, parent_id) VALUES
+(401, 'Tops', 301),
+(402, 'Bottoms', 301),
+(403, 'Shoes', 301),
+(404, 'Dresses', 302),
+(405, 'Handbags', 304),
+(406, 'Suitcases', 304)
+ON CONFLICT (id) DO NOTHING;
 
 -- Listing Table
 CREATE TABLE IF NOT EXISTS listing (

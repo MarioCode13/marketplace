@@ -1,6 +1,7 @@
 package dev.marketplace.marketplace.config;
 
 import dev.marketplace.marketplace.repository.CityRepository;
+import dev.marketplace.marketplace.repository.SubscriptionRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.security.JwtAuthenticationFilter;
 import dev.marketplace.marketplace.security.JwtUtil;
@@ -42,8 +43,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository) {
-        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService, cityRepository);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
+        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService, cityRepository, subscriptionRepository);
     }
 
     @Bean
@@ -66,7 +67,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/health", "/graphql", "/graphiql", "/playground", "/api/users/**", "/pghero/**", "/error").permitAll()
+                        .requestMatchers(
+                                "/", "/health", "/graphql", "/graphiql", "/playground",
+                                "/api/users/**", "/pghero/**", "/error",
+                                "/api/payments/payfast/itn"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
