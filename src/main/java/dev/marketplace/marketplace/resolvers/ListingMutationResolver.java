@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.resolvers;
 
+import dev.marketplace.marketplace.dto.ListingUpdateInput;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.service.ListingService;
@@ -43,27 +44,10 @@ public class ListingMutationResolver {
     }
 
     @MutationMapping
-    public Listing updateListingPrice(@Argument Long listingId, 
-                                     @Argument Double newPrice, 
-                                     @AuthenticationPrincipal UserDetails userDetails) {
+    public Listing updateListing(@Argument ListingUpdateInput input,
+                                 @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return listingService.updateListingPrice(listingId, userId, newPrice);
-    }
-
-    @MutationMapping
-    public Listing updateListingTitle(@Argument Long listingId, 
-                                     @Argument String newTitle, 
-                                     @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return listingService.updateListingTitle(listingId, userId, newTitle);
-    }
-
-    @MutationMapping
-    public Listing updateListingDescription(@Argument Long listingId, 
-                                           @Argument String newDescription, 
-                                           @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-        return listingService.updateListingDescription(listingId, userId, newDescription);
+        return listingService.updateListing(input, userId);
     }
 
     @MutationMapping

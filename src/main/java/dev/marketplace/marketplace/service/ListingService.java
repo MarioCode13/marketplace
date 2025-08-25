@@ -2,13 +2,13 @@ package dev.marketplace.marketplace.service;
 
 import dev.marketplace.marketplace.dto.ListingDTO;
 import dev.marketplace.marketplace.dto.ListingPageResponse;
+import dev.marketplace.marketplace.dto.ListingUpdateInput;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.Category;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.CategoryRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
-import dev.marketplace.marketplace.service.TransactionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,14 +30,15 @@ public class ListingService {
     private final ListingAuthorizationService authorizationService;
     private final TransactionService transactionService;
     private final CityRepository cityRepository;
+    private final CategoryService categoryService;
 
-    public ListingService(ListingRepository listingRepository, 
-                         CategoryRepository categoryRepository,
-                         ListingImageService imageService,
-                         ListingValidationService validationService,
-                         ListingAuthorizationService authorizationService,
-                         TransactionService transactionService,
-                         CityRepository cityRepository) {
+    public ListingService(ListingRepository listingRepository,
+                          CategoryRepository categoryRepository,
+                          ListingImageService imageService,
+                          ListingValidationService validationService,
+                          ListingAuthorizationService authorizationService,
+                          TransactionService transactionService,
+                          CityRepository cityRepository, CategoryService categoryService) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
         this.imageService = imageService;
@@ -45,6 +46,7 @@ public class ListingService {
         this.authorizationService = authorizationService;
         this.transactionService = transactionService;
         this.cityRepository = cityRepository;
+        this.categoryService = categoryService;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
@@ -228,7 +230,26 @@ public class ListingService {
         return listing;
     }
 
-    public Listing save(Listing listing) {
+    public void save(Listing listing) {}
+
+    public Listing updateListing(ListingUpdateInput input, Long userId) {
+        Listing listing = listingRepository.findById(input.id())
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+
+        if (!listing.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized update attempt");
+        }
+
+        if (input.title() != null) listing.setTitle(input.title());
+        if (input.price() != null) listing.setPrice(input.price());
+        if (input.description() != null) listing.setDescription(input.description());
+        if (input.images() != null) listing.setImages(input.images());
+        if (input.condition() != null) listing.setCondition(input.condition());
+        if (input.categoryId() != null)
+            listing.setCategory(categoryService.findById(input.categoryId()));
+
+        if (input.customCity() != null) listing.setCustomCity(input.customCity());
+
         return listingRepository.save(listing);
     }
 }

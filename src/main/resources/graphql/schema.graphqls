@@ -314,6 +314,7 @@ type Mutation {
     updateListingPrice(listingId: ID!, newPrice: Float!): Listing!
     updateListingTitle(listingId: ID!, newTitle: String!): Listing!
     updateListingDescription(listingId: ID!, newDescription: String!): Listing!
+    updateListing(input: UpdateListingInput!): Listing!
     updateUserPlanType(id: ID!, planType: String!): User
     updateStoreBranding(
         id: ID!
@@ -345,4 +346,16 @@ type City {
     id: ID!
     name: String!
     region: Region!
+}
+
+input UpdateListingInput {
+    id: ID!
+    title: String
+    price: Float
+    description: String
+    images: [String!]
+    condition: Condition
+    categoryId: ID
+    cityId: ID
+    customCity: String
 }
