@@ -31,6 +31,7 @@ public class ListingService {
     private final TransactionService transactionService;
     private final CityRepository cityRepository;
     private final CategoryService categoryService;
+    private final CityService cityService;
 
     public ListingService(ListingRepository listingRepository,
                           CategoryRepository categoryRepository,
@@ -38,7 +39,7 @@ public class ListingService {
                           ListingValidationService validationService,
                           ListingAuthorizationService authorizationService,
                           TransactionService transactionService,
-                          CityRepository cityRepository, CategoryService categoryService) {
+                          CityRepository cityRepository, CategoryService categoryService, CityService cityService) {
         this.listingRepository = listingRepository;
         this.categoryRepository = categoryRepository;
         this.imageService = imageService;
@@ -47,6 +48,7 @@ public class ListingService {
         this.transactionService = transactionService;
         this.cityRepository = cityRepository;
         this.categoryService = categoryService;
+        this.cityService = cityService;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, Long categoryId, Double minPrice, Double maxPrice) {
@@ -139,18 +141,14 @@ public class ListingService {
         validationService.validateListingCreation(title, description, price, cityId, condition, userId, customCity);
         imageService.validateImages(imageUrls);
 
-        // Convert URLs to filenames for database storage
+        cityService.validateCityOrCustomCity(cityId, customCity);
+
         List<String> imageFilenames = imageService.convertUrlsToFilenames(imageUrls);
 
         User user = authorizationService.validateUserExists(userId);
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new IllegalArgumentException("Category not found with ID: " + categoryId));
+        Category category = categoryService.findById(categoryId);
 
-        City city = null;
-        if (cityId != null) {
-            city = cityRepository.findById(cityId)
-                .orElseThrow(() -> new IllegalArgumentException("City not found with ID: " + cityId));
-        }
+        City city = cityId != null ? cityService.getCityById(cityId) : null;
 
         Listing listing = new Listing.Builder()
                 .title(title)
@@ -174,11 +172,40 @@ public class ListingService {
 
 
 
-    @Transactional
-    private Listing updateListing(Long listingId, Long userId, Consumer<Listing> updateAction) {
-        Listing listing = authorizationService.checkUpdatePermission(listingId, userId);
-        
-        updateAction.accept(listing);
+    public Listing updateListing(ListingUpdateInput input, Long userId) {
+        Listing listing = listingRepository.findById(input.id())
+                .orElseThrow(() -> new RuntimeException("Listing not found"));
+
+        if (!listing.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Unauthorized update attempt");
+        }
+
+        if (input.title() != null) listing.setTitle(input.title());
+        if (input.price() != null) listing.setPrice(input.price());
+        if (input.description() != null) listing.setDescription(input.description());
+        if (input.images() != null) listing.setImages(input.images());
+        if (input.condition() != null) listing.setCondition(input.condition());
+
+        // Validate city/customCity rules
+        if (input.cityId() != null || input.customCity() != null) {
+            cityService.validateCityOrCustomCity(input.cityId(), input.customCity());
+            listing.setCity(input.cityId() != null ? cityService.getCityById(input.cityId()) : null);
+            listing.setCustomCity(input.customCity());
+        }
+
+
+        if (input.categoryId() != null) {
+            try {
+                Category category = categoryService.findById(input.categoryId());
+                if (category == null) {
+                    throw new RuntimeException("Category not found: " + input.categoryId());
+                }
+                listing.setCategory(category);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Invalid category ID: " + input.categoryId());
+            }
+        }
+
         return listingRepository.save(listing);
     }
 
@@ -190,30 +217,14 @@ public class ListingService {
         return true;
     }
 
-    @Transactional
-    public Listing updateListingPrice(Long listingId, Long userId, double newPrice) {
-        validationService.validatePriceUpdate(newPrice);
-        return updateListing(listingId, userId, listing -> listing.setPrice(newPrice));
-    }
 
-    @Transactional
-    public Listing updateListingTitle(Long listingId, Long userId, String newTitle) {
-        validationService.validateTitleUpdate(newTitle);
-        return updateListing(listingId, userId, listing -> listing.setTitle(newTitle));
-    }
 
-    @Transactional
-    public Listing updateListingDescription(Long listingId, Long userId, String newDescription) {
-        validationService.validateDescriptionUpdate(newDescription);
-        return updateListing(listingId, userId, listing -> listing.setDescription(newDescription));
-    }
-
-    @Transactional
-    public Listing markListingAsSold(Long listingId, Long userId) {
-        // This method is deprecated - use createTransaction instead
-        // Keeping for backward compatibility but it should not be used
-        return updateListing(listingId, userId, listing -> listing.setSold(true));
-    }
+//    @Transactional
+//    public Listing markListingAsSold(Long listingId, Long userId) {
+//        // This method is deprecated - use createTransaction instead
+//        // Keeping for backward compatibility but it should not be used
+//        return updateListing(listingId, userId, listing -> listing.setSold(true));
+//    }
     
     /**
      * Mark a listing as sold to a specific buyer (creates a transaction)
@@ -232,24 +243,4 @@ public class ListingService {
 
     public void save(Listing listing) {}
 
-    public Listing updateListing(ListingUpdateInput input, Long userId) {
-        Listing listing = listingRepository.findById(input.id())
-                .orElseThrow(() -> new RuntimeException("Listing not found"));
-
-        if (!listing.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized update attempt");
-        }
-
-        if (input.title() != null) listing.setTitle(input.title());
-        if (input.price() != null) listing.setPrice(input.price());
-        if (input.description() != null) listing.setDescription(input.description());
-        if (input.images() != null) listing.setImages(input.images());
-        if (input.condition() != null) listing.setCondition(input.condition());
-        if (input.categoryId() != null)
-            listing.setCategory(categoryService.findById(input.categoryId()));
-
-        if (input.customCity() != null) listing.setCustomCity(input.customCity());
-
-        return listingRepository.save(listing);
-    }
 }

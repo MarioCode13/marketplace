@@ -11,6 +11,6 @@ public record ListingUpdateInput(
         List<String> images,
         Condition condition,
         Long categoryId,
-        Long cityId,
+        Long  cityId,
         String customCity
 ) {}
