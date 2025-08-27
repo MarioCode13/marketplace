@@ -34,22 +34,31 @@ public class B2StorageService {
                 .create(applicationKeyId, applicationKey, "marketplace-app");
     }
 
+    /**
+     * Sanitizes the filename to ensure it is safe for B2 and URLs.
+     */
+    private String sanitizeFilename(String originalName) {
+        if (originalName == null || originalName.isBlank()) {
+            return "file";
+        }
+        return originalName
+                .trim()
+                .replaceAll("\\s+", "_")        // Replace spaces with underscores
+                .replaceAll("[^a-zA-Z0-9._-]", ""); // Strip unsafe characters
+    }
+
     public String uploadImage(String fileName, byte[] imageData) throws B2Exception {
+        String safeFileName = sanitizeFilename(fileName);
+
         B2ContentSource contentSource = B2ByteArrayContentSource.builder(imageData).build();
 
         B2UploadFileRequest request = B2UploadFileRequest
-                .builder(bucketId, fileName, B2ContentTypes.B2_AUTO, contentSource)
+                .builder(bucketId, safeFileName, B2ContentTypes.B2_AUTO, contentSource)
                 .build();
 
         B2FileVersion uploadedFile = client.uploadSmallFile(request);
 
         return uploadedFile.getFileName();
-    }
-
-    public String uploadImage(MultipartFile file) throws B2Exception, IOException {
-        String fileName = "listings/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-        byte[] imageData = file.getBytes();
-        return uploadImage(fileName, imageData);
     }
 
     public String generatePreSignedUrl(String fileName) throws B2Exception {
