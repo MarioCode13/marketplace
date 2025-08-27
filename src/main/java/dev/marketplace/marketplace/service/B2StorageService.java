@@ -47,6 +47,7 @@ public class B2StorageService {
                 .replaceAll("[^a-zA-Z0-9._-]", ""); // Strip unsafe characters
     }
 
+//    To be deprecated shortly
     public String uploadImage(String fileName, byte[] imageData) throws B2Exception {
         String safeFileName = sanitizeFilename(fileName);
 
@@ -86,4 +87,12 @@ public class B2StorageService {
             System.err.println("Failed to delete file from B2: " + fileName + ", error: " + e.getMessage());
         }
     }
+
+    public String uploadPublicImage(String folder, MultipartFile file) throws B2Exception, IOException {
+        String safeFileName = sanitizeFilename(file.getOriginalFilename());
+        String filePath = folder + "/" + UUID.randomUUID() + "_" + safeFileName;
+        return uploadImage(filePath, file.getBytes()); // returns permanent path
+    }
+
+
 }
