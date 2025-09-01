@@ -294,7 +294,7 @@ type Mutation {
         categoryId: ID!
         userId: ID!
     ): Listing!
-    deleteListing(id: ID!): Boolean!
+    deleteListing(listingId: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
     createTransaction(
         listingId: ID!,
