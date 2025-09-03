@@ -46,15 +46,15 @@ CREATE TABLE IF NOT EXISTS "users" (
 -- Category Table
 CREATE TABLE IF NOT EXISTS category (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL UNIQUE,
-    parent_id INTEGER REFERENCES category(id) ON DELETE SET NULL
+    name VARCHAR(255) NOT NULL,
+    parent_id INTEGER REFERENCES category(id) ON DELETE SET NULL,
+    CONSTRAINT unique_category_name_per_parent UNIQUE (name, parent_id)
 );
 
 -- Seed Countries
 
 INSERT INTO country (name, code) VALUES
-  ('South Africa', 'ZA'),
-  ('United States', 'US')
+  ('South Africa', 'ZA')
 ON CONFLICT (code) DO NOTHING;
 
 -- South African provinces (regions)
@@ -67,82 +67,352 @@ INSERT INTO region ( name, country_id) VALUES
                                               ( 'Limpopo', 1),
                                               ( 'Mpumalanga', 1),
                                               ( 'North West', 1),
-                                              ( 'Northern Cape', 1),
-                                              ('California', (SELECT id FROM country WHERE code = 'US')),
-                                              ('New York', (SELECT id FROM country WHERE code = 'US'))
+                                              ( 'Northern Cape', 1)
 ON CONFLICT (name, country_id) DO NOTHING;
 
--- Seed Cities
+-- Expanded South African cities
+
 INSERT INTO city (name, region_id) VALUES
-  ('Johannesburg', (SELECT id FROM region WHERE name = 'Gauteng')),
-  ('Pretoria', (SELECT id FROM region WHERE name = 'Gauteng')),
-  ('Cape Town', (SELECT id FROM region WHERE name = 'Western Cape')),
-  ('Durban', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-  ( 'Port Elizabeth', 4),
-  ( 'Bloemfontein', 5),
-  ( 'Polokwane', 6),
-  ( 'Nelspruit', 7),
-  ( 'Mahikeng', 8),
-  ( 'Kimberley', 9),
-  ('Los Angeles', (SELECT id FROM region WHERE name = 'California')),
-  ('San Francisco', (SELECT id FROM region WHERE name = 'California')),
-  ('New York City', (SELECT id FROM region WHERE name = 'New York'))
+                                       -- Gauteng
+                                       ('Johannesburg', (SELECT id FROM region WHERE name = 'Gauteng')),
+                                       ('Pretoria', (SELECT id FROM region WHERE name = 'Gauteng')),
+                                       ('Sandton', (SELECT id FROM region WHERE name = 'Gauteng')),
+                                       ('Midrand', (SELECT id FROM region WHERE name = 'Gauteng')),
+                                       ('Centurion', (SELECT id FROM region WHERE name = 'Gauteng')),
+
+                                       -- Western Cape
+                                       ('Cape Town', (SELECT id FROM region WHERE name = 'Western Cape')),
+                                       ('Stellenbosch', (SELECT id FROM region WHERE name = 'Western Cape')),
+                                       ('Paarl', (SELECT id FROM region WHERE name = 'Western Cape')),
+                                       ('George', (SELECT id FROM region WHERE name = 'Western Cape')),
+                                       ('Knysna', (SELECT id FROM region WHERE name = 'Western Cape')),
+
+                                       -- KwaZulu-Natal
+                                       ('Durban', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+                                       ('Pietermaritzburg', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+                                       ('Richards Bay', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+                                       ('Ballito', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+                                       ('Umhlanga', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+
+                                       -- Eastern Cape
+                                       ('Port Elizabeth', (SELECT id FROM region WHERE name = 'Eastern Cape')),
+                                       ('East London', (SELECT id FROM region WHERE name = 'Eastern Cape')),
+                                       ('Grahamstown', (SELECT id FROM region WHERE name = 'Eastern Cape')),
+                                       ('Jeffreys Bay', (SELECT id FROM region WHERE name = 'Eastern Cape')),
+
+                                       -- Free State
+                                       ('Bloemfontein', (SELECT id FROM region WHERE name = 'Free State')),
+                                       ('Welkom', (SELECT id FROM region WHERE name = 'Free State')),
+
+                                       -- Limpopo
+                                       ('Polokwane', (SELECT id FROM region WHERE name = 'Limpopo')),
+                                       ('Thohoyandou', (SELECT id FROM region WHERE name = 'Limpopo')),
+                                       ('Tzaneen', (SELECT id FROM region WHERE name = 'Limpopo')),
+
+                                       -- Mpumalanga
+                                       ('Nelspruit', (SELECT id FROM region WHERE name = 'Mpumalanga')),
+                                       ('White River', (SELECT id FROM region WHERE name = 'Mpumalanga')),
+                                       ('Sabie', (SELECT id FROM region WHERE name = 'Mpumalanga')),
+
+                                       -- North West
+                                       ('Mahikeng', (SELECT id FROM region WHERE name = 'North West')),
+                                       ('Rustenburg', (SELECT id FROM region WHERE name = 'North West')),
+
+                                       -- Northern Cape
+                                       ('Kimberley', (SELECT id FROM region WHERE name = 'Northern Cape')),
+                                       ('Upington', (SELECT id FROM region WHERE name = 'Northern Cape'))
 ON CONFLICT (name, region_id) DO NOTHING;
 
--- Insert Core Categories
+
+-- =========================
+-- Core Categories
 INSERT INTO category (id, name, parent_id) VALUES
-(1, 'Electronics', NULL),
-(2, 'Fashion & Accessories', NULL),
-(3, 'Home & Garden', NULL),
-(4, 'Sports & Outdoors', NULL),
-(5, 'Books & Media', NULL),
-(6, 'Automotive', NULL),
-(7, 'Toys & Games', NULL),
-(8, 'Health & Beauty', NULL),
-(9, 'Art & Collectibles', NULL),
-(10, 'Musical Instruments', NULL),
-(11, 'Tools & Hardware', NULL),
-(12, 'Pet Supplies', NULL),
-(13, 'Baby & Kids', NULL),
-(14, 'Office & Business', NULL),
-(15, 'Food & Beverages', NULL)
+                                               (1, 'Electronics', NULL),
+                                               (2, 'Fashion & Accessories', NULL),
+                                               (3, 'Home & Garden', NULL),
+                                               (4, 'Sports & Outdoors', NULL),
+                                               (5, 'Books & Media', NULL),
+                                               (6, 'Automotive', NULL),
+                                               (7, 'Toys & Games', NULL),
+                                               (8, 'Health & Beauty', NULL),
+                                               (9, 'Art & Collectibles', NULL),
+                                               (10, 'Musical Instruments', NULL),
+                                               (11, 'Tools & Hardware', NULL),
+                                               (12, 'Pet Supplies', NULL),
+                                               (13, 'Baby & Kids', NULL),
+                                               (14, 'Office & Business', NULL),
+                                               (15, 'Food & Beverages', NULL)
 ON CONFLICT (id) DO NOTHING;
 
+-- =========================
 -- Electronics subcategories
 INSERT INTO category (id, name, parent_id) VALUES
-(101, 'Computers & Tablets', 1),
-(102, 'Phones & Accessories', 1),
-(103, 'TV, Audio & Video', 1)
+                                               (101, 'Computers & Tablets', 1),
+                                               (102, 'Phones & Accessories', 1),
+                                               (103, 'Cameras & Photography', 1),
+                                               (104, 'Audio & Video', 1),
+                                               (105, 'Gaming', 1)
 ON CONFLICT (id) DO NOTHING;
 
--- Electronics sub-subcategories
+-- Computers sub-subcategories
 INSERT INTO category (id, name, parent_id) VALUES
-(201, 'Laptops', 101),
-(202, 'Desktops', 101),
-(203, 'Tablets', 101),
-(204, 'Smartphones', 102),
-(205, 'Phone Cases', 102),
-(206, 'Headphones', 103),
-(207, 'Speakers', 103)
+                                               (201, 'Laptops', 101),
+                                               (202, 'Desktops', 101),
+                                               (203, 'Tablets', 101),
+                                               (204, 'Components', 101),
+                                               (205, 'Accessories & Peripherals', 101)
 ON CONFLICT (id) DO NOTHING;
 
--- Fashion & Accessories subcategories
+-- Components
 INSERT INTO category (id, name, parent_id) VALUES
-(301, 'Men''s Fashion', 2),
-(302, 'Women''s Fashion', 2),
-(303, 'Jewelry & Watches', 2),
-(304, 'Bags & Luggage', 2)
+                                               (301, 'CPU', 204),
+                                               (302, 'GPU', 204),
+                                               (303, 'RAM & Storage', 204),
+                                               (304, 'Motherboards', 204),
+                                               (305, 'Power Supplies', 204),
+                                               (306, 'Cooling', 204)
 ON CONFLICT (id) DO NOTHING;
 
--- Fashion & Accessories sub-subcategories
+-- Accessories & Peripherals
 INSERT INTO category (id, name, parent_id) VALUES
-(401, 'Tops', 301),
-(402, 'Bottoms', 301),
-(403, 'Shoes', 301),
-(404, 'Dresses', 302),
-(405, 'Handbags', 304),
-(406, 'Suitcases', 304)
+                                               (307, 'Keyboards', 205),
+                                               (308, 'Mice', 205),
+                                               (309, 'Monitors', 205),
+                                               (310, 'Cables & Hubs', 205),
+                                               (311, 'Docking Stations', 205)
 ON CONFLICT (id) DO NOTHING;
+
+-- Phones & Accessories
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (312, 'Smartphones', 102),
+                                               (313, 'Cases & Covers', 102),
+                                               (314, 'Chargers & Cables', 102),
+                                               (315, 'Headphones & Earphones', 102)
+ON CONFLICT (id) DO NOTHING;
+
+-- Cameras
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (316, 'DSLR & Mirrorless', 103),
+                                               (317, 'Lenses & Filters', 103),
+                                               (318, 'Tripods & Mounts', 103),
+                                               (319, 'Camera Bags & Storage', 103)
+ON CONFLICT (id) DO NOTHING;
+
+-- Audio & Video
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (320, 'Speakers', 104),
+                                               (321, 'Headphones', 104),
+                                               (322, 'TVs & Projectors', 104),
+                                               (323, 'Streaming Devices', 104)
+ON CONFLICT (id) DO NOTHING;
+
+-- Gaming
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (324, 'Consoles', 105),
+                                               (325, 'Games', 105),
+                                               (326, 'Controllers & Accessories', 105),
+                                               (327, 'VR Headsets', 105)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Fashion & Accessories
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (401, 'Men''s Fashion', 2),
+                                               (402, 'Women''s Fashion', 2),
+                                               (403, 'Jewelry & Watches', 2),
+                                               (404, 'Bags & Luggage', 2),
+                                               (405, 'Accessories', 2)
+ON CONFLICT (id) DO NOTHING;
+
+-- Men
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (501, 'Tops', 401),
+                                               (502, 'Bottoms', 401),
+                                               (503, 'Shoes', 401),
+                                               (504, 'Underwear', 401),
+                                               (505, 'Outerwear', 401)
+ON CONFLICT (id) DO NOTHING;
+
+-- Women
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (506, 'Tops', 402),
+                                               (507, 'Bottoms', 402),
+                                               (508, 'Dresses', 402),
+                                               (509, 'Shoes', 402),
+                                               (510, 'Underwear', 402),
+                                               (511, 'Outerwear', 402)
+ON CONFLICT (id) DO NOTHING;
+
+-- Jewelry & Watches
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (512, 'Rings', 403),
+                                               (513, 'Necklaces', 403),
+                                               (514, 'Bracelets', 403),
+                                               (515, 'Watches', 403)
+ON CONFLICT (id) DO NOTHING;
+
+-- Bags & Luggage
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (516, 'Handbags', 404),
+                                               (517, 'Backpacks', 404),
+                                               (518, 'Suitcases', 404)
+ON CONFLICT (id) DO NOTHING;
+
+-- Accessories
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (519, 'Belts', 405),
+                                               (520, 'Hats & Caps', 405),
+                                               (521, 'Sunglasses', 405),
+                                               (522, 'Scarves', 405)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Home & Garden
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (601, 'Furniture', 3),
+                                               (602, 'Kitchen & Dining', 3),
+                                               (603, 'Garden & Outdoor', 3),
+                                               (604, 'Home Decor', 3),
+                                               (605, 'Bedding & Bath', 3)
+ON CONFLICT (id) DO NOTHING;
+
+-- Furniture
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (701, 'Living Room', 601),
+                                               (702, 'Bedroom', 601),
+                                               (703, 'Office Furniture', 601)
+ON CONFLICT (id) DO NOTHING;
+
+-- Kitchen & Dining
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (704, 'Cookware', 602),
+                                               (705, 'Tableware', 602),
+                                               (706, 'Small Appliances', 602)
+ON CONFLICT (id) DO NOTHING;
+
+-- Garden & Outdoor
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (707, 'Garden Tools', 603),
+                                               (708, 'Outdoor Furniture', 603),
+                                               (709, 'Grills & BBQ', 603)
+ON CONFLICT (id) DO NOTHING;
+
+-- Home Decor
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (710, 'Lighting', 604),
+                                               (711, 'Rugs & Carpets', 604),
+                                               (712, 'Wall Art & Decor', 604)
+ON CONFLICT (id) DO NOTHING;
+
+-- Bedding & Bath
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (713, 'Bedding', 605),
+                                               (714, 'Bath', 605)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Sports & Outdoors
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (801, 'Fitness', 4),
+                                               (802, 'Outdoor Recreation', 4),
+                                               (803, 'Team Sports', 4),
+                                               (804, 'Cycling', 4)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Automotive
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (901, 'Car Parts & Accessories', 6),
+                                               (902, 'Motorcycles & Scooters', 6),
+                                               (903, 'Tires & Wheels', 6),
+                                               (904, 'Car Electronics', 6),
+                                               (905, 'Tools & Garage', 6)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Toys & Games
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1001, 'Action Figures & Collectibles', 7),
+                                               (1002, 'Board Games & Puzzles', 7),
+                                               (1003, 'Dolls & Accessories', 7),
+                                               (1004, 'Outdoor Play', 7),
+                                               (1005, 'Educational Toys', 7)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Health & Beauty
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1101, 'Makeup', 8),
+                                               (1102, 'Skincare', 8),
+                                               (1103, 'Hair Care', 8),
+                                               (1104, 'Personal Care', 8),
+                                               (1105, 'Supplements', 8)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Art & Collectibles
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1201, 'Paintings', 9),
+                                               (1202, 'Sculptures', 9),
+                                               (1203, 'Collectibles', 9)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Musical Instruments
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1301, 'Guitars', 10),
+                                               (1302, 'Keyboards & Pianos', 10),
+                                               (1303, 'Drums & Percussion', 10),
+                                               (1304, 'Wind Instruments', 10)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Tools & Hardware
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1401, 'Hand Tools', 11),
+                                               (1402, 'Power Tools', 11),
+                                               (1403, 'Tool Storage', 11),
+                                               (1404, 'Safety Equipment', 11)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Pet Supplies
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1501, 'Dog Supplies', 12),
+                                               (1502, 'Cat Supplies', 12),
+                                               (1503, 'Fish & Aquatic', 12),
+                                               (1504, 'Small Pets', 12),
+                                               (1505, 'Birds', 12)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Baby & Kids
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1601, 'Clothing', 13),
+                                               (1602, 'Toys', 13),
+                                               (1603, 'Gear & Accessories', 13),
+                                               (1604, 'Feeding & Nursing', 13)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Office & Business
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1701, 'Office Supplies', 14),
+                                               (1702, 'Stationery', 14),
+                                               (1703, 'Furniture', 14),
+                                               (1704, 'Technology', 14)
+ON CONFLICT (id) DO NOTHING;
+
+-- =========================
+-- Food & Beverages
+INSERT INTO category (id, name, parent_id) VALUES
+                                               (1801, 'Snacks', 15),
+                                               (1802, 'Beverages', 15),
+                                               (1803, 'Groceries', 15),
+                                               (1804, 'Specialty Foods', 15)
+ON CONFLICT (id) DO NOTHING;
+
+
 
 -- Listing Table
 CREATE TABLE IF NOT EXISTS listing (

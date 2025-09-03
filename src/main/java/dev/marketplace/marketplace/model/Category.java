@@ -9,14 +9,16 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "category", schema = "public")
+@Table(name = "category", schema = "public", uniqueConstraints = {
+    @UniqueConstraint(columnNames = {"name", "parent_id"}, name = "unique_category_name_per_parent")
+})
 public class Category {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
