@@ -86,7 +86,8 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "https://marketplace-fe-theta.vercel.app",
                 "https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app",
-                "https://marketplace-fe-theta.vercel.app"
+                "https://marketplace-fe-theta.vercel.app",
+                "https://www.dealio.org.za/"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));

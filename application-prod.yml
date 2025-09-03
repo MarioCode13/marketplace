@@ -33,7 +33,10 @@ server:
   port: ${PORT:8080}
 
 allowed:
-  origins: https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app
+  origins:
+    - https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app
+    - https://dealio.org.za
+    - https://marketplace-fe-git-master-mariocode13s-projects.vercel.app/
 
 # JWT Configuration
 jwt:
