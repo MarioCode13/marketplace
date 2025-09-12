@@ -152,7 +152,7 @@ public class UserQueryResolver {
     @QueryMapping
     public User storeBySlug(@Argument String slug) {
         return storeBrandingRepository.findBySlug(slug)
-                .map(dev.marketplace.marketplace.model.StoreBranding::getUser)
+                .map(branding -> branding.getBusiness() != null ? branding.getBusiness().getOwner() : null)
                 .orElse(null);
     }
 

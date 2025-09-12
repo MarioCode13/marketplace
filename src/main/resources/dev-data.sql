@@ -33,8 +33,8 @@ VALUES (
 ON CONFLICT (email) DO NOTHING;
 
 -- Add store branding for reseller
-INSERT INTO store_branding (user_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
-SELECT id, 'reseller-joe',
+INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT b.id, 'reseller-joe',
   'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
   '#e53e3e',
@@ -43,14 +43,18 @@ SELECT id, 'reseller-joe',
   'light',
   'Welcome to Joe''s Reseller Store! Find top gadgets and more.',
   'Joe''s Reseller Store'
-FROM "users" WHERE email = 'reseller@marketplace.com'
-ON CONFLICT (user_id) DO NOTHING;
+FROM business b
+JOIN "users" u ON u.id = b.owner_id
+WHERE u.email = 'reseller@marketplace.com'
+ON CONFLICT (business_id) DO NOTHING;
 
 -- Store branding for admin (pro store)
-INSERT INTO store_branding (user_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
-SELECT id, 'admin-pro', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#6470ff', '#ff131a', '#ffffff', 'light', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.', 'Admin Pro Store'
-FROM "users" WHERE email = 'admin@admin.com'
-ON CONFLICT (user_id) DO NOTHING;
+INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT b.id, 'admin-pro', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#6470ff', '#ff131a', '#ffffff', 'light', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.', 'Admin Pro Store'
+FROM business b
+JOIN "users" u ON u.id = b.owner_id
+WHERE u.email = 'admin@admin.com'
+ON CONFLICT (business_id) DO NOTHING;
 
 -- Insert Profile Completion records for all users
 INSERT INTO profile_completion (user_id, has_profile_photo, has_bio, has_contact_number, has_location, has_id_document, has_drivers_license, has_proof_of_address, completion_percentage) 
@@ -374,3 +378,89 @@ JOIN "users" seller ON l.user_id = seller.id
 JOIN "users" admin ON admin.email = 'admin@admin.com'
 WHERE l.title IN ('MacBook Air M2', 'Vintage Chanel Bag', 'Mountain Bike')
   AND seller.email != 'admin@admin.com'; 
+-- Add businesses for existing users
+INSERT INTO business (name, email, contact_number, address_line1, city_id, owner_id)
+SELECT 
+    CASE 
+        WHEN u.email = 'admin@admin.com' THEN 'Admin Marketplace Store'
+        WHEN u.email = 'john@example.com' THEN 'John''s Electronics'
+        WHEN u.email = 'sarah@example.com' THEN 'Sarah''s Fashion Boutique'
+        WHEN u.email = 'mike@example.com' THEN 'Mike''s Home Improvement'
+        WHEN u.email = 'emma@example.com' THEN 'Emma''s Book Collection'
+        WHEN u.email = 'alex@example.com' THEN 'Alex''s Sports Equipment'
+        WHEN u.email = 'lisa@example.com' THEN 'Lisa''s Art Gallery'
+        WHEN u.email = 'david@example.com' THEN 'David''s Music Store'
+        WHEN u.email = 'maria@example.com' THEN 'Maria''s Jewelry Studio'
+        ELSE u.first_name || '''s Business'
+    END,
+    u.email,
+    u.contact_number,
+    CASE 
+        WHEN u.city_id IS NOT NULL THEN '123 Business Street'
+        ELSE '456 Main Road'
+    END,
+    COALESCE(u.city_id, 1), -- Default to Johannesburg if no city
+    u.id
+FROM "users" u
+WHERE u.email IN ('admin@admin.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 
+                  'emma@example.com', 'alex@example.com', 'lisa@example.com', 'david@example.com', 'maria@example.com')
+ON CONFLICT DO NOTHING;
+
+-- Add business user relationships (all as owners for now)
+INSERT INTO business_user (business_id, user_id, role)
+SELECT b.id, b.owner_id, 'OWNER'
+FROM business b
+ON CONFLICT (business_id, user_id) DO NOTHING;
+
+-- Add store branding for businesses
+INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT 
+    b.id,
+    LOWER(REPLACE(b.name, ' ', '-')) || '-' || b.id,
+    'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+    CASE 
+        WHEN b.name LIKE '%Electronics%' THEN '#3B82F6'
+        WHEN b.name LIKE '%Fashion%' THEN '#EC4899'
+        WHEN b.name LIKE '%Home%' THEN '#10B981'
+        WHEN b.name LIKE '%Sports%' THEN '#F59E0B'
+        WHEN b.name LIKE '%Book%' THEN '#8B5CF6'
+        WHEN b.name LIKE '%Art%' THEN '#EF4444'
+        WHEN b.name LIKE '%Music%' THEN '#06B6D4'
+        WHEN b.name LIKE '%Jewelry%' THEN '#F97316'
+        ELSE '#6B7280'
+    END,
+    CASE 
+        WHEN b.name LIKE '%Electronics%' THEN '#1E40AF'
+        WHEN b.name LIKE '%Fashion%' THEN '#BE185D'
+        WHEN b.name LIKE '%Home%' THEN '#047857'
+        WHEN b.name LIKE '%Sports%' THEN '#D97706'
+        WHEN b.name LIKE '%Book%' THEN '#7C3AED'
+        WHEN b.name LIKE '%Art%' THEN '#DC2626'
+        WHEN b.name LIKE '%Music%' THEN '#0891B2'
+        WHEN b.name LIKE '%Jewelry%' THEN '#EA580C'
+        ELSE '#374151'
+    END,
+    '#FFFFFF',
+    'light',
+    'Welcome to ' || b.name || '! We offer quality products and excellent service.',
+    b.name
+FROM business b
+ON CONFLICT (business_id) DO NOTHING;
+
+-- Add some team members to businesses (non-owners)
+INSERT INTO business_user (business_id, user_id, role)
+SELECT 
+    b.id,
+    u.id,
+    CASE 
+        WHEN RANDOM() < 0.3 THEN 'MANAGER'
+        ELSE 'CONTRIBUTOR'
+    END
+FROM business b
+CROSS JOIN "users" u
+WHERE b.owner_id != u.id
+  AND u.email IN ('test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com')
+  AND RANDOM() < 0.2 -- 20% chance of being added to a random business
+ON CONFLICT (business_id, user_id) DO NOTHING;
+

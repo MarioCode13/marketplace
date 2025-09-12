@@ -81,7 +81,7 @@ public class User {
     @Column(name = "plan_type")
     private String planType; // FREE, VERIFIED, RESELLER, PRO_STORE
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @Transient
     private StoreBranding storeBranding;
 
     @PrePersist

@@ -40,6 +40,8 @@ type StoreBranding {
     lightOrDark: String
     about: String
     storeName: String
+    textColor: String
+    cardTextColor: String
 }
 
 enum Condition {
@@ -358,4 +360,77 @@ input UpdateListingInput {
     categoryId: ID
     cityId: ID
     customCity: String
+}
+# Business domain
+
+type Business {
+    id: ID!
+    name: String!
+    email: String!
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    city: City
+    postalCode: String
+    owner: User!
+    storeBranding: StoreBranding
+    businessUsers: [BusinessUser!]!
+}
+
+type BusinessUser {
+    id: ID!
+    user: User!
+    role: String!
+}
+
+input UpdateBusinessInput {
+    businessId: ID!
+    email: String
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    cityId: ID
+    postalCode: String
+}
+
+input UpdateStoreBrandingInput {
+    slug: String
+    logoUrl: String
+    bannerUrl: String
+    themeColor: String
+    primaryColor: String
+    secondaryColor: String
+    lightOrDark: String
+    about: String
+    storeName: String
+    textColor: String
+    cardTextColor: String
+}
+
+extend type Query {
+    business(id: ID!): Business
+    myBusiness: Business
+    myBusinesses: [Business!]!
+    businessUsers(businessId: ID!): [BusinessUser!]!
+}
+
+extend type Mutation {
+    createBusiness(
+        name: String!
+        email: String!
+        contactNumber: String
+        addressLine1: String
+        addressLine2: String
+        cityId: ID
+        postalCode: String
+    ): Business!
+
+    updateBusinessAndBranding(
+        business: UpdateBusinessInput!
+        branding: UpdateStoreBrandingInput!
+    ): Business!
+
+    linkUserToBusiness(businessId: ID!, userId: ID!, role: String!): BusinessUser!
+    unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
+    transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
 }

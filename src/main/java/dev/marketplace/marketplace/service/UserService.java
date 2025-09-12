@@ -362,28 +362,21 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public User updateStoreBranding(Long userId, String slug, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName) {
-        User user = userRepository.findById(userId)
+        // Legacy user-scoped branding; now business-scoped. No-op to keep backward compatibility.
+        return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        dev.marketplace.marketplace.model.StoreBranding branding = user.getStoreBranding();
-        if (branding == null) {
-            branding = new dev.marketplace.marketplace.model.StoreBranding();
-            branding.setUser(user);
-            branding.setUserId(userId);
-        }
-        branding.setSlug(slug);
-        branding.setLogoUrl(logoUrl);
-        branding.setBannerUrl(bannerUrl);
-        branding.setThemeColor(themeColor);
-        branding.setPrimaryColor(primaryColor);
-        branding.setSecondaryColor(secondaryColor);
-        branding.setLightOrDark(lightOrDark);
-        branding.setAbout(about);
-        branding.setStoreName(storeName);
-        user.setStoreBranding(branding);
-        return userRepository.save(user);
     }
 
     public boolean hasActiveSubscription(Long userId) {
         return subscriptionRepository.existsByUserIdAndStatusIn(userId, java.util.Arrays.asList(SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL));
+    }
+
+
+    public java.util.Optional<dev.marketplace.marketplace.model.User> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    public java.util.Optional<dev.marketplace.marketplace.model.User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 }
