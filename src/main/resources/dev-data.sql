@@ -33,8 +33,8 @@ VALUES (
 ON CONFLICT (email) DO NOTHING;
 
 -- Add store branding for reseller
-INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
-SELECT b.id, 'reseller-joe',
+INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT b.id,
   'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
   'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
   '#e53e3e',
@@ -49,8 +49,16 @@ WHERE u.email = 'reseller@marketplace.com'
 ON CONFLICT (business_id) DO NOTHING;
 
 -- Store branding for admin (pro store)
-INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
-SELECT b.id, 'admin-pro', 'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470', '#6470ff', '#ff131a', '#ffffff', 'light', 'Welcome to the Admin Pro Store! We offer the best tech and collectibles.', 'Admin Pro Store'
+INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT b.id,
+  'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470',
+  '#6470ff',
+  '#ff131a',
+  '#ffffff',
+  'light',
+  'Welcome to the Admin Pro Store! We offer the best tech and collectibles.',
+  'Admin Pro Store'
 FROM business b
 JOIN "users" u ON u.id = b.owner_id
 WHERE u.email = 'admin@admin.com'
@@ -229,9 +237,10 @@ FROM (
 JOIN "users" admin ON admin.email = 'admin@admin.com';
 
 -- Insert subscription for admin
-INSERT INTO subscription (user_id, stripe_subscription_id, stripe_customer_id, plan_type, status, amount, currency, billing_cycle, current_period_start, current_period_end)
-SELECT 
+INSERT INTO subscription (user_id, business_id, stripe_subscription_id, stripe_customer_id, plan_type, status, amount, currency, billing_cycle, current_period_start, current_period_end)
+SELECT
     admin.id,
+    b.id,
     'sub_admin_001',
     'cus_admin_001',
     'PREMIUM',
@@ -242,6 +251,7 @@ SELECT
     NOW() - INTERVAL '15 days',
     NOW() + INTERVAL '15 days'
 FROM "users" admin
+JOIN business b ON b.owner_id = admin.id
 WHERE admin.email = 'admin@admin.com'
 ON CONFLICT (stripe_subscription_id) DO NOTHING;
 
@@ -413,10 +423,9 @@ FROM business b
 ON CONFLICT (business_id, user_id) DO NOTHING;
 
 -- Add store branding for businesses
-INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
-SELECT 
+INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+SELECT
     b.id,
-    LOWER(REPLACE(b.name, ' ', '-')) || '-' || b.id,
     'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     CASE 

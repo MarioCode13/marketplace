@@ -25,6 +25,10 @@ public class Subscription {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id")
+    private Business business;
+
     @Column(name = "stripe_subscription_id", unique = true)
     private String stripeSubscriptionId;
     
@@ -127,4 +131,4 @@ public class Subscription {
     public boolean willCancelAtPeriodEnd() {
         return cancelAtPeriodEnd != null && cancelAtPeriodEnd;
     }
-} 
+}

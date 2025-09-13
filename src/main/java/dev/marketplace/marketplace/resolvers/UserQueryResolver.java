@@ -12,6 +12,8 @@ import dev.marketplace.marketplace.service.VerificationDocumentService;
 import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.repository.ProfileCompletionRepository;
 import dev.marketplace.marketplace.repository.StoreBrandingRepository;
+import dev.marketplace.marketplace.repository.BusinessRepository;
+import dev.marketplace.marketplace.model.Business;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -37,6 +39,7 @@ public class UserQueryResolver {
     private final ProfileCompletionRepository profileCompletionRepository;
     private final StoreBrandingRepository storeBrandingRepository;
     private final ListingService listingService;
+    private final BusinessRepository businessRepository;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(User user) {
@@ -92,7 +95,22 @@ public class UserQueryResolver {
 
     @SchemaMapping(typeName = "User", field = "storeBranding")
     public dev.marketplace.marketplace.model.StoreBranding resolveStoreBranding(User user) {
-        return user.getStoreBranding();
+        // Try to find business where user is owner
+        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(user);
+        Business business = null;
+        if (ownedBusiness.isPresent()) {
+            business = ownedBusiness.get();
+        } else {
+            // Optionally, return first business where user is a team member
+            List<Business> businesses = businessRepository.findByUser(user);
+            if (!businesses.isEmpty()) {
+                business = businesses.get(0);
+            }
+        }
+        if (business != null) {
+            return storeBrandingRepository.findByBusiness(business).orElse(null);
+        }
+        return null;
     }
 
     @SchemaMapping(typeName = "StoreBranding", field = "storeName")
@@ -105,13 +123,34 @@ public class UserQueryResolver {
         return listingService.getListingsByUserId(user.getId());
     }
 
-    public UserQueryResolver(UserService userService, TrustRatingService trustRatingService, VerificationDocumentService verificationDocumentService, ProfileCompletionRepository profileCompletionRepository, StoreBrandingRepository storeBrandingRepository, ListingService listingService) {
+    @SchemaMapping(typeName = "User", field = "business")
+    public Business resolveBusiness(User user) {
+        // Try to find business where user is owner
+        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(user);
+        if (ownedBusiness.isPresent()) {
+            return ownedBusiness.get();
+        }
+        // Optionally, return first business where user is a team member
+        List<Business> businesses = businessRepository.findByUser(user);
+        return businesses.isEmpty() ? null : businesses.get(0);
+    }
+
+    public UserQueryResolver(
+        UserService userService,
+        TrustRatingService trustRatingService,
+        VerificationDocumentService verificationDocumentService,
+        ProfileCompletionRepository profileCompletionRepository,
+        StoreBrandingRepository storeBrandingRepository,
+        ListingService listingService,
+        BusinessRepository businessRepository
+    ) {
         this.userService = userService;
         this.trustRatingService = trustRatingService;
         this.verificationDocumentService = verificationDocumentService;
         this.profileCompletionRepository = profileCompletionRepository;
         this.storeBrandingRepository = storeBrandingRepository;
         this.listingService = listingService;
+        this.businessRepository = businessRepository;
     }
 
     @QueryMapping

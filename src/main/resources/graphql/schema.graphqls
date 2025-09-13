@@ -28,6 +28,7 @@ type User {
     planType: String
     storeBranding: StoreBranding
     listings: [Listing!]!
+    business: Business
 }
 
 type StoreBranding {
@@ -319,17 +320,9 @@ type Mutation {
     updateListing(input: UpdateListingInput!): Listing!
     updateUserPlanType(id: ID!, planType: String!): User
     updateStoreBranding(
-        id: ID!
-        slug: String
-        logoUrl: String
-        bannerUrl: String
-        themeColor: String
-        primaryColor: String
-        secondaryColor: String
-        lightOrDark: String
-        about: String
-        storeName: String
-    ): User
+            id: ID!
+            input: UpdateStoreBrandingInput
+        ): User
 }
 
 type Country {
@@ -372,6 +365,7 @@ type Business {
     addressLine2: String
     city: City
     postalCode: String
+    slug: String
     owner: User!
     storeBranding: StoreBranding
     businessUsers: [BusinessUser!]!
@@ -380,7 +374,7 @@ type Business {
 type BusinessUser {
     id: ID!
     user: User!
-    role: String!
+    role: BusinessUserRole!
 }
 
 input UpdateBusinessInput {
@@ -407,6 +401,42 @@ input UpdateStoreBrandingInput {
     cardTextColor: String
 }
 
+enum BusinessUserRole {
+    OWNER
+    MANAGER
+    CONTRIBUTOR
+}
+
+input CreateBusinessInput {
+    name: String!
+    email: String!
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    cityId: ID
+    postalCode: String
+    slug: String
+    branding: CreateStoreBrandingInput
+}
+
+input CreateStoreBrandingInput {
+    slug: String
+    logoUrl: String
+    bannerUrl: String
+    themeColor: String
+    primaryColor: String
+    secondaryColor: String
+    lightOrDark: String
+    about: String
+    storeName: String
+    textColor: String
+    cardTextColor: String
+}
+
+extend type Query {
+    isStoreSlugAvailable(slug: String!): Boolean!
+}
+
 extend type Query {
     business(id: ID!): Business
     myBusiness: Business
@@ -415,22 +445,8 @@ extend type Query {
 }
 
 extend type Mutation {
-    createBusiness(
-        name: String!
-        email: String!
-        contactNumber: String
-        addressLine1: String
-        addressLine2: String
-        cityId: ID
-        postalCode: String
-    ): Business!
-
-    updateBusinessAndBranding(
-        business: UpdateBusinessInput!
-        branding: UpdateStoreBrandingInput!
-    ): Business!
-
-    linkUserToBusiness(businessId: ID!, userId: ID!, role: String!): BusinessUser!
+    createBusiness(input: CreateBusinessInput!): Business!
+    linkUserToBusiness(businessId: ID!, userId: ID!, role: BusinessUserRole!): BusinessUser!
     unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
     transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
 }
