@@ -14,6 +14,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -27,7 +28,7 @@ public class SubscriptionResolver {
      */
     @MutationMapping
     public Subscription cancelSubscription(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.cancelAtPeriodEnd(userId);
     }
     
@@ -36,7 +37,7 @@ public class SubscriptionResolver {
      */
     @MutationMapping
     public Subscription reactivateSubscription(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.reactivateSubscription(userId);
     }
     
@@ -45,7 +46,7 @@ public class SubscriptionResolver {
      */
     @QueryMapping
     public Subscription mySubscription(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.getActiveSubscription(userId).orElse(null);
     }
     
@@ -54,7 +55,7 @@ public class SubscriptionResolver {
      */
     @QueryMapping
     public List<Subscription> mySubscriptionHistory(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.getUserSubscriptions(userId);
     }
     
@@ -63,7 +64,7 @@ public class SubscriptionResolver {
      */
     @QueryMapping
     public boolean hasActiveSubscription(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.hasActiveSubscription(userId);
     }
     
@@ -72,7 +73,7 @@ public class SubscriptionResolver {
      */
     @QueryMapping
     public boolean canContactSellers(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return subscriptionService.canContactSellers(userId);
     }
     
@@ -104,4 +105,4 @@ public class SubscriptionResolver {
     public List<Subscription> getExpiringSubscriptions(@Argument Integer daysAhead) {
         return subscriptionService.getExpiringSubscriptions(daysAhead != null ? daysAhead : 7);
     }
-} 
+}

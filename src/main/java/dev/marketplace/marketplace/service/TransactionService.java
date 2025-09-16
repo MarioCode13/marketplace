@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +33,7 @@ public class TransactionService {
      * Create a transaction when a listing is sold to a specific buyer
      */
     @Transactional
-    public Transaction createTransaction(Long listingId, Long buyerId, BigDecimal salePrice, 
+    public Transaction createTransaction(UUID listingId, UUID buyerId, BigDecimal salePrice,
                                        String paymentMethod, String notes) {
         log.info("Creating transaction: listing={}, buyer={}, price={}", listingId, buyerId, salePrice);
         
@@ -84,7 +85,7 @@ public class TransactionService {
      * Complete a transaction (confirm the sale)
      */
     @Transactional
-    public Transaction completeTransaction(Long transactionId, Long sellerId) {
+    public Transaction completeTransaction(UUID transactionId, UUID sellerId) {
         log.info("Completing transaction: {}, by seller: {}", transactionId, sellerId);
         
         Transaction transaction = transactionRepository.findById(transactionId)
@@ -112,7 +113,7 @@ public class TransactionService {
      * Cancel a transaction
      */
     @Transactional
-    public Transaction cancelTransaction(Long transactionId, Long sellerId, String reason) {
+    public Transaction cancelTransaction(UUID transactionId, UUID sellerId, String reason) {
         log.info("Cancelling transaction: {}, by seller: {}", transactionId, sellerId);
         
         Transaction transaction = transactionRepository.findById(transactionId)
@@ -146,7 +147,7 @@ public class TransactionService {
      * Check if a user has bought a specific listing
      */
     @Transactional(readOnly = true)
-    public boolean hasUserBoughtListing(Long userId, Long listingId) {
+    public boolean hasUserBoughtListing(UUID userId, UUID listingId) {
         return transactionRepository.existsByListingIdAndBuyerIdAndStatus(
                 listingId, userId, Transaction.TransactionStatus.COMPLETED);
     }
@@ -155,7 +156,7 @@ public class TransactionService {
      * Get the buyer for a completed transaction on a listing
      */
     @Transactional(readOnly = true)
-    public Optional<User> getBuyerForListing(Long listingId) {
+    public Optional<User> getBuyerForListing(UUID listingId) {
         return transactionRepository.findFirstByListingIdAndStatusOrderBySaleDateDesc(
                 listingId, Transaction.TransactionStatus.COMPLETED)
                 .map(Transaction::getBuyer);
@@ -165,7 +166,7 @@ public class TransactionService {
      * Get all transactions for a user as buyer
      */
     @Transactional(readOnly = true)
-    public List<Transaction> getUserBuyingHistory(Long userId) {
+    public List<Transaction> getUserBuyingHistory(UUID userId) {
         return transactionRepository.findByBuyerId(userId);
     }
     
@@ -173,7 +174,7 @@ public class TransactionService {
      * Get all transactions for a user as seller
      */
     @Transactional(readOnly = true)
-    public List<Transaction> getUserSellingHistory(Long userId) {
+    public List<Transaction> getUserSellingHistory(UUID userId) {
         return transactionRepository.findBySellerId(userId);
     }
     
@@ -181,7 +182,7 @@ public class TransactionService {
      * Get completed transactions for a user as buyer
      */
     @Transactional(readOnly = true)
-    public List<Transaction> getUserCompletedPurchases(Long userId) {
+    public List<Transaction> getUserCompletedPurchases(UUID userId) {
         return transactionRepository.findByBuyerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED);
     }
     
@@ -189,7 +190,7 @@ public class TransactionService {
      * Get completed transactions for a user as seller
      */
     @Transactional(readOnly = true)
-    public List<Transaction> getUserCompletedSales(Long userId) {
+    public List<Transaction> getUserCompletedSales(UUID userId) {
         return transactionRepository.findBySellerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED);
     }
     
@@ -197,7 +198,7 @@ public class TransactionService {
      * Get transaction by ID
      */
     @Transactional(readOnly = true)
-    public Optional<Transaction> getTransaction(Long transactionId) {
+    public Optional<Transaction> getTransaction(UUID transactionId) {
         return transactionRepository.findById(transactionId);
     }
     
@@ -205,7 +206,7 @@ public class TransactionService {
      * Get all transactions for a listing
      */
     @Transactional(readOnly = true)
-    public List<Transaction> getListingTransactions(Long listingId) {
+    public List<Transaction> getListingTransactions(UUID listingId) {
         return transactionRepository.findByListingId(listingId);
     }
     
@@ -213,7 +214,7 @@ public class TransactionService {
      * Get user's transaction count as buyer
      */
     @Transactional(readOnly = true)
-    public long getUserPurchaseCount(Long userId) {
+    public long getUserPurchaseCount(UUID userId) {
         return transactionRepository.countByBuyerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED);
     }
     
@@ -221,7 +222,7 @@ public class TransactionService {
      * Get user's transaction count as seller
      */
     @Transactional(readOnly = true)
-    public long getUserSaleCount(Long userId) {
+    public long getUserSaleCount(UUID userId) {
         return transactionRepository.countBySellerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED);
     }
     
@@ -243,9 +244,11 @@ public class TransactionService {
                 listing.getCustomCity(),
                 listing.getCondition().name(),
                 listing.getUser(),
+                listing.getBusiness(),
                 listing.getCreatedAt(),
                 listing.isSold(),
-                listing.getExpiresAt() != null ? listing.getExpiresAt().toString() : null
+                listing.getExpiresAt() != null ? listing.getExpiresAt().toString() : null,
+                listing.isArchived() // Pass archived field
         );
         
         return TransactionDTO.fromTransaction(transaction, listingDTO);
@@ -255,7 +258,7 @@ public class TransactionService {
      * Get all transactions for a user as buyer (with DTOs)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> getUserBuyingHistoryDTO(Long userId) {
+    public List<TransactionDTO> getUserBuyingHistoryDTO(UUID userId) {
         return transactionRepository.findByBuyerId(userId)
                 .stream()
                 .map(this::convertToDTO)
@@ -266,7 +269,7 @@ public class TransactionService {
      * Get all transactions for a user as seller (with DTOs)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> getUserSellingHistoryDTO(Long userId) {
+    public List<TransactionDTO> getUserSellingHistoryDTO(UUID userId) {
         return transactionRepository.findBySellerId(userId)
                 .stream()
                 .map(this::convertToDTO)
@@ -277,7 +280,7 @@ public class TransactionService {
      * Get completed transactions for a user as buyer (with DTOs)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> getUserCompletedPurchasesDTO(Long userId) {
+    public List<TransactionDTO> getUserCompletedPurchasesDTO(UUID userId) {
         return transactionRepository.findByBuyerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED)
                 .stream()
                 .map(this::convertToDTO)
@@ -288,7 +291,7 @@ public class TransactionService {
      * Get completed transactions for a user as seller (with DTOs)
      */
     @Transactional(readOnly = true)
-    public List<TransactionDTO> getUserCompletedSalesDTO(Long userId) {
+    public List<TransactionDTO> getUserCompletedSalesDTO(UUID userId) {
         return transactionRepository.findBySellerIdAndStatus(userId, Transaction.TransactionStatus.COMPLETED)
                 .stream()
                 .map(this::convertToDTO)
@@ -299,8 +302,8 @@ public class TransactionService {
      * Get transaction by ID (with DTO)
      */
     @Transactional(readOnly = true)
-    public Optional<TransactionDTO> getTransactionDTO(Long transactionId) {
+    public Optional<TransactionDTO> getTransactionDTO(UUID transactionId) {
         return transactionRepository.findById(transactionId)
                 .map(this::convertToDTO);
     }
-} 
+}

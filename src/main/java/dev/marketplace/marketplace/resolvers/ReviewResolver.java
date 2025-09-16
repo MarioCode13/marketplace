@@ -11,8 +11,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
+import java.math.BigDecimal;
 
 @Controller
 @RequiredArgsConstructor
@@ -25,12 +26,12 @@ public class ReviewResolver {
      * Create a review for a completed transaction
      */
     @MutationMapping
-    public Review createReview(@Argument Long transactionId,
-                              @Argument Long reviewedUserId,
+    public Review createReview(@Argument UUID transactionId,
+                              @Argument UUID reviewedUserId,
                               @Argument BigDecimal rating,
                               @Argument String comment,
                               @AuthenticationPrincipal UserDetails userDetails) {
-        Long reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
         return reviewService.createReview(reviewerId, reviewedUserId, transactionId, rating, comment);
     }
     
@@ -38,22 +39,20 @@ public class ReviewResolver {
      * Update a review
      */
     @MutationMapping
-    public Review updateReview(@Argument Long reviewId,
+    public Review updateReview(@Argument UUID reviewId,
                               @Argument BigDecimal rating,
                               @Argument String comment,
                               @AuthenticationPrincipal UserDetails userDetails) {
-        Long reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
-        return reviewService.updateReview(reviewId, reviewerId, rating, comment);
+        return reviewService.updateReview(reviewId, rating, comment);
     }
     
     /**
      * Delete a review
      */
     @MutationMapping
-    public boolean deleteReview(@Argument Long reviewId,
+    public boolean deleteReview(@Argument UUID reviewId,
                                @AuthenticationPrincipal UserDetails userDetails) {
-        Long reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
-        reviewService.deleteReview(reviewId, reviewerId);
+        reviewService.deleteReview(reviewId);
         return true;
     }
     
@@ -61,7 +60,7 @@ public class ReviewResolver {
      * Get reviews for a user
      */
     @QueryMapping
-    public List<Review> getUserReviews(@Argument Long userId) {
+    public List<Review> getUserReviews(@Argument UUID userId) {
         return reviewService.getUserReviews(userId);
     }
     
@@ -69,7 +68,7 @@ public class ReviewResolver {
      * Get positive reviews for a user
      */
     @QueryMapping
-    public List<Review> getUserPositiveReviews(@Argument Long userId) {
+    public List<Review> getUserPositiveReviews(@Argument UUID userId) {
         return reviewService.getUserPositiveReviews(userId);
     }
     
@@ -77,7 +76,7 @@ public class ReviewResolver {
      * Get negative reviews for a user
      */
     @QueryMapping
-    public List<Review> getUserNegativeReviews(@Argument Long userId) {
+    public List<Review> getUserNegativeReviews(@Argument UUID userId) {
         return reviewService.getUserNegativeReviews(userId);
     }
     
@@ -85,7 +84,7 @@ public class ReviewResolver {
      * Get reviews for a transaction
      */
     @QueryMapping
-    public List<Review> getTransactionReviews(@Argument Long transactionId) {
+    public List<Review> getTransactionReviews(@Argument UUID transactionId) {
         return reviewService.getTransactionReviews(transactionId);
     }
     
@@ -93,7 +92,7 @@ public class ReviewResolver {
      * Get a specific review
      */
     @QueryMapping
-    public Review getReview(@Argument Long reviewId) {
+    public Review getReview(@Argument UUID reviewId) {
         return reviewService.getReview(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("Review not found with ID: " + reviewId));
     }
@@ -102,45 +101,40 @@ public class ReviewResolver {
      * Get current user's review for a specific transaction
      */
     @QueryMapping
-    public Review getMyReviewForTransaction(@Argument Long transactionId,
+    public Review getMyReviewForTransaction(@Argument UUID transactionId,
                                            @AuthenticationPrincipal UserDetails userDetails) {
-        Long reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID reviewerId = userService.getUserIdByUsername(userDetails.getUsername());
         return reviewService.getUserReviewForTransaction(reviewerId, transactionId)
                 .orElse(null);
     }
-    
     /**
      * Get average rating for a user
      */
     @QueryMapping
-    public BigDecimal getUserAverageRating(@Argument Long userId) {
+    public BigDecimal getUserAverageRating(@Argument UUID userId) {
         return reviewService.getUserAverageRating(userId);
     }
-    
     /**
      * Get review count for a user
      */
     @QueryMapping
-    public Long getUserReviewCount(@Argument Long userId) {
+    public Long getUserReviewCount(@Argument UUID userId) {
         return reviewService.getUserReviewCount(userId);
     }
-    
     /**
      * Get positive review count for a user
      */
     @QueryMapping
-    public Long getUserPositiveReviewCount(@Argument Long userId) {
+    public Long getUserPositiveReviewCount(@Argument UUID userId) {
         return reviewService.getUserPositiveReviewCount(userId);
     }
-    
     /**
      * Get recent reviews for a user
      */
     @QueryMapping
-    public List<Review> getRecentUserReviews(@Argument Long userId, @Argument Integer limit) {
+    public List<Review> getRecentUserReviews(@Argument UUID userId, @Argument Integer limit) {
         return reviewService.getRecentUserReviews(userId, limit != null ? limit : 10);
     }
-    
     /**
      * Get reviews by minimum rating
      */
@@ -148,12 +142,11 @@ public class ReviewResolver {
     public List<Review> getReviewsByMinimumRating(@Argument BigDecimal minRating) {
         return reviewService.getReviewsByMinimumRating(minRating);
     }
-    
     /**
      * Get reviews for a user (reviews they received)
      */
     @QueryMapping
-    public List<Review> reviewsByUser(@Argument Long userId) {
+    public List<Review> reviewsByUser(@Argument UUID userId) {
         return reviewService.getUserReviews(userId);
     }
-} 
+}

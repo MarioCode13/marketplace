@@ -43,8 +43,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
-        return new UserService(userRepository, passwordEncoder, jwtUtil, b2StorageService, cityRepository, subscriptionRepository);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
+        return new UserService(userRepository, passwordEncoder, b2StorageService, cityRepository, subscriptionRepository);
     }
 
     @Bean

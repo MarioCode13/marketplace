@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -27,12 +28,13 @@ public class ReviewService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final TrustRatingService trustRatingService;
-    
+    private final BusinessService businessService;
+
     @Transactional
-    public Review createReview(Long reviewerId, 
-                             Long reviewedUserId, 
-                             Long transactionId, 
-                             BigDecimal rating, 
+    public Review createReview(UUID reviewerId,
+                             UUID reviewedUserId,
+                             UUID transactionId,
+                             BigDecimal rating,
                              String comment) {
         log.info("Creating review: reviewer={}, reviewed={}, transaction={}, rating={}", 
                 reviewerId, reviewedUserId, transactionId, rating);
@@ -79,120 +81,88 @@ public class ReviewService {
                 .rating(rating)
                 .comment(comment)
                 .build();
-        
-        Review saved = reviewRepository.save(review);
-        
-        // Update trust rating for the reviewed user
-        trustRatingService.calculateAndUpdateTrustRating(reviewedUserId);
-        
-        log.info("Review created successfully: {}", saved.getId());
-        
-        return saved;
+        Review savedReview = reviewRepository.save(review);
+        // Recalculate business trust rating if this is a business review
+        if (savedReview.getBusiness() != null) {
+            businessService.getBusinessTrustRating(savedReview.getBusiness().getId());
+        }
+        return savedReview;
     }
     
     @Transactional
-    public Review updateReview(Long reviewId, Long reviewerId, BigDecimal rating, String comment) {
-        log.info("Updating review: {}, by user: {}", reviewId, reviewerId);
-        
+    public Review updateReview(UUID reviewId, BigDecimal rating, String comment) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found with ID: " + reviewId));
-        
-        // Check if user owns the review
-        if (!review.getReviewer().getId().equals(reviewerId)) {
-            throw new IllegalArgumentException("User not authorized to update this review");
-        }
-        
-        // Validate rating
-        if (rating.compareTo(BigDecimal.valueOf(0.5)) < 0 || rating.compareTo(BigDecimal.valueOf(5.0)) > 0) {
-            throw new IllegalArgumentException("Rating must be between 0.5 and 5.0");
-        }
-        
-        // Update review
+                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
         review.setRating(rating);
         review.setComment(comment);
-        
-        Review saved = reviewRepository.save(review);
-        
-        // Update trust rating for the reviewed user
-        trustRatingService.calculateAndUpdateTrustRating(review.getReviewedUser().getId());
-        
-        log.info("Review updated successfully: {}", reviewId);
-        
-        return saved;
+        Review updatedReview = reviewRepository.save(review);
+        // Recalculate business trust rating if this is a business review
+        if (updatedReview.getBusiness() != null) {
+            businessService.getBusinessTrustRating(updatedReview.getBusiness().getId());
+        }
+        return updatedReview;
     }
     
     @Transactional
-    public void deleteReview(Long reviewId, Long reviewerId) {
-        log.info("Deleting review: {}, by user: {}", reviewId, reviewerId);
-        
+    public void deleteReview(UUID reviewId) {
         Review review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new IllegalArgumentException("Review not found with ID: " + reviewId));
-        
-        // Check if user owns the review
-        if (!review.getReviewer().getId().equals(reviewerId)) {
-            throw new IllegalArgumentException("User not authorized to delete this review");
-        }
-        
-        Long reviewedUserId = review.getReviewedUser().getId();
-        
+                .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+        UUID businessId = review.getBusiness() != null ? review.getBusiness().getId() : null;
         reviewRepository.delete(review);
-        
-        // Update trust rating for the reviewed user
-        trustRatingService.calculateAndUpdateTrustRating(reviewedUserId);
-        
-        log.info("Review deleted successfully: {}", reviewId);
+        // Recalculate business trust rating if this was a business review
+        if (businessId != null) {
+            businessService.getBusinessTrustRating(businessId);
+        }
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getUserReviews(Long userId) {
+    public List<Review> getUserReviews(UUID userId) {
         return reviewRepository.findByReviewedUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getUserPositiveReviews(Long userId) {
+    public List<Review> getUserPositiveReviews(UUID userId) {
         return reviewRepository.findPositiveReviewsByUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getUserNegativeReviews(Long userId) {
+    public List<Review> getUserNegativeReviews(UUID userId) {
         return reviewRepository.findNegativeReviewsByUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getTransactionReviews(Long transactionId) {
+    public List<Review> getTransactionReviews(UUID transactionId) {
         return reviewRepository.findByTransactionId(transactionId);
     }
     
     @Transactional(readOnly = true)
-    public Optional<Review> getReview(Long reviewId) {
+    public Optional<Review> getReview(UUID reviewId) {
         return reviewRepository.findById(reviewId);
     }
     
     @Transactional(readOnly = true)
-    public Optional<Review> getUserReviewForTransaction(Long reviewerId, Long transactionId) {
+    public Optional<Review> getUserReviewForTransaction(UUID reviewerId, UUID transactionId) {
         return reviewRepository.findByReviewerIdAndTransactionId(reviewerId, transactionId);
     }
     
     @Transactional(readOnly = true)
-    public BigDecimal getUserAverageRating(Long userId) {
+    public BigDecimal getUserAverageRating(UUID userId) {
         BigDecimal average = reviewRepository.getAverageRatingByUserId(userId);
         return average != null ? average : BigDecimal.ZERO;
     }
     
     @Transactional(readOnly = true)
-    public Long getUserReviewCount(Long userId) {
+    public Long getUserReviewCount(UUID userId) {
         return reviewRepository.countReviewsByUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public Long getUserPositiveReviewCount(Long userId) {
+    public Long getUserPositiveReviewCount(UUID userId) {
         return reviewRepository.countPositiveReviewsByUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public List<Review> getRecentUserReviews(Long userId, int limit) {
-        // This would need a custom query in the repository
-        // For now, return all reviews and limit in service
+    public List<Review> getRecentUserReviews(UUID userId, int limit) {
         List<Review> reviews = reviewRepository.findRecentReviewsByUserId(userId);
         return reviews.stream().limit(limit).toList();
     }
@@ -201,4 +171,4 @@ public class ReviewService {
     public List<Review> getReviewsByMinimumRating(BigDecimal minRating) {
         return reviewRepository.findReviewsByMinimumRating(minRating);
     }
-} 
+}

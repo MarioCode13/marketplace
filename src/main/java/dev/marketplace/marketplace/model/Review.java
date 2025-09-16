@@ -8,6 +8,7 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "review")
@@ -18,9 +19,10 @@ import java.time.LocalDateTime;
 public class Review {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewer_id", nullable = false)
     private User reviewer;
@@ -33,6 +35,10 @@ public class Review {
     @JoinColumn(name = "transaction_id", nullable = false)
     private Transaction transaction;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id")
+    private Business business;
+
     @Column(name = "rating", nullable = false, precision = 2, scale = 1)
     private BigDecimal rating;
     
@@ -79,4 +85,4 @@ public class Review {
                rating.compareTo(BigDecimal.valueOf(0.5)) >= 0 && 
                rating.compareTo(BigDecimal.valueOf(5.0)) <= 0;
     }
-} 
+}

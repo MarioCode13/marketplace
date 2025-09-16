@@ -66,6 +66,25 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
                     .build();
         }
         
+        if (ex instanceof dev.marketplace.marketplace.exceptions.BusinessNotFoundException) {
+            return GraphqlErrorBuilder.newError()
+                    .errorType(ErrorType.NOT_FOUND)
+                    .message(ex.getMessage())
+                    .extensions(java.util.Map.of("code", "BUSINESS_NOT_FOUND"))
+                    .path(env.getExecutionStepInfo().getPath())
+                    .location(env.getField().getSourceLocation())
+                    .build();
+        }
+        if (ex instanceof dev.marketplace.marketplace.exceptions.PermissionDeniedException) {
+            return GraphqlErrorBuilder.newError()
+                    .errorType(ErrorType.FORBIDDEN)
+                    .message(ex.getMessage())
+                    .extensions(java.util.Map.of("code", "PERMISSION_DENIED"))
+                    .path(env.getExecutionStepInfo().getPath())
+                    .location(env.getField().getSourceLocation())
+                    .build();
+        }
+
         // For any other exceptions, return a generic error
         return GraphqlErrorBuilder.newError()
                 .errorType(ErrorType.INTERNAL_ERROR)
@@ -75,4 +94,4 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
                 .location(env.getField().getSourceLocation())
                 .build();
     }
-} 
+}

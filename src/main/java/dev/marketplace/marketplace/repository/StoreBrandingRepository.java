@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface StoreBrandingRepository extends JpaRepository<StoreBranding, Long> {
+public interface StoreBrandingRepository extends JpaRepository<StoreBranding, UUID> {
     Optional<StoreBranding> findBySlug(String slug);
     Optional<StoreBranding> findByBusiness(Business business);
 }

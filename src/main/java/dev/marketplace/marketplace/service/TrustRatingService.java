@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +23,9 @@ public class TrustRatingService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository; // Added transactionRepository
-    
+    private final BusinessTrustRatingRepository businessTrustRatingRepository;
+    private final BusinessRepository businessRepository;
+
     // Trust score weights (out of 100)
     private static final BigDecimal DOCUMENT_WEIGHT = BigDecimal.valueOf(30); // 30%
     private static final BigDecimal PROFILE_WEIGHT = BigDecimal.valueOf(20); // 20%
@@ -43,9 +46,8 @@ public class TrustRatingService {
     private static final BigDecimal SUBSCRIPTION_BONUS = BigDecimal.valueOf(15);
     
     @Transactional
-    public TrustRating calculateAndUpdateTrustRating(Long userId) {
+    public TrustRating calculateAndUpdateTrustRating(UUID userId) {
         log.info("Calculating trust rating for user: {}", userId);
-        
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
         
@@ -92,7 +94,7 @@ public class TrustRatingService {
     }
     
     // Profile completion = user info + uploaded docs (not verified)
-    private BigDecimal calculateProfileCompletionScore(Long userId) {
+    private BigDecimal calculateProfileCompletionScore(UUID userId) {
         int totalFields = 4; // user info fields: photo, bio, contact, location
         int completedFields = 0;
         Optional<ProfileCompletion> profileCompletionOpt = profileCompletionRepository.findByUserId(userId);
@@ -116,7 +118,7 @@ public class TrustRatingService {
     }
 
     // Verification score = % of uploaded docs that are admin-verified
-    private BigDecimal calculateVerificationScore(Long userId) {
+    private BigDecimal calculateVerificationScore(UUID userId) {
         int totalDocs = 0;
         int verifiedDocs = 0;
         Optional<VerificationDocument> idDoc = verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.ID_CARD);
@@ -144,7 +146,7 @@ public class TrustRatingService {
     }
 
     // Review score (same as before)
-    private BigDecimal calculateReviewScore(Long userId) {
+    private BigDecimal calculateReviewScore(UUID userId) {
         Long totalReviews = reviewRepository.countReviewsByUserId(userId);
         if (totalReviews == 0) {
             return BigDecimal.ZERO;
@@ -164,7 +166,7 @@ public class TrustRatingService {
     }
 
     // Transaction score (ratio of successful to total, or 0 if no transactions)
-    private BigDecimal calculateTransactionScore(Long userId) {
+    private BigDecimal calculateTransactionScore(UUID userId) {
         // Count total and successful transactions as seller and buyer
         long totalTransactions = 0;
         long successfulTransactions = 0;
@@ -181,7 +183,7 @@ public class TrustRatingService {
     }
 
     // Subscription score: 100 if subscribed, 0 if not
-    private BigDecimal calculateSubscriptionScore(Long userId) {
+    private BigDecimal calculateSubscriptionScore(UUID userId) {
         User user = userRepository.findById(userId).orElse(null);
         if (user != null && user.getRole() == dev.marketplace.marketplace.enums.Role.SUBSCRIBED) {
             return BigDecimal.valueOf(100);
@@ -193,7 +195,7 @@ public class TrustRatingService {
      * Add subscription bonus to user's trust rating
      */
     @Transactional
-    public void addSubscriptionBonus(Long userId) {
+    public void addSubscriptionBonus(UUID userId) {
         log.info("Adding subscription bonus to user: {}", userId);
         calculateAndUpdateTrustRating(userId);
     }
@@ -202,19 +204,19 @@ public class TrustRatingService {
      * Remove subscription bonus from user's trust rating
      */
     @Transactional
-    public void removeSubscriptionBonus(Long userId) {
+    public void removeSubscriptionBonus(UUID userId) {
         log.info("Removing subscription bonus from user: {}", userId);
         calculateAndUpdateTrustRating(userId);
     }
     
     @Transactional
-    public TrustRating getTrustRating(Long userId) {
+    public TrustRating getTrustRating(UUID userId) {
         return trustRatingRepository.findByUserId(userId)
                 .orElseGet(() -> calculateAndUpdateTrustRating(userId));
     }
     
     @Transactional
-    public void updateProfileCompletion(Long userId) {
+    public void updateProfileCompletion(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
         
@@ -245,4 +247,64 @@ public class TrustRatingService {
     public Long getUsersWithMinimumTrustScore(BigDecimal minScore) {
         return trustRatingRepository.countByMinimumScore(minScore);
     }
-} 
+
+    @Transactional
+    public BusinessTrustRating calculateAndUpdateBusinessTrustRating(UUID businessId) {
+        log.info("Calculating trust rating for business: {}", businessId);
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new IllegalArgumentException("Business not found with ID: " + businessId));
+        BusinessTrustRating trustRating = businessTrustRatingRepository.findByBusinessId(businessId)
+                .orElse(BusinessTrustRating.builder().business(business).build());
+        // Calculate scores
+        BigDecimal profileScore = calculateBusinessProfileScore(business);
+        BigDecimal verificationScore = calculateBusinessVerificationScore(businessId);
+        BigDecimal reviewScore = calculateBusinessReviewScore(businessId);
+        BigDecimal transactionScore = calculateBusinessTransactionScore(businessId);
+        // Average for overall
+        BigDecimal overallScore = profileScore.add(verificationScore).add(reviewScore).add(transactionScore)
+                .divide(BigDecimal.valueOf(4), 2, RoundingMode.HALF_UP);
+        trustRating.setProfileScore(profileScore);
+        trustRating.setVerificationScore(verificationScore);
+        trustRating.setReviewScore(reviewScore);
+        trustRating.setTransactionScore(transactionScore);
+        trustRating.setOverallScore(overallScore);
+        trustRating.setLastCalculated(java.time.LocalDateTime.now());
+        // TODO: Set review/transaction counts if available
+        BusinessTrustRating saved = businessTrustRatingRepository.save(trustRating);
+        log.info("Updated business trust rating for business {}: overall score = {}", businessId, overallScore);
+        return saved;
+    }
+    // Helper methods for business trust rating
+    private BigDecimal calculateBusinessProfileScore(Business business) {
+        int totalFields = 4;
+        int completedFields = 0;
+        String logoUrl = business.getStoreBranding() != null ? business.getStoreBranding().getLogoUrl() : null;
+        String about = business.getStoreBranding() != null ? business.getStoreBranding().getAbout() : null;
+        if (logoUrl != null && !logoUrl.isEmpty()) completedFields++;
+        if (about != null && !about.isEmpty()) completedFields++;
+        if (business.getContactNumber() != null && !business.getContactNumber().isEmpty()) completedFields++;
+        if (business.getAddressLine1() != null && !business.getAddressLine1().isEmpty()) completedFields++;
+        return BigDecimal.valueOf(completedFields).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalFields), 2, RoundingMode.HALF_UP);
+    }
+    private BigDecimal calculateBusinessVerificationScore(UUID businessId) {
+        int totalDocs = 0;
+        int verifiedDocs = 0;
+        for (VerificationDocument.DocumentType type : VerificationDocument.DocumentType.values()) {
+            Optional<VerificationDocument> doc = verificationDocumentRepository.findByBusinessIdAndDocumentType(businessId, type);
+            if (doc.isPresent()) {
+                totalDocs++;
+                if (doc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED) verifiedDocs++;
+            }
+        }
+        if (totalDocs == 0) return BigDecimal.ZERO;
+        return BigDecimal.valueOf(verifiedDocs).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalDocs), 2, RoundingMode.HALF_UP);
+    }
+    private BigDecimal calculateBusinessReviewScore(UUID businessId) {
+        // Placeholder: implement if business reviews are available
+        return BigDecimal.ZERO;
+    }
+    private BigDecimal calculateBusinessTransactionScore(UUID businessId) {
+        // Placeholder: implement if business transactions are available
+        return BigDecimal.ZERO;
+    }
+}

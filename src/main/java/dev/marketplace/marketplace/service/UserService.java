@@ -3,8 +3,6 @@ package dev.marketplace.marketplace.service;
 import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.UserRepository;
-import dev.marketplace.marketplace.security.JwtUtil;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -12,9 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.marketplace.marketplace.enums.Role;
-import dev.marketplace.marketplace.exceptions.AuthException;
 import dev.marketplace.marketplace.exceptions.UserAlreadyExistsException;
-import dev.marketplace.marketplace.exceptions.InvalidCredentialsException;
 import dev.marketplace.marketplace.exceptions.ValidationException;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
@@ -24,12 +20,7 @@ import dev.marketplace.marketplace.repository.CityRepository;
 import dev.marketplace.marketplace.repository.SubscriptionRepository;
 import dev.marketplace.marketplace.model.Subscription.SubscriptionStatus;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -45,7 +36,7 @@ public class UserService implements UserDetailsService {
     private final CityRepository cityRepository;
     private final SubscriptionRepository subscriptionRepository;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.b2StorageService = b2StorageService;
@@ -123,7 +114,7 @@ public class UserService implements UserDetailsService {
         return savedUser;
     }
 
-    public User updateUser(Long userId, String username, String email, String firstName, String lastName, String bio, Long cityId, String customCity, String contactNumber) {
+    public User updateUser(UUID userId, String username, String email, String firstName, String lastName, String bio, UUID cityId, String customCity, String contactNumber) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -165,15 +156,13 @@ public class UserService implements UserDetailsService {
         return userRepository.save(user);
     }
 
-    public Long getUserIdByUsername(String username) {
+    public UUID getUserIdByUsername(String username) {
         // First try to find by username
         Optional<User> userOpt = userRepository.findByUsername(username);
-        
         // If not found by username, try by email
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findByEmail(username);
         }
-        
         return userOpt
                 .map(User::getId)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username/email: " + username));
@@ -181,7 +170,7 @@ public class UserService implements UserDetailsService {
 
 
     @Transactional
-    public User upgradeUserRole(Long userId, Role newRole) {
+    public User upgradeUserRole(UUID userId, Role newRole) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -246,12 +235,12 @@ public class UserService implements UserDetailsService {
         return userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(term, term);
     }
 
-    public User getUserById(Long id) {
+    public User getUserById(UUID id) {
         return userRepository.findByIdWithCity(id)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
     }
 
-    public Optional<String> getUserProfileImageUrl(Long userId) {
+    public Optional<String> getUserProfileImageUrl(UUID userId) {
         return userRepository.findById(userId)
                 .map(User::getProfileImageUrl);
     }
@@ -260,7 +249,7 @@ public class UserService implements UserDetailsService {
 
 
     @Transactional
-    public User saveUserProfileImage(Long userId, String imageUrl) {
+    public User saveUserProfileImage(UUID userId, String imageUrl) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -270,11 +259,11 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User updateProfileImage(Long userId, String imageUrl) {
+    public User updateProfileImage(UUID userId, String imageUrl) {
         return saveUserProfileImage(userId, imageUrl);
     }
 
-    public String getProfileImageUrl(Long userId) {
+    public String getProfileImageUrl(UUID userId) {
         return userRepository.findById(userId)
                 .map(User::getProfileImageUrl)
                 .orElse(null);
@@ -293,7 +282,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User uploadIdPhoto(Long userId, MultipartFile file) {
+    public User uploadIdPhoto(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         try {
@@ -308,7 +297,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User uploadDriversLicense(Long userId, MultipartFile file) {
+    public User uploadDriversLicense(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         try {
@@ -323,7 +312,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User uploadProofOfAddress(Long userId, MultipartFile file) {
+    public User uploadProofOfAddress(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         try {
@@ -338,7 +327,7 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User uploadProfileImage(Long userId, MultipartFile file) {
+    public User uploadProfileImage(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         try {
@@ -353,26 +342,19 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User updateUserPlanType(Long userId, String planType) {
+    public User updateUserPlanType(UUID userId, String planType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         user.setPlanType(planType);
         return userRepository.save(user);
     }
 
-    @Transactional
-    public User updateStoreBranding(Long userId, String slug, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName) {
-        // Legacy user-scoped branding; now business-scoped. No-op to keep backward compatibility.
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-    }
-
-    public boolean hasActiveSubscription(Long userId) {
+    public boolean hasActiveSubscription(UUID userId) {
         return subscriptionRepository.existsByUserIdAndStatusIn(userId, java.util.Arrays.asList(SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL));
     }
 
 
-    public java.util.Optional<dev.marketplace.marketplace.model.User> findById(Long id) {
+    public java.util.Optional<dev.marketplace.marketplace.model.User> findById(UUID id) {
         return userRepository.findById(id);
     }
 

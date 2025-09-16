@@ -5,6 +5,7 @@ import dev.marketplace.marketplace.repository.CityRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class CityService {
@@ -15,16 +16,16 @@ public class CityService {
         this.cityRepository = cityRepository;
     }
 
-    public City getCityById(Long id) {
+    public City getCityById(UUID id) {
         return cityRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("City not found with id: " + id));
     }
 
-    public List<City> getCitiesByRegion(Long regionId) {
+    public List<City> getCitiesByRegion(UUID regionId) {
         return cityRepository.findByRegionId(regionId);
     }
 
-    public void validateCityOrCustomCity(Long cityId, String customCity) {
+    public void validateCityOrCustomCity(UUID cityId, String customCity) {
         if ((cityId == null && (customCity == null || customCity.isBlank())) ||
                 (cityId != null && customCity != null && !customCity.isBlank())) {
             throw new IllegalArgumentException("Provide either cityId or customCity, not both.");

@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "city")
 @Getter
@@ -12,8 +14,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class City {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -21,4 +24,4 @@ public class City {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "region_id", nullable = false)
     private Region region;
-} 
+}

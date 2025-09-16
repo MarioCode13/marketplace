@@ -13,4 +13,7 @@ public class UpdateStoreBrandingInput {
     private String lightOrDark;
     private String about;
     private String storeName;
+    private String backgroundColor;
+    private String textColor;
+    private String cardTextColor;
 }

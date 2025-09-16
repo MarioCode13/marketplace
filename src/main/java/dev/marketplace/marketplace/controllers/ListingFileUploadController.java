@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/listings")
@@ -48,7 +49,7 @@ public class ListingFileUploadController {
     }
 
     @PostMapping("/{listingId}/upload-images")
-    public ResponseEntity<?> uploadListingImages(@PathVariable Long listingId, @RequestParam("images") MultipartFile[] images) {
+    public ResponseEntity<?> uploadListingImages(@PathVariable UUID listingId, @RequestParam("images") MultipartFile[] images) {
         if (images == null || images.length == 0) {
             return ResponseEntity.badRequest().body("No images uploaded!");
         }

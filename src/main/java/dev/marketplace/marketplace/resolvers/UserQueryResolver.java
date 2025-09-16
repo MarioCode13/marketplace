@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import dev.marketplace.marketplace.model.StoreBranding;
 
 @CrossOrigin(origins = "http://localhost:3000")
@@ -154,12 +155,12 @@ public class UserQueryResolver {
     }
 
     @QueryMapping
-    public User getUserById(@Argument Long id) {
+    public User getUserById(@Argument UUID id) {
         return userService.getUserById(id);
     }
 
     @QueryMapping
-    public User user(@Argument Long id) {
+    public User user(@Argument UUID id) {
         return userService.getUserById(id);
     }
 
@@ -179,12 +180,12 @@ public class UserQueryResolver {
     }
 
     @QueryMapping
-    public String getProfileImage(@Argument Long userId) {
+    public String getProfileImage(@Argument UUID userId) {
         return userService.getProfileImageUrl(userId);
     }
 
     @QueryMapping
-    public String getUserProfileImage(@Argument Long userId) {
+    public String getUserProfileImage(@Argument UUID userId) {
         return userService.getProfileImageUrl(userId);
     }
 
@@ -217,6 +218,11 @@ public class UserQueryResolver {
         } else {
             throw new RuntimeException("Invalid authentication details");
         }
+    }
+
+    @QueryMapping
+    public List<ListingDTO> getUserListings(@Argument UUID id) {
+        return listingService.getListingsByUserId(id);
     }
 
 

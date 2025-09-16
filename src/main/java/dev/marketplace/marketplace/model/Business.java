@@ -1,5 +1,7 @@
 package dev.marketplace.marketplace.model;
 
+import dev.marketplace.marketplace.enums.BusinessType;
+import dev.marketplace.marketplace.enums.BusinessUserRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -11,6 +13,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "business")
@@ -21,9 +24,10 @@ import java.util.List;
 public class Business {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
+
     @Column(nullable = false)
     private String name;
     
@@ -56,6 +60,10 @@ public class Business {
     @OneToOne(mappedBy = "business", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private StoreBranding storeBranding;
     
+    @Enumerated(EnumType.STRING)
+    @Column(name = "business_type", nullable = false)
+    private BusinessType businessType = BusinessType.RESELLER; // Default to PRO_STORE
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -64,6 +72,15 @@ public class Business {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+    @Column(name = "archived", nullable = false)
+    private boolean archived = false;
+
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+
+    @Column(name = "is_email_verified")
+    private boolean isEmailVerified;
+
     // Helper methods
     public boolean isOwner(User user) {
         return owner != null && owner.getId().equals(user.getId());
@@ -91,5 +108,29 @@ public class Business {
         return role != null && (role == BusinessUserRole.OWNER || 
                                role == BusinessUserRole.MANAGER || 
                                role == BusinessUserRole.CONTRIBUTOR);
+    }
+
+    public String getBusinessEmail() {
+        return email;
+    }
+
+    public void setBusinessEmail(String businessEmail) {
+        this.email = businessEmail;
+    }
+
+    public String getEmailVerificationToken() {
+        return emailVerificationToken;
+    }
+
+    public void setEmailVerificationToken(String emailVerificationToken) {
+        this.emailVerificationToken = emailVerificationToken;
+    }
+
+    public boolean isEmailVerified() {
+        return isEmailVerified;
+    }
+
+    public void setEmailVerified(boolean emailVerified) {
+        isEmailVerified = emailVerified;
     }
 }

@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,8 +81,7 @@ public class PayFastController {
     }
 
     @PostMapping("/itn")
-    public ResponseEntity<String> handlePayFastITN(@RequestParam Map<String, String> payload, @RequestHeader Map<String, String> headers) {
-        // TODO: Validate signature and source IP as per PayFast docs
+    public ResponseEntity<String> handlePayFastITN(@RequestParam Map<String, String> payload) {
         System.out.println("Received PayFast ITN:");
         System.out.println(payload);
 
@@ -105,7 +105,6 @@ public class PayFastController {
         } else {
             System.err.println("Missing email, payment not complete, or plan type");
         }
-
         return ResponseEntity.ok("OK");
     }
 
@@ -115,10 +114,8 @@ public class PayFastController {
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(401).build();
         }
-        // Assuming the principal is the user's email or username
         String usernameOrEmail = authentication.getName();
-        // You may need to adjust this if you use a custom UserDetails
-        Long userId = userService.getUserIdByUsername(usernameOrEmail);
+        UUID userId = userService.getUserIdByUsername(usernameOrEmail);
         boolean active = userService.hasActiveSubscription(userId);
         Map<String, Boolean> response = new java.util.HashMap<>();
         response.put("active", active);
@@ -149,4 +146,4 @@ public class PayFastController {
         // 3. MD5 hash
         return org.apache.commons.codec.digest.DigestUtils.md5Hex(sb.toString());
     }
-} 
+}

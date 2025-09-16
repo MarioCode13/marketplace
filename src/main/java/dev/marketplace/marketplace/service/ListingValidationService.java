@@ -3,11 +3,13 @@ package dev.marketplace.marketplace.service;
 import dev.marketplace.marketplace.enums.Condition;
 import org.springframework.stereotype.Service;
 
+import java.util.UUID;
+
 @Service
 public class ListingValidationService {
 
-    public void validateListingCreation(String title, String description, double price, 
-                                       Long cityId, Condition condition, Long userId, String customCity) {
+    public void validateListingCreation(String title, String description, double price,
+                                       UUID cityId, Condition condition, UUID userId, String customCity) {
         validateTitle(title);
         validateDescription(description);
         validatePrice(price);
@@ -16,7 +18,7 @@ public class ListingValidationService {
         validateUserId(userId);
     }
 
-    public void validateListingUpdate(Long listingId, Long userId) {
+    public void validateListingUpdate(UUID listingId, UUID userId) {
         validateListingId(listingId);
         validateUserId(userId);
     }
@@ -37,11 +39,11 @@ public class ListingValidationService {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("Title is required");
         }
-        
+
         if (title.length() < 3) {
             throw new IllegalArgumentException("Title must be at least 3 characters long");
         }
-        
+
         if (title.length() > 100) {
             throw new IllegalArgumentException("Title must be less than 100 characters");
         }
@@ -51,11 +53,11 @@ public class ListingValidationService {
         if (description == null || description.trim().isEmpty()) {
             throw new IllegalArgumentException("Description is required");
         }
-        
+
         if (description.length() < 10) {
             throw new IllegalArgumentException("Description must be at least 10 characters long");
         }
-        
+
         if (description.length() > 1000) {
             throw new IllegalArgumentException("Description must be less than 1000 characters");
         }
@@ -65,7 +67,7 @@ public class ListingValidationService {
         if (price <= 0) {
             throw new IllegalArgumentException("Price must be positive");
         }
-        
+
         if (price > 1000000) {
             throw new IllegalArgumentException("Price cannot exceed $1,000,000");
         }
@@ -75,23 +77,19 @@ public class ListingValidationService {
         if (location == null || location.trim().isEmpty()) {
             throw new IllegalArgumentException("Location is required");
         }
-        
+
         if (location.length() > 200) {
             throw new IllegalArgumentException("Location must be less than 200 characters");
         }
     }
 
-    private void validateListingId(Long listingId) {
+    private void validateListingId(UUID listingId) {
         if (listingId == null) {
             throw new IllegalArgumentException("Listing ID is required");
         }
-
-        if (listingId <= 0) {
-            throw new IllegalArgumentException("Invalid listing ID");
-        }
     }
 
-    private void validateCity(Long cityId, String customCity) {
+    private void validateCity(UUID cityId, String customCity) {
         boolean hasCityId = cityId != null;
         boolean hasCustomCity = customCity != null && !customCity.trim().isEmpty();
 
@@ -114,15 +112,11 @@ public class ListingValidationService {
         }
     }
 
-    private void validateUserId(Long userId) {
+    private void validateUserId(UUID userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID is required");
-        }
-        
-        if (userId <= 0) {
-            throw new IllegalArgumentException("Invalid user ID");
         }
     }
 
 
-} 
+}

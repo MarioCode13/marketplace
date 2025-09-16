@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
+import java.util.UUID;
 
 @Controller
 public class ListingMutationResolver {
@@ -30,23 +31,23 @@ public class ListingMutationResolver {
                                  @Argument String description,
                                  @Argument List<String> images,
                                  @Argument Condition condition,
-                                 @Argument Long categoryId,
-                                 @Argument Long userId,
-                                 @Argument Long cityId,
+                                 @Argument UUID categoryId,
+                                 @Argument UUID userId,
+                                 @Argument UUID cityId,
                                  @Argument String customCity) {
         return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId);
     }
 
     @MutationMapping
-    public boolean deleteListing(@Argument Long listingId, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+    public boolean deleteListing(@Argument UUID listingId, @AuthenticationPrincipal UserDetails userDetails) {
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return listingService.deleteListing(listingId, userId);
     }
 
     @MutationMapping
     public Listing updateListing(@Argument ListingUpdateInput input,
                                  @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return listingService.updateListing(input, userId);
     }
 

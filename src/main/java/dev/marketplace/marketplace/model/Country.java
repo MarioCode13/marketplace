@@ -12,12 +12,13 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Country {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
 
     @Column(nullable = false, unique = true)
     private String name;
 
     @Column(nullable = false, unique = true)
     private String code;
-} 
+}

@@ -1,18 +1,15 @@
 package dev.marketplace.marketplace.resolvers;
 
-import com.backblaze.b2.client.exceptions.B2Exception;
 import dev.marketplace.marketplace.model.User;
-import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.util.UUID;
 
 
 @CrossOrigin(origins = "http://localhost:3000")
@@ -27,13 +24,13 @@ public class UserMutationResolver {
 
     @MutationMapping
     public User updateUser(
-            @Argument Long id,
+            @Argument UUID id,
             @Argument String username,
             @Argument String email,
             @Argument String firstName,
             @Argument String lastName,
             @Argument String bio,
-            @Argument Long cityId,
+            @Argument UUID cityId,
             @Argument String customCity,
             @Argument String contactNumber
     ) {
@@ -42,7 +39,7 @@ public class UserMutationResolver {
 
     @MutationMapping
     public String uploadProfileImage(@Argument String image, @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         String imageUrl = userService.uploadImageAndGetUrl(image);
 
         userService.updateProfileImage(userId, imageUrl);
@@ -51,23 +48,7 @@ public class UserMutationResolver {
     }
 
     @MutationMapping
-    public User updateUserPlanType(@Argument Long id, @Argument String planType) {
+    public User updateUserPlanType(@Argument UUID id, @Argument String planType) {
         return userService.updateUserPlanType(id, planType);
-    }
-
-    @MutationMapping
-    public User updateStoreBranding(
-            @Argument Long id,
-            @Argument String slug,
-            @Argument String logoUrl,
-            @Argument String bannerUrl,
-            @Argument String themeColor,
-            @Argument String primaryColor,
-            @Argument String secondaryColor,
-            @Argument String lightOrDark,
-            @Argument String about,
-            @Argument String storeName
-    ) {
-        return userService.updateStoreBranding(id, slug, logoUrl, bannerUrl, themeColor, primaryColor, secondaryColor, lightOrDark, about, storeName);
     }
 }

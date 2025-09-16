@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -16,11 +17,12 @@ import java.util.List;
 @NoArgsConstructor
 public class Listing {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Column(columnDefinition = "TEXT")
@@ -53,6 +55,16 @@ public class Listing {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime expiresAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id")
+    private Business business;
+
+    @ManyToOne
+    @JoinColumn(name = "created_by")
+    private User createdBy; // Tracks who created the listing (for audit)
+
+    private boolean archived = false; // Archived state for expiry/deletion
+
     @PrePersist
     public void setExpiration() {
         this.expiresAt = this.createdAt.plusDays(30);
@@ -72,10 +84,13 @@ public class Listing {
         this.condition = builder.condition;
         this.createdAt = builder.createdAt;
         this.expiresAt = builder.expiresAt;
+        this.business = builder.business;
+        this.createdBy = builder.createdBy;
+        this.archived = builder.archived;
     }
 
     public static class Builder {
-        private Long id;
+        private UUID id;
         private User user;
         private String title;
         private String description;
@@ -88,8 +103,11 @@ public class Listing {
         private Condition condition;
         private LocalDateTime createdAt = LocalDateTime.now();
         private LocalDateTime expiresAt;
+        private Business business;
+        private User createdBy; // Tracks who created the listing (for audit)
+        private boolean archived = false; // Archived state for expiry/deletion
 
-        public Builder id(Long id) {
+        public Builder id(UUID id) {
             this.id = id;
             return this;
         }
@@ -151,6 +169,21 @@ public class Listing {
 
         public Builder expiresAt(LocalDateTime expiresAt) {
             this.expiresAt = expiresAt;
+            return this;
+        }
+
+        public Builder business(Business business) {
+            this.business = business;
+            return this;
+        }
+
+        public Builder createdBy(User createdBy) {
+            this.createdBy = createdBy;
+            return this;
+        }
+
+        public Builder archived(boolean archived) {
+            this.archived = archived;
             return this;
         }
 

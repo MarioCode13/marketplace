@@ -1,4 +1,4 @@
-package dev.marketplace.marketplace.model;
+package dev.marketplace.marketplace.enums;
 
 public enum BusinessUserRole {
     OWNER,      // Can edit business details, branding, manage team

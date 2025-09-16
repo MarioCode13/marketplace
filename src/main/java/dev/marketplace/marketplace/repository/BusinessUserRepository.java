@@ -2,7 +2,7 @@ package dev.marketplace.marketplace.repository;
 
 import dev.marketplace.marketplace.model.Business;
 import dev.marketplace.marketplace.model.BusinessUser;
-import dev.marketplace.marketplace.model.BusinessUserRole;
+import dev.marketplace.marketplace.enums.BusinessUserRole;
 import dev.marketplace.marketplace.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -11,10 +11,11 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface BusinessUserRepository extends JpaRepository<BusinessUser, Long> {
-    
+public interface BusinessUserRepository extends JpaRepository<BusinessUser, UUID> {
+
     Optional<BusinessUser> findByBusinessAndUser(Business business, User user);
     
     List<BusinessUser> findByBusiness(Business business);
@@ -30,4 +31,6 @@ public interface BusinessUserRepository extends JpaRepository<BusinessUser, Long
     
     @Query("SELECT COUNT(bu) FROM BusinessUser bu WHERE bu.business = :business AND bu.role = 'OWNER'")
     long countOwnersByBusiness(@Param("business") Business business);
+
+    Optional<BusinessUser> findByBusinessIdAndUserId(UUID businessId, UUID userId);
 }

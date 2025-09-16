@@ -44,7 +44,7 @@ public class UserFileUploadController {
     public ResponseEntity<String> uploadIdPhoto(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            Long userId = jwtUtil.extractUserId(token);
+            UUID userId = jwtUtil.extractUserId(token);
             userService.uploadIdPhoto(userId, file);
             return ResponseEntity.ok("ID photo uploaded successfully");
         } catch (Exception e) {
@@ -58,7 +58,7 @@ public class UserFileUploadController {
     public ResponseEntity<String> uploadDriversLicense(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            Long userId = jwtUtil.extractUserId(token);
+            UUID userId = jwtUtil.extractUserId(token);
             userService.uploadDriversLicense(userId, file);
             return ResponseEntity.ok("Driver's license uploaded successfully");
         } catch (Exception e) {
@@ -72,7 +72,7 @@ public class UserFileUploadController {
     public ResponseEntity<String> uploadProofOfAddress(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            Long userId = jwtUtil.extractUserId(token);
+            UUID userId = jwtUtil.extractUserId(token);
             userService.uploadProofOfAddress(userId, file);
             return ResponseEntity.ok("Proof of address uploaded successfully");
         } catch (Exception e) {
@@ -86,7 +86,7 @@ public class UserFileUploadController {
     public ResponseEntity<String> uploadProfileImage(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            Long userId = jwtUtil.extractUserId(token);
+            UUID userId = jwtUtil.extractUserId(token);
             userService.uploadProfileImage(userId, file);
             return ResponseEntity.ok("Profile image uploaded successfully");
         } catch (Exception e) {

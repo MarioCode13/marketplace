@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "store_branding")
 @Data
@@ -14,7 +16,7 @@ public class StoreBranding {
     
     @Id
     @Column(name = "business_id")
-    private Long businessId;
+    private UUID businessId;
 
     @OneToOne
     @MapsId
@@ -51,4 +53,7 @@ public class StoreBranding {
 
     @Column(name = "card_text_color")
     private String cardTextColor;
+
+    @Column(name = "background_color")
+    private String backgroundColor;
 }

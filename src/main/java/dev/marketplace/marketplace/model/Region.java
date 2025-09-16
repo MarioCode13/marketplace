@@ -12,8 +12,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class Region {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -21,4 +22,4 @@ public class Region {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
-} 
+}

@@ -2,15 +2,16 @@ package dev.marketplace.marketplace.dto;
 
 import dev.marketplace.marketplace.enums.Condition;
 import java.util.List;
+import java.util.UUID;
 
 public record ListingUpdateInput(
-        Long id,
+        UUID id,
         String title,
         Double price,
         String description,
         List<String> images,
         Condition condition,
-        Long categoryId,
-        Long  cityId,
+        UUID categoryId,
+        UUID cityId,
         String customCity
 ) {}

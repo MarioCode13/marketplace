@@ -8,6 +8,7 @@ import io.jsonwebtoken.jackson.io.JacksonSerializer;
 import io.jsonwebtoken.jackson.io.JacksonDeserializer;
 import java.util.Date;
 import java.util.function.Function;
+import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
@@ -40,14 +41,14 @@ public class JwtUtil {
         }
     }
 
-    public String generateToken(String email, String role, Long userId) {
+    public String generateToken(String email, String role, UUID userId) {
         logger.debug("Generating JWT token for user: {} (ID: {}, Role: {})", email, userId, role);
         logger.debug("Using JWT secret: {}", secret);
         try {
             String token = Jwts.builder()
                     .subject(email)
                     .claim("role", role)
-                    .claim("userId", userId)
+                    .claim("userId", userId.toString())
                     .issuedAt(new Date(System.currentTimeMillis()))
                     .expiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                     .signWith(getSigningKey(), Jwts.SIG.HS256)
@@ -72,8 +73,8 @@ public class JwtUtil {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
-    public Long extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    public UUID extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("userId", UUID.class));
     }
 
     private SecretKey getSigningKey() {

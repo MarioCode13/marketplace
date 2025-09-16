@@ -43,6 +43,7 @@ type StoreBranding {
     storeName: String
     textColor: String
     cardTextColor: String
+    backgroundColor: String
 }
 
 enum Condition {
@@ -69,7 +70,9 @@ type Listing {
     condition: Condition!
     createdAt: String!
     expiresAt: String!
-    user: User!
+    user: User      # Now nullable
+    business: Business # Added, nullable
+    archived: Boolean! # Added
 }
 
 type ListingPageResponse {
@@ -174,7 +177,8 @@ enum VerificationStatus {
 
 type VerificationDocument {
     id: ID!
-    userId: ID!
+    userId: ID
+    businessId: ID
     documentType: DocumentType!
     documentUrl: String!
     status: VerificationStatus!
@@ -218,6 +222,17 @@ type ProfileCompletion {
     updatedAt: String!
 }
 
+type Notification {
+    id: ID!
+    user: User!
+    type: String!
+    message: String!
+    data: String
+    createdAt: String!
+    read: Boolean!
+    actionRequired: Boolean!
+}
+
 type Query {
     getUserById(id: ID!): User
     user(id: ID!): User
@@ -239,6 +254,7 @@ type Query {
         sortBy: String
         sortOrder: String
         userId: ID # Optional: filter by user/store
+        businessId: ID # Optional: filter by business
     ): ListingPageResponse!
     getListingById(id: ID!): Listing
     getConditions: [Condition] # No longer non-nullable list
@@ -279,6 +295,10 @@ type Query {
     listingsByUser(userId: ID!): [Listing!]!
     searchCities(query: String!): [City!]!
     storeBySlug(slug: String!): User
+    notifications(userId: ID!): [Notification!]!
+    getBusinessVerificationDocuments(businessId: ID!): [VerificationDocument!]!
+    getBusinessDocumentByType(businessId: ID!, documentType: DocumentType!): VerificationDocument
+    businessTrustRating(businessId: ID!): BusinessTrustRating
 }
 
 type Mutation {
@@ -320,9 +340,14 @@ type Mutation {
     updateListing(input: UpdateListingInput!): Listing!
     updateUserPlanType(id: ID!, planType: String!): User
     updateStoreBranding(
-            id: ID!
-            input: UpdateStoreBrandingInput
-        ): User
+        businessId: ID!
+        input: UpdateStoreBrandingInput!
+    ): StoreBranding
+    markNotificationRead(notificationId: ID!): Boolean!
+    acceptBusinessInvitation(notificationId: ID!): Boolean!
+    declineBusinessInvitation(notificationId: ID!): Boolean!
+    uploadBusinessVerificationDocument(businessId: ID!, documentType: DocumentType!, file: String!): VerificationDocument!
+    deleteBusinessVerificationDocument(documentId: ID!, businessId: ID!): Boolean!
 }
 
 type Country {
@@ -369,6 +394,8 @@ type Business {
     owner: User!
     storeBranding: StoreBranding
     businessUsers: [BusinessUser!]!
+    businessType: String # Added
+    verificationDocuments: [VerificationDocument!]!
 }
 
 type BusinessUser {
@@ -399,6 +426,7 @@ input UpdateStoreBrandingInput {
     storeName: String
     textColor: String
     cardTextColor: String
+    backgroundColor: String
 }
 
 enum BusinessUserRole {
@@ -431,6 +459,12 @@ input CreateStoreBrandingInput {
     storeName: String
     textColor: String
     cardTextColor: String
+    backgroundColor: String
+}
+
+type BusinessTrustRating {
+    averageRating: Float!
+    reviewCount: Int!
 }
 
 extend type Query {

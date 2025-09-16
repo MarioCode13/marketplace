@@ -1,9 +1,13 @@
 package dev.marketplace.marketplace.service;
 
+import dev.marketplace.marketplace.enums.BusinessType;
+import dev.marketplace.marketplace.enums.BusinessUserRole;
 import dev.marketplace.marketplace.model.*;
 import dev.marketplace.marketplace.repository.BusinessRepository;
 import dev.marketplace.marketplace.repository.BusinessUserRepository;
-import dev.marketplace.marketplace.repository.StoreBrandingRepository;
+import dev.marketplace.marketplace.repository.ListingRepository;
+import dev.marketplace.marketplace.repository.ReviewRepository;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -19,46 +24,104 @@ public class BusinessService {
     
     private final BusinessRepository businessRepository;
     private final BusinessUserRepository businessUserRepository;
-    private final StoreBrandingRepository storeBrandingRepository;
-    
-    public Optional<Business> findById(Long id) {
+    private final ListingRepository listingRepository;
+    private final UserService userService;
+    private final NotificationService notificationService;
+    private final ReviewRepository reviewRepository;
+
+    public Optional<Business> findById(UUID id) {
         return businessRepository.findById(id);
-    }
-    
-    public Optional<Business> findByOwner(User owner) {
-        return businessRepository.findByOwner(owner);
-    }
-    
-    public List<Business> findByUser(User user) {
-        return businessRepository.findByUser(user);
-    }
-    
-    public Optional<Business> findOwnedByUser(User user) {
-        return businessRepository.findOwnedByUser(user);
     }
     
     @Transactional
     public Business createBusiness(Business business) {
         log.info("Creating business: {}", business.getName());
-        
         // Validate email uniqueness
         if (businessRepository.existsByEmail(business.getEmail())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
         }
-        
+        // Require business email for verification
+        if (business.getBusinessEmail() == null || business.getBusinessEmail().isBlank()) {
+            throw new IllegalArgumentException("Business email is required for verification.");
+        }
+        // Generate verification token and set verification flag
+        business.setEmailVerificationToken(UUID.randomUUID().toString());
+        business.setEmailVerified(false);
+        // If businessType is not set, default to RESELLER
+        if (business.getBusinessType() == null) {
+            business.setBusinessType(BusinessType.RESELLER);
+        }
         Business savedBusiness = businessRepository.save(business);
-        
-        // Create owner relationship
+        // Only create owner relationship for reseller
         BusinessUser ownerRelation = new BusinessUser();
         ownerRelation.setBusiness(savedBusiness);
         ownerRelation.setUser(business.getOwner());
         ownerRelation.setRole(BusinessUserRole.OWNER);
         businessUserRepository.save(ownerRelation);
-        
+        // Send verification email
+        notificationService.sendBusinessVerificationEmail(
+            business.getBusinessEmail(),
+            business.getEmailVerificationToken(),
+            business.getName()
+        );
         log.info("Created business with ID: {}", savedBusiness.getId());
         return savedBusiness;
     }
     
+    @Transactional
+    public void inviteUserToBusiness(UUID businessId, String userEmail, User inviter) {
+        Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new IllegalArgumentException("Business not found"));
+        if (business.getBusinessType() == BusinessType.RESELLER) {
+            throw new IllegalArgumentException("Reseller businesses cannot have team members.");
+        }
+        User userToInvite = userService.findByEmail(userEmail)
+            .orElseThrow(() -> new IllegalArgumentException("User with email does not exist: " + userEmail));
+        if (businessUserRepository.existsByBusinessAndUser(business, userToInvite)) {
+            throw new IllegalArgumentException("User is already linked to this business");
+        }
+        notificationService.sendBusinessInviteNotification(userToInvite, business, inviter);
+    }
+
+    @Transactional
+    public BusinessUser linkUserToBusiness(UUID businessId, User user, BusinessUserRole role, User requestingUser) {
+        Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+        if (business.getBusinessType() == BusinessType.RESELLER) {
+            throw new IllegalArgumentException("Reseller businesses cannot have team members.");
+        }
+        if (!business.canUserEditBusiness(requestingUser)) {
+            throw new IllegalArgumentException("User does not have permission to manage this business");
+        }
+        if (businessUserRepository.existsByBusinessAndUser(business, user)) {
+            throw new IllegalArgumentException("User is already linked to this business");
+        }
+        BusinessUser businessUser = new BusinessUser();
+        businessUser.setBusiness(business);
+        businessUser.setUser(user);
+        businessUser.setRole(role);
+        return businessUserRepository.save(businessUser);
+    }
+
+    @Transactional
+    public void changeUserRole(UUID businessId, UUID userId, BusinessUserRole newRole, User changer) {
+        Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+        if (business.getBusinessType() == BusinessType.RESELLER) {
+            throw new IllegalArgumentException("Reseller businesses cannot have team members.");
+        }
+        User user = userService.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        Optional<BusinessUser> buOpt = businessUserRepository.findByBusinessAndUser(business, user);
+        if (buOpt.isEmpty()) {
+            throw new IllegalArgumentException("User not linked to business");
+        }
+        BusinessUser bu = buOpt.get();
+        bu.setRole(newRole);
+        businessUserRepository.save(bu);
+        notificationService.sendRoleChangeNotification(bu.getUser(), bu.getBusiness(), newRole, changer);
+    }
+
     @Transactional
     public Business updateBusiness(Business business, User requestingUser) {
         log.info("Updating business: {}", business.getId());
@@ -90,32 +153,7 @@ public class BusinessService {
     }
     
     @Transactional
-    public BusinessUser linkUserToBusiness(Long businessId, User user, BusinessUserRole role, User requestingUser) {
-        log.info("Linking user {} to business {} with role {}", user.getId(), businessId, role);
-        
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
-        
-        // Check permissions (only owner or manager can link users)
-        if (!business.canUserEditBusiness(requestingUser)) {
-            throw new IllegalArgumentException("User does not have permission to manage this business");
-        }
-        
-        // Check if user is already linked
-        if (businessUserRepository.existsByBusinessAndUser(business, user)) {
-            throw new IllegalArgumentException("User is already linked to this business");
-        }
-        
-        BusinessUser businessUser = new BusinessUser();
-        businessUser.setBusiness(business);
-        businessUser.setUser(user);
-        businessUser.setRole(role);
-        
-        return businessUserRepository.save(businessUser);
-    }
-    
-    @Transactional
-    public void unlinkUserFromBusiness(Long businessId, User user, User requestingUser) {
+    public void unlinkUserFromBusiness(UUID businessId, User user, User requestingUser) {
         log.info("Unlinking user {} from business {}", user.getId(), businessId);
         
         Business business = businessRepository.findById(businessId)
@@ -138,7 +176,7 @@ public class BusinessService {
     }
     
     @Transactional
-    public void transferOwnership(Long businessId, User newOwner, User requestingUser) {
+    public void transferOwnership(UUID businessId, User newOwner, User requestingUser) {
         log.info("Transferring ownership of business {} to user {}", businessId, newOwner.getId());
         
         Business business = businessRepository.findById(businessId)
@@ -169,15 +207,35 @@ public class BusinessService {
         businessRepository.save(business);
     }
     
-    public List<BusinessUser> getBusinessUsers(Long businessId) {
+    public List<BusinessUser> getBusinessUsers(UUID businessId) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
         return businessUserRepository.findByBusiness(business);
     }
     
-    public boolean canUserCreateListingsForBusiness(User user, Long businessId) {
+    public boolean canUserCreateListingsForBusiness(User user, UUID businessId) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
         return business.canUserCreateListings(user);
+    }
+
+    public Optional<Business> findOwnedByUser(User user) {
+        return businessRepository.findOwnedByUser(user);
+    }
+
+    public List<Business> findByUser(User user) {
+        return businessRepository.findByUser(user);
+    }
+
+    public BusinessTrustRating getBusinessTrustRating(UUID businessId) {
+        BigDecimal avgRating = reviewRepository.getAverageRatingByBusinessId(businessId);
+        Long reviewCount = reviewRepository.countReviewsByBusinessId(businessId);
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+        return BusinessTrustRating.builder()
+                .business(business)
+                .overallScore(avgRating != null ? avgRating : BigDecimal.ZERO)
+                .totalReviews(reviewCount != null ? reviewCount.intValue() : 0)
+                .build();
     }
 }

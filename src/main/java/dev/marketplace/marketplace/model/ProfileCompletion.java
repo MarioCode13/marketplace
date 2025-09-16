@@ -18,9 +18,10 @@ import java.time.LocalDateTime;
 public class ProfileCompletion {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
@@ -96,7 +97,7 @@ public class ProfileCompletion {
         int complete = completedFields + uploadedDocs;
         this.completionPercentage = BigDecimal.valueOf(complete)
                 .multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(total), 2, BigDecimal.ROUND_HALF_UP);
+                .divide(BigDecimal.valueOf(total), 2, java.math.RoundingMode.HALF_UP);
         this.lastCalculated = LocalDateTime.now();
     }
     
@@ -112,4 +113,4 @@ public class ProfileCompletion {
         if (percentage >= 50) return "POOR";
         return "VERY_POOR";
     }
-} 
+}

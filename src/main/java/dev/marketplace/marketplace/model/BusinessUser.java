@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.model;
 
+import dev.marketplace.marketplace.enums.BusinessUserRole;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,9 +20,10 @@ import java.time.LocalDateTime;
 public class BusinessUser {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)
     private Business business;

@@ -1,6 +1,7 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.model.BusinessTrustRating;
 import dev.marketplace.marketplace.model.BusinessUser;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.BusinessService;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -26,7 +28,7 @@ public class BusinessQueryResolver {
     private final UserService userService;
     
     @QueryMapping
-    public Business business(@Argument Long id) {
+    public Business business(@Argument UUID id) {
         log.info("Fetching business with ID: {}", id);
         return businessService.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + id));
@@ -48,11 +50,16 @@ public class BusinessQueryResolver {
     }
     
     @QueryMapping
-    public List<BusinessUser> businessUsers(@Argument Long businessId) {
+    public List<BusinessUser> businessUsers(@Argument UUID businessId) {
         log.info("Fetching users for business: {}", businessId);
         return businessService.getBusinessUsers(businessId);
     }
     
+    @QueryMapping
+    public BusinessTrustRating businessTrustRating(@Argument UUID businessId) {
+        return businessService.getBusinessTrustRating(businessId);
+    }
+
     @SchemaMapping
     public User owner(Business business) {
         return business.getOwner();

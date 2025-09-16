@@ -1,12 +1,14 @@
 package dev.marketplace.marketplace.dto;
 
+import java.util.UUID;
+
 public class AuthResponseDto {
     private String token;
     private String email;
     private String role;
-    private Long userId;
+    private UUID userId;
 
-    public AuthResponseDto(String token, String email, String role, Long userId) {
+    public AuthResponseDto(String token, String email, String role, UUID userId) {
         this.token = token;
         this.email = email;
         this.role = role;
@@ -37,11 +39,11 @@ public class AuthResponseDto {
         this.role = role;
     }
 
-    public Long getUserId() {
+    public UUID getUserId() {
         return userId;
     }
 
-    public void setUserId(Long userId) {
+    public void setUserId(UUID userId) {
         this.userId = userId;
     }
 }

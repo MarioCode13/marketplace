@@ -1,7 +1,9 @@
 package dev.marketplace.marketplace.service;
 
+import dev.marketplace.marketplace.model.Business;
 import dev.marketplace.marketplace.model.VerificationDocument;
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.repository.BusinessRepository;
 import dev.marketplace.marketplace.repository.VerificationDocumentRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,10 +24,11 @@ public class VerificationDocumentService {
     private final UserRepository userRepository;
     private final TrustRatingService trustRatingService;
     private final B2StorageService b2StorageService;
-    
+    private final BusinessRepository businessRepository;
+
     @Transactional
-    public VerificationDocument uploadDocument(Long userId, 
-                                             VerificationDocument.DocumentType documentType, 
+    public VerificationDocument uploadDocument(UUID userId,
+                                             VerificationDocument.DocumentType documentType,
                                              byte[] documentData, 
                                              String fileName) {
         log.info("Uploading document for user: {}, type: {}", userId, documentType);
@@ -68,9 +72,9 @@ public class VerificationDocumentService {
     }
     
     @Transactional
-    public VerificationDocument verifyDocument(Long documentId, 
-                                             Long adminUserId, 
-                                             VerificationDocument.VerificationStatus status, 
+    public VerificationDocument verifyDocument(UUID documentId,
+                                             UUID adminUserId,
+                                             VerificationDocument.VerificationStatus status,
                                              String rejectionReason) {
         log.info("Verifying document: {}, by admin: {}, status: {}", documentId, adminUserId, status);
         
@@ -102,7 +106,7 @@ public class VerificationDocumentService {
     }
     
     @Transactional(readOnly = true)
-    public List<VerificationDocument> getUserDocuments(Long userId) {
+    public List<VerificationDocument> getUserDocuments(UUID userId) {
         return verificationDocumentRepository.findByUserId(userId);
     }
     
@@ -112,17 +116,17 @@ public class VerificationDocumentService {
     }
     
     @Transactional(readOnly = true)
-    public Optional<VerificationDocument> getDocument(Long documentId) {
+    public Optional<VerificationDocument> getDocument(UUID documentId) {
         return verificationDocumentRepository.findById(documentId);
     }
     
     @Transactional(readOnly = true)
-    public Optional<VerificationDocument> getUserDocumentByType(Long userId, VerificationDocument.DocumentType documentType) {
+    public Optional<VerificationDocument> getUserDocumentByType(UUID userId, VerificationDocument.DocumentType documentType) {
         return verificationDocumentRepository.findByUserIdAndDocumentType(userId, documentType);
     }
     
     @Transactional
-    public void deleteDocument(Long documentId, Long userId) {
+    public void deleteDocument(UUID documentId, UUID userId) {
         VerificationDocument document = verificationDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found with ID: " + documentId));
         
@@ -148,19 +152,94 @@ public class VerificationDocumentService {
     }
     
     @Transactional(readOnly = true)
-    public Long getApprovedDocumentsCount(Long userId) {
+    public Long getApprovedDocumentsCount(UUID userId) {
         return verificationDocumentRepository.countApprovedDocumentsByUserId(userId);
     }
     
     @Transactional(readOnly = true)
-    public boolean hasDocumentOfType(Long userId, VerificationDocument.DocumentType documentType) {
+    public boolean hasDocumentOfType(UUID userId, VerificationDocument.DocumentType documentType) {
         return verificationDocumentRepository.existsByUserIdAndDocumentType(userId, documentType);
     }
     
     @Transactional(readOnly = true)
-    public boolean hasApprovedDocumentOfType(Long userId, VerificationDocument.DocumentType documentType) {
+    public boolean hasApprovedDocumentOfType(UUID userId, VerificationDocument.DocumentType documentType) {
         Optional<VerificationDocument> doc = verificationDocumentRepository
                 .findByUserIdAndDocumentType(userId, documentType);
         return doc.isPresent() && doc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED;
     }
-} 
+
+    @Transactional
+    public VerificationDocument uploadBusinessDocument(UUID businessId,
+                                                      VerificationDocument.DocumentType documentType,
+                                                      byte[] documentData,
+                                                      String fileName) {
+        log.info("Uploading document for business: {}, type: {}", businessId, documentType);
+        Business business = businessRepository.findById(businessId)
+                .orElseThrow(() -> new IllegalArgumentException("Business not found with ID: " + businessId));
+        Optional<VerificationDocument> existingDoc = verificationDocumentRepository
+                .findByBusinessIdAndDocumentType(businessId, documentType);
+        if (existingDoc.isPresent()) {
+            throw new IllegalArgumentException("Document of type " + documentType + " already exists for business " + businessId);
+        }
+        String documentUrl;
+        try {
+            documentUrl = b2StorageService.uploadImage(fileName, documentData);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload document to storage", e);
+        }
+        VerificationDocument document = VerificationDocument.builder()
+                .business(business)
+                .documentType(documentType)
+                .documentUrl(documentUrl)
+                .status(VerificationDocument.VerificationStatus.PENDING)
+                .build();
+        VerificationDocument saved = verificationDocumentRepository.save(document);
+        trustRatingService.calculateAndUpdateBusinessTrustRating(businessId);
+        log.info("Document uploaded successfully for business: {}, type: {}, status: {}", businessId, documentType, saved.getStatus());
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<VerificationDocument> getBusinessDocuments(UUID businessId) {
+        return verificationDocumentRepository.findByBusinessId(businessId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<VerificationDocument> getBusinessDocumentByType(UUID businessId, VerificationDocument.DocumentType documentType) {
+        return verificationDocumentRepository.findByBusinessIdAndDocumentType(businessId, documentType);
+    }
+
+    @Transactional
+    public void deleteBusinessDocument(UUID documentId, UUID businessId) {
+        VerificationDocument document = verificationDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found with ID: " + documentId));
+        if (document.getBusiness() == null || !document.getBusiness().getId().equals(businessId)) {
+            throw new IllegalArgumentException("Business not authorized to delete this document");
+        }
+        try {
+            b2StorageService.deleteImage(document.getDocumentUrl());
+        } catch (Exception e) {
+            log.warn("Failed to delete document from storage: {}", document.getDocumentUrl(), e);
+        }
+        verificationDocumentRepository.delete(document);
+        trustRatingService.calculateAndUpdateBusinessTrustRating(businessId);
+        log.info("Business document deleted: {}", documentId);
+    }
+
+    @Transactional(readOnly = true)
+    public Long getApprovedDocumentsCountForBusiness(UUID businessId) {
+        return verificationDocumentRepository.countApprovedDocumentsByBusinessId(businessId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasBusinessDocumentOfType(UUID businessId, VerificationDocument.DocumentType documentType) {
+        return verificationDocumentRepository.existsByBusinessIdAndDocumentType(businessId, documentType);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasApprovedBusinessDocumentOfType(UUID businessId, VerificationDocument.DocumentType documentType) {
+        Optional<VerificationDocument> doc = verificationDocumentRepository
+                .findByBusinessIdAndDocumentType(businessId, documentType);
+        return doc.isPresent() && doc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED;
+    }
+}

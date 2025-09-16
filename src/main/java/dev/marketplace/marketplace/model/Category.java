@@ -15,8 +15,9 @@ import lombok.*;
 public class Category {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
 
     @Column(nullable = false)
     private String name;
@@ -29,11 +30,11 @@ public class Category {
     @Builder.Default
     private java.util.Set<Category> children = new java.util.HashSet<>();
 
-    public Long getId() {
+    public java.util.UUID getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(java.util.UUID id) {
         this.id = id;
     }
 
@@ -46,7 +47,7 @@ public class Category {
     }
 
     // Expose parentId for GraphQL
-    public Long getParentId() {
+    public java.util.UUID getParentId() {
         return parent != null ? parent.getId() : null;
     }
 }

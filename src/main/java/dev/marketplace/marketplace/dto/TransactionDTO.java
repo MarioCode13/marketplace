@@ -7,9 +7,10 @@ import dev.marketplace.marketplace.model.Transaction.TransactionStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 public record TransactionDTO(
-        Long id,
+        UUID id,
         ListingDTO listing,
         User seller,
         User buyer,
@@ -36,4 +37,4 @@ public record TransactionDTO(
                 transaction.getUpdatedAt()
         );
     }
-} 
+}

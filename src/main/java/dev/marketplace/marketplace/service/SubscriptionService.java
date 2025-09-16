@@ -1,8 +1,12 @@
 package dev.marketplace.marketplace.service;
 
 import dev.marketplace.marketplace.enums.Role;
+import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.model.Subscription;
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.repository.BusinessRepository;
+import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.SubscriptionRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,12 +28,14 @@ public class SubscriptionService {
     private final SubscriptionRepository subscriptionRepository;
     private final UserRepository userRepository;
     private final TrustRatingService trustRatingService;
-    
+    private final BusinessRepository businessRepository;
+    private final ListingRepository listingRepository;
+
     /**
      * Check if user has active subscription
      */
     @Transactional(readOnly = true)
-    public boolean hasActiveSubscription(Long userId) {
+    public boolean hasActiveSubscription(UUID userId) {
         return subscriptionRepository.existsByUserIdAndStatusIn(
                 userId, 
                 List.of(Subscription.SubscriptionStatus.ACTIVE, Subscription.SubscriptionStatus.TRIAL)
@@ -39,7 +46,7 @@ public class SubscriptionService {
      * Get user's active subscription
      */
     @Transactional(readOnly = true)
-    public Optional<Subscription> getActiveSubscription(Long userId) {
+    public Optional<Subscription> getActiveSubscription(UUID userId) {
         return subscriptionRepository.findByUserIdAndStatusIn(
                 userId,
                 List.of(Subscription.SubscriptionStatus.ACTIVE, Subscription.SubscriptionStatus.TRIAL)
@@ -50,7 +57,7 @@ public class SubscriptionService {
      * Create a new subscription (called after successful Stripe payment)
      */
     @Transactional
-    public Subscription createSubscription(Long userId, 
+    public Subscription createSubscription(UUID userId,
                                          String stripeSubscriptionId,
                                          String stripeCustomerId,
                                          Subscription.PlanType planType,
@@ -109,12 +116,13 @@ public class SubscriptionService {
         
         if (status == Subscription.SubscriptionStatus.CANCELLED) {
             subscription.setCancelledAt(LocalDateTime.now());
-            
+
             User user = subscription.getUser();
-            if (!hasActiveSubscription(user.getId())) {
+            boolean isInBusiness = !businessRepository.findByUser(user).isEmpty() || businessRepository.findByOwner(user).isPresent();
+            if (!hasActiveSubscription(user.getId()) && !isInBusiness) {
                 user.setRole(Role.HAS_ACCOUNT);
                 userRepository.save(user);
-                
+
                 // Remove subscription bonus from trust rating
                 trustRatingService.removeSubscriptionBonus(user.getId());
             }
@@ -131,7 +139,7 @@ public class SubscriptionService {
      * Cancel subscription at period end
      */
     @Transactional
-    public Subscription cancelAtPeriodEnd(Long userId) {
+    public Subscription cancelAtPeriodEnd(UUID userId) {
         log.info("Cancelling subscription at period end for user: {}", userId);
         
         Subscription subscription = getActiveSubscription(userId)
@@ -149,7 +157,7 @@ public class SubscriptionService {
      * Reactivate cancelled subscription
      */
     @Transactional
-    public Subscription reactivateSubscription(Long userId) {
+    public Subscription reactivateSubscription(UUID userId) {
         log.info("Reactivating subscription for user: {}", userId);
         
         Subscription subscription = getActiveSubscription(userId)
@@ -167,7 +175,7 @@ public class SubscriptionService {
      * Create or activate a PayFast subscription for the user and plan type
      */
     @Transactional
-    public void createOrActivatePayFastSubscription(Long userId, Subscription.PlanType planType) {
+    public void createOrActivatePayFastSubscription(UUID userId, Subscription.PlanType planType) {
         if (!hasActiveSubscription(userId)) {
             User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
@@ -196,7 +204,7 @@ public class SubscriptionService {
      * Get all subscriptions for a user
      */
     @Transactional(readOnly = true)
-    public List<Subscription> getUserSubscriptions(Long userId) {
+    public List<Subscription> getUserSubscriptions(UUID userId) {
         return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId);
     }
     
@@ -238,7 +246,7 @@ public class SubscriptionService {
      * Check if user can contact sellers (requires active subscription)
      */
     @Transactional(readOnly = true)
-    public boolean canContactSellers(Long userId) {
+    public boolean canContactSellers(UUID userId) {
         return hasActiveSubscription(userId);
     }
     
@@ -253,4 +261,36 @@ public class SubscriptionService {
      * Subscription statistics
      */
     public record SubscriptionStats(long activeSubscriptions, long totalSubscriptions) {}
-} 
+
+    @Transactional
+    public void handleBusinessSubscriptionExpiry(UUID businessId) {
+        // Archive business and all its listings
+        Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+        business.setArchived(true);
+        business.setBusinessType(null); // Set to null on expiry to fully disable business features
+        List<Listing> listings = listingRepository.findByBusinessAndArchivedFalse(business);
+        for (Listing listing : listings) {
+            listing.setArchived(true);
+            listingRepository.save(listing);
+        }
+        // Optionally, disable store URL and editing in other services
+    }
+
+    @Transactional
+    public void handleBusinessSubscriptionReactivation(UUID businessId) {
+        // Unarchive business and all its listings if within 14 days
+        Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+        if (business.isArchived()) {
+            business.setArchived(false);
+            businessRepository.save(business);
+            List<Listing> listings = listingRepository.findByBusinessAndArchivedTrue(business);
+            for (Listing listing : listings) {
+                listing.setArchived(false);
+                listingRepository.save(listing);
+            }
+            // Optionally, restore roles and permissions
+        }
+    }
+}

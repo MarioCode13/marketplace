@@ -9,12 +9,13 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface ProfileCompletionRepository extends JpaRepository<ProfileCompletion, Long> {
-    
-    Optional<ProfileCompletion> findByUserId(Long userId);
-    
+public interface ProfileCompletionRepository extends JpaRepository<ProfileCompletion, UUID> {
+
+    Optional<ProfileCompletion> findByUserId(UUID userId);
+
     @Query("SELECT pc FROM ProfileCompletion pc WHERE pc.completionPercentage >= :minPercentage")
     List<ProfileCompletion> findByMinimumCompletionPercentage(@Param("minPercentage") BigDecimal minPercentage);
     
@@ -27,5 +28,5 @@ public interface ProfileCompletionRepository extends JpaRepository<ProfileComple
     @Query("SELECT COUNT(pc) FROM ProfileCompletion pc WHERE pc.completionPercentage >= :minPercentage")
     Long countByMinimumCompletionPercentage(@Param("minPercentage") BigDecimal minPercentage);
     
-    boolean existsByUserId(Long userId);
-} 
+    boolean existsByUserId(UUID userId);
+}

@@ -17,15 +17,19 @@ import java.time.LocalDateTime;
 public class VerificationDocument {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
-    
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id", nullable = true)
+    private Business business;
+
     @Enumerated(EnumType.STRING)
-    @Column(name = "document_type", nullable = false)
     private DocumentType documentType;
     
     @Column(name = "document_url", nullable = false)
@@ -95,4 +99,4 @@ public class VerificationDocument {
             return displayName;
         }
     }
-} 
+}

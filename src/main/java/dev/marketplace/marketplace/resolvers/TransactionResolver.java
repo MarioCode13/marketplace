@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Controller
 @RequiredArgsConstructor
@@ -27,13 +28,13 @@ public class TransactionResolver {
      * Create a transaction when a listing is sold to a specific buyer
      */
     @MutationMapping
-    public Transaction createTransaction(@Argument Long listingId,
-                                       @Argument Long buyerId,
+    public Transaction createTransaction(@Argument UUID listingId,
+                                       @Argument UUID buyerId,
                                        @Argument BigDecimal salePrice,
                                        @Argument String paymentMethod,
                                        @Argument String notes,
                                        @AuthenticationPrincipal UserDetails userDetails) {
-        Long sellerId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.createTransaction(listingId, buyerId, salePrice, paymentMethod, notes);
     }
     
@@ -41,9 +42,9 @@ public class TransactionResolver {
      * Complete a transaction (confirm the sale)
      */
     @MutationMapping
-    public Transaction completeTransaction(@Argument Long transactionId,
+    public Transaction completeTransaction(@Argument UUID transactionId,
                                          @AuthenticationPrincipal UserDetails userDetails) {
-        Long sellerId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.completeTransaction(transactionId, sellerId);
     }
     
@@ -51,10 +52,10 @@ public class TransactionResolver {
      * Cancel a transaction
      */
     @MutationMapping
-    public Transaction cancelTransaction(@Argument Long transactionId,
+    public Transaction cancelTransaction(@Argument UUID transactionId,
                                        @Argument String reason,
                                        @AuthenticationPrincipal UserDetails userDetails) {
-        Long sellerId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.cancelTransaction(transactionId, sellerId, reason);
     }
     
@@ -63,7 +64,7 @@ public class TransactionResolver {
      */
     @QueryMapping
     public List<TransactionDTO> myPurchases(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.getUserBuyingHistoryDTO(userId);
     }
     
@@ -72,7 +73,7 @@ public class TransactionResolver {
      */
     @QueryMapping
     public List<TransactionDTO> mySales(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.getUserSellingHistoryDTO(userId);
     }
     
@@ -81,7 +82,7 @@ public class TransactionResolver {
      */
     @QueryMapping
     public List<TransactionDTO> myCompletedPurchases(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.getUserCompletedPurchasesDTO(userId);
     }
     
@@ -90,7 +91,7 @@ public class TransactionResolver {
      */
     @QueryMapping
     public List<TransactionDTO> myCompletedSales(@AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.getUserCompletedSalesDTO(userId);
     }
     
@@ -98,7 +99,7 @@ public class TransactionResolver {
      * Get transaction by ID
      */
     @QueryMapping
-    public TransactionDTO getTransaction(@Argument Long transactionId) {
+    public TransactionDTO getTransaction(@Argument UUID transactionId) {
         return transactionService.getTransactionDTO(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found with ID: " + transactionId));
     }
@@ -107,7 +108,7 @@ public class TransactionResolver {
      * Get all transactions for a listing
      */
     @QueryMapping
-    public List<Transaction> getListingTransactions(@Argument Long listingId) {
+    public List<Transaction> getListingTransactions(@Argument UUID listingId) {
         return transactionService.getListingTransactions(listingId);
     }
     
@@ -115,9 +116,9 @@ public class TransactionResolver {
      * Check if current user has bought a specific listing
      */
     @QueryMapping
-    public boolean hasBoughtListing(@Argument Long listingId,
+    public boolean hasBoughtListing(@Argument UUID listingId,
                                    @AuthenticationPrincipal UserDetails userDetails) {
-        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
         return transactionService.hasUserBoughtListing(userId, listingId);
     }
     
@@ -125,9 +126,9 @@ public class TransactionResolver {
      * Get the buyer for a completed transaction on a listing
      */
     @QueryMapping
-    public String getBuyerForListing(@Argument Long listingId) {
+    public String getBuyerForListing(@Argument UUID listingId) {
         return transactionService.getBuyerForListing(listingId)
                 .map(user -> user.getUsername() != null ? user.getUsername() : user.getEmail())
                 .orElse(null);
     }
-} 
+}

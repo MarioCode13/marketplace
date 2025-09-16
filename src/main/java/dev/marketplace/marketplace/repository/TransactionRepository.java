@@ -8,50 +8,51 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    
+public interface TransactionRepository extends JpaRepository<Transaction, UUID> {
+
     // Find transactions by listing
-    List<Transaction> findByListingId(Long listingId);
+    List<Transaction> findByListingId(UUID listingId);
     
     // Find transactions where user is the buyer
-    List<Transaction> findByBuyerId(Long buyerId);
-    
+    List<Transaction> findByBuyerId(UUID buyerId);
+
     // Find transactions where user is the seller
-    List<Transaction> findBySellerId(Long sellerId);
-    
+    List<Transaction> findBySellerId(UUID sellerId);
+
     // Find completed transactions by listing
-    List<Transaction> findByListingIdAndStatus(Long listingId, Transaction.TransactionStatus status);
+    List<Transaction> findByListingIdAndStatus(UUID listingId, Transaction.TransactionStatus status);
     
     // Find the most recent completed transaction for a listing
-    Optional<Transaction> findFirstByListingIdAndStatusOrderBySaleDateDesc(Long listingId, Transaction.TransactionStatus status);
+    Optional<Transaction> findFirstByListingIdAndStatusOrderBySaleDateDesc(UUID listingId, Transaction.TransactionStatus status);
     
     // Check if a user has bought a specific listing
-    boolean existsByListingIdAndBuyerIdAndStatus(Long listingId, Long buyerId, Transaction.TransactionStatus status);
-    
+    boolean existsByListingIdAndBuyerIdAndStatus(UUID listingId, UUID buyerId, Transaction.TransactionStatus status);
+
     // Get transaction count for a user as buyer
-    long countByBuyerIdAndStatus(Long buyerId, Transaction.TransactionStatus status);
-    
+    long countByBuyerIdAndStatus(UUID buyerId, Transaction.TransactionStatus status);
+
     // Get transaction count for a user as seller
-    long countBySellerIdAndStatus(Long sellerId, Transaction.TransactionStatus status);
-    
+    long countBySellerIdAndStatus(UUID sellerId, Transaction.TransactionStatus status);
+
     // Find transactions by status
     List<Transaction> findByStatus(Transaction.TransactionStatus status);
     
     // Find transactions by buyer and status
-    List<Transaction> findByBuyerIdAndStatus(Long buyerId, Transaction.TransactionStatus status);
-    
+    List<Transaction> findByBuyerIdAndStatus(UUID buyerId, Transaction.TransactionStatus status);
+
     // Find transactions by seller and status
-    List<Transaction> findBySellerIdAndStatus(Long sellerId, Transaction.TransactionStatus status);
-    
+    List<Transaction> findBySellerIdAndStatus(UUID sellerId, Transaction.TransactionStatus status);
+
     // Find transactions within a date range
     @Query("SELECT t FROM Transaction t WHERE t.saleDate BETWEEN :startDate AND :endDate")
     List<Transaction> findBySaleDateBetween(@Param("startDate") java.time.LocalDateTime startDate, 
                                            @Param("endDate") java.time.LocalDateTime endDate);
 
     // Get transaction count for a user as seller (all statuses)
-    long countBySellerId(Long sellerId);
+    long countBySellerId(UUID sellerId);
     // Get transaction count for a user as buyer (all statuses)
-    long countByBuyerId(Long buyerId);
-} 
+    long countByBuyerId(UUID buyerId);
+}

@@ -10,6 +10,7 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.JoinColumn;
@@ -22,8 +23,9 @@ import jakarta.persistence.JoinColumn;
 @AllArgsConstructor
 public class User {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
 
     @Column(nullable = true, unique = true)
     private String username;

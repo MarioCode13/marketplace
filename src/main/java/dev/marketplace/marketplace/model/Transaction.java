@@ -8,6 +8,7 @@ import lombok.Builder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "transaction")
@@ -18,9 +19,10 @@ import java.time.LocalDateTime;
 public class Transaction {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private UUID id;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "listing_id", nullable = false)
     private Listing listing;
@@ -33,6 +35,10 @@ public class Transaction {
     @JoinColumn(name = "buyer_id", nullable = false)
     private User buyer;
     
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "business_id")
+    private Business business;
+
     @Column(name = "sale_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal salePrice;
     
@@ -75,4 +81,4 @@ public class Transaction {
         CANCELLED,  // Transaction was cancelled
         DISPUTED    // Transaction is under dispute
     }
-} 
+}

@@ -18,9 +18,10 @@ import java.time.LocalDateTime;
 public class TrustRating {
     
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid", updatable = false, nullable = false)
+    private java.util.UUID id;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -88,7 +89,7 @@ public class TrustRating {
             return BigDecimal.ZERO;
         }
         // Convert 0-100 score to 0-5 stars
-        return overallScore.divide(BigDecimal.valueOf(20), 1, BigDecimal.ROUND_HALF_UP);
+        return overallScore.divide(BigDecimal.valueOf(20), 1, java.math.RoundingMode.HALF_UP);
     }
     
     // Helper method to get trust level
@@ -103,4 +104,4 @@ public class TrustRating {
         if (score >= 50) return "POOR";
         return "VERY_POOR";
     }
-} 
+}

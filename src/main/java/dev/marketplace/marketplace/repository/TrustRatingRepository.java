@@ -9,12 +9,13 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface TrustRatingRepository extends JpaRepository<TrustRating, Long> {
-    
-    Optional<TrustRating> findByUserId(Long userId);
-    
+public interface TrustRatingRepository extends JpaRepository<TrustRating, UUID> {
+
+    Optional<TrustRating> findByUserId(UUID userId);
+
     @Query("SELECT tr FROM TrustRating tr WHERE tr.overallScore >= :minScore ORDER BY tr.overallScore DESC")
     List<TrustRating> findByMinimumScore(@Param("minScore") BigDecimal minScore);
     
@@ -27,5 +28,5 @@ public interface TrustRatingRepository extends JpaRepository<TrustRating, Long> 
     @Query("SELECT tr FROM TrustRating tr ORDER BY tr.overallScore DESC LIMIT :limit")
     List<TrustRating> findTopTrustedUsers(@Param("limit") int limit);
     
-    boolean existsByUserId(Long userId);
-} 
+    boolean existsByUserId(UUID userId);
+}

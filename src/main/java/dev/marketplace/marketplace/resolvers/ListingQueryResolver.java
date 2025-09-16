@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @CrossOrigin(origins = "http://localhost:3000")
 @Controller
@@ -33,17 +34,18 @@ public class ListingQueryResolver {
     public ListingPageResponse getListings(
             @Argument Integer limit,
             @Argument Integer offset,
-            @Argument String categoryId,
+            @Argument UUID categoryId,
             @Argument Double minPrice,
             @Argument Double maxPrice,
             @Argument String condition,
-            @Argument Long cityId,
+            @Argument UUID cityId,
             @Argument String searchTerm,
             @Argument String minDate,
             @Argument String maxDate,
             @Argument String sortBy,
             @Argument String sortOrder,
-            @Argument Long userId // new argument
+            @Argument UUID userId,
+            @Argument UUID businessId // Added businessId argument
     ) {
         // Convert condition string to enum if provided
         dev.marketplace.marketplace.enums.Condition conditionEnum = null;
@@ -81,30 +83,32 @@ public class ListingQueryResolver {
             }
         }
 
-        // Convert categoryId string to Long if provided
-        Long categoryIdLong = null;
-        if (categoryId != null && !categoryId.isEmpty()) {
-            try {
-                categoryIdLong = Long.parseLong(categoryId);
-            } catch (NumberFormatException e) {
-                // Invalid category ID, ignore it
-                System.err.println("Failed to parse categoryId: " + categoryId + ", error: " + e.getMessage());
-            }
-        }
-
         return listingService.getListingsWithFilters(
-            limit, offset, categoryIdLong, minPrice, maxPrice, 
-            conditionEnum, cityId, searchTerm, minDateTime, maxDateTime, sortBy, sortOrder, userId);
+            limit,
+            offset,
+            categoryId,
+            minPrice,
+            maxPrice,
+            conditionEnum,
+            cityId,
+            searchTerm,
+            minDateTime,
+            maxDateTime,
+            sortBy,
+            sortOrder,
+            userId,
+            businessId // Pass businessId to service
+        );
     }
 
     @QueryMapping
-    public ListingDTO getListingById(@Argument Long id) {
+    public ListingDTO getListingById(@Argument UUID id) {
         return listingService.getListingById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Listing not found with ID: " + id));
     }
 
     @QueryMapping
-    public List<ListingDTO> getListingsByCategory(@Argument Long categoryId) {
+    public List<ListingDTO> getListingsByCategory(@Argument UUID categoryId) {
         return listingService.getListingsByCategory(categoryId);
     }
 
@@ -137,7 +141,7 @@ public class ListingQueryResolver {
     }
 
     @QueryMapping
-    public List<ListingDTO> listingsByUser(@Argument Long userId) {
+    public List<ListingDTO> listingsByUser(@Argument UUID userId) {
         return listingService.getListingsByUserId(userId);
     }
 

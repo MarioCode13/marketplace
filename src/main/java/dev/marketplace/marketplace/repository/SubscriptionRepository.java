@@ -9,13 +9,14 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
-    
+public interface SubscriptionRepository extends JpaRepository<Subscription, UUID> {
+
     // Find active subscription for a user
-    Optional<Subscription> findByUserIdAndStatusIn(Long userId, List<Subscription.SubscriptionStatus> statuses);
-    
+    Optional<Subscription> findByUserIdAndStatusIn(UUID userId, List<Subscription.SubscriptionStatus> statuses);
+
     // Find by Stripe subscription ID
     Optional<Subscription> findByStripeSubscriptionId(String stripeSubscriptionId);
     
@@ -44,8 +45,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     List<Subscription> findByBillingCycle(Subscription.BillingCycle billingCycle);
     
     // Find all subscriptions for a user (including cancelled)
-    List<Subscription> findByUserIdOrderByCreatedAtDesc(Long userId);
-    
+    List<Subscription> findByUserIdOrderByCreatedAtDesc(UUID userId);
+
     // Check if user has active subscription
-    boolean existsByUserIdAndStatusIn(Long userId, List<Subscription.SubscriptionStatus> statuses);
-} 
+    boolean existsByUserIdAndStatusIn(UUID userId, List<Subscription.SubscriptionStatus> statuses);
+}
