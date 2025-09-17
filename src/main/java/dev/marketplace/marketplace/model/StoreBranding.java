@@ -23,8 +23,6 @@ public class StoreBranding {
     @JoinColumn(name = "business_id")
     private Business business;
 
-    private String slug;
-    
     @Column(name = "logo_url")
     private String logoUrl;
     

@@ -190,13 +190,6 @@ public class UserQueryResolver {
     }
 
     @QueryMapping
-    public User storeBySlug(@Argument String slug) {
-        return storeBrandingRepository.findBySlug(slug)
-                .map(branding -> branding.getBusiness() != null ? branding.getBusiness().getOwner() : null)
-                .orElse(null);
-    }
-
-    @QueryMapping
     @PreAuthorize("isAuthenticated()")
     public User me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS business (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     email_verification_token VARCHAR(255),
-    is_email_verified BOOLEAN DEFAULT FALSE
+    is_email_verified BOOLEAN DEFAULT FALSE,
+    slug VARCHAR(255) UNIQUE
 );
 
 -- BusinessUser Table
@@ -577,7 +578,6 @@ CREATE TABLE subscription (
 -- StoreBranding Table
 CREATE TABLE IF NOT EXISTS store_branding (
     business_id UUID PRIMARY KEY REFERENCES business(id) ON DELETE CASCADE,
-    slug VARCHAR(255),
     logo_url TEXT,
     banner_url TEXT,
     theme_color VARCHAR(32),
@@ -627,7 +627,7 @@ CREATE INDEX idx_store_branding_business_id ON store_branding(business_id);
 -- Add reseller and admin user
 INSERT INTO "users" (username, email, password, role, plan_type, first_name, last_name, bio, city_id, contact_number, created_at, profile_image_url)
 VALUES
-    ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT',
+    ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT',
      'RESELLER','Joe','Reseller','We sell the best gadgets and accessories!', (SELECT id FROM city WHERE name = 'Cape Town'),'+27111222333',NOW(), 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
     ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'PRO_STORE', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE name = 'Cape Town'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ON CONFLICT (email) DO NOTHING;
@@ -722,7 +722,7 @@ WHERE l.title = 'Smart LED Desk Lamp' AND u.email = 'reseller@marketplace.com';
 
 -- ADMIN STORE
 -- Add businesses for admin
-INSERT INTO business (name, email, contact_number, address_line1, city_id, owner_id, business_type)
+INSERT INTO business (name, email, contact_number, address_line1, city_id, owner_id, business_type, slug)
 SELECT
     CASE
         WHEN u.email = 'admin@admin.com' THEN 'Admin Marketplace Store'
@@ -735,7 +735,8 @@ SELECT
         END,
     COALESCE(u.city_id, (SELECT id FROM city WHERE name = 'Johannesburg')),
     u.id,
-    'PRO_STORE'
+    'PRO_STORE',
+    'admin-store'
 FROM "users" u
 WHERE u.email IN ('admin@admin.com')
 ON CONFLICT DO NOTHING;
@@ -749,9 +750,8 @@ WHERE u.email = 'admin@admin.com'
 ON CONFLICT DO NOTHING;
 
 -- Store branding for admin (pro store)
-INSERT INTO store_branding (business_id, slug, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name )
+INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name )
 SELECT b.id,
-       'admin-pro-store',
        'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
        'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470',
        '#6470ff',

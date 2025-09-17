@@ -25,4 +25,6 @@ public interface BusinessRepository extends JpaRepository<Business, UUID> {
     boolean existsByEmail(String email);
     
     boolean existsByEmailAndIdNot(String email, UUID id);
+
+    Optional<Business> findBySlug(String slug);
 }

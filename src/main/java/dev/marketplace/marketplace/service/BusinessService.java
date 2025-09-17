@@ -33,6 +33,10 @@ public class BusinessService {
         return businessRepository.findById(id);
     }
     
+    public Optional<Business> findBySlug(String slug) {
+        return businessRepository.findBySlug(slug);
+    }
+
     @Transactional
     public Business createBusiness(Business business) {
         log.info("Creating business: {}", business.getName());

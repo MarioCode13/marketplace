@@ -32,10 +32,6 @@ public class StoreBrandingService {
         return storeBrandingRepository.findByBusiness(business);
     }
     
-    public Optional<StoreBranding> findBySlug(String slug) {
-        return storeBrandingRepository.findBySlug(slug);
-    }
-    
     @Transactional
     public StoreBranding save(StoreBranding storeBranding) {
         log.info("Saving store branding for business: {}", storeBranding.getBusiness().getId());
@@ -49,7 +45,7 @@ public class StoreBrandingService {
     }
 
     @Transactional
-    public StoreBranding updateStoreBranding(UUID userId, UUID businessId, String slug, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName, String backgroundColor, String textColor, String cardTextColor) {
+    public StoreBranding updateStoreBranding(UUID userId, UUID businessId, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName, String backgroundColor, String textColor, String cardTextColor) {
         Business business = businessRepository.findById(businessId)
             .orElseThrow(() -> new IllegalArgumentException("Business not found"));
         User user = userRepository.findById(userId)
@@ -67,7 +63,6 @@ public class StoreBrandingService {
                 sb.setBusinessId(business.getId());
                 return sb;
             });
-        storeBranding.setSlug(slug);
         storeBranding.setLogoUrl(logoUrl);
         storeBranding.setBannerUrl(bannerUrl);
         storeBranding.setThemeColor(themeColor);

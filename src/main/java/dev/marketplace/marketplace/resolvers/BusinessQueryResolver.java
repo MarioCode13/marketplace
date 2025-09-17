@@ -50,7 +50,7 @@ public class BusinessQueryResolver {
     }
     
     @QueryMapping
-    public List<BusinessUser> businessUsers(@Argument UUID businessId) {
+    public List<BusinessUser> getBusinessUsers(@Argument UUID businessId) {
         log.info("Fetching users for business: {}", businessId);
         return businessService.getBusinessUsers(businessId);
     }
@@ -60,13 +60,13 @@ public class BusinessQueryResolver {
         return businessService.getBusinessTrustRating(businessId);
     }
 
-    @SchemaMapping
-    public User owner(Business business) {
-        return business.getOwner();
+    @QueryMapping
+    public Business getBusinessBySlug(@Argument String slug) {
+        return businessService.findBySlug(slug).orElse(null);
     }
-    
+
     @SchemaMapping
-    public List<BusinessUser> businessUsers(Business business) {
+    public List<BusinessUser> getBusinessUsers(Business business) {
         return business.getBusinessUsers();
     }
     

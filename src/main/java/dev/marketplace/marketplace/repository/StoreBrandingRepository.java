@@ -10,6 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface StoreBrandingRepository extends JpaRepository<StoreBranding, UUID> {
-    Optional<StoreBranding> findBySlug(String slug);
     Optional<StoreBranding> findByBusiness(Business business);
 }

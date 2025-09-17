@@ -81,12 +81,12 @@ public class BusinessMutationResolver {
                 existingBusiness.setCity(cityService.getCityById((UUID) business.getCityId()));
 
         }
+        if (business.getSlug() != null) existingBusiness.setSlug(business.getSlug());
         Business updatedBusiness = businessService.updateBusiness(existingBusiness, currentUser);
         if (branding != null) {
             StoreBranding existingBranding = storeBrandingService.findByBusiness(updatedBusiness)
                     .orElse(new StoreBranding());
             existingBranding.setBusiness(updatedBusiness);
-            if (branding.getSlug() != null) existingBranding.setSlug(branding.getSlug());
             if (branding.getLogoUrl() != null) existingBranding.setLogoUrl(branding.getLogoUrl());
             if (branding.getBannerUrl() != null) existingBranding.setBannerUrl(branding.getBannerUrl());
             if (branding.getThemeColor() != null) existingBranding.setThemeColor(branding.getThemeColor());

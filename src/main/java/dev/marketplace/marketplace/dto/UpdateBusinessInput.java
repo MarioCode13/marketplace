@@ -13,4 +13,5 @@ public class UpdateBusinessInput {
     private String addressLine2;
     private UUID cityId;
     private String postalCode;
+    private String slug;
 }

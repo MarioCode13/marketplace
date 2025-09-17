@@ -81,6 +81,9 @@ public class Business {
     @Column(name = "is_email_verified")
     private boolean isEmailVerified;
 
+    @Column(nullable = false, unique = true)
+    private String slug;
+
     // Helper methods
     public boolean isOwner(User user) {
         return owner != null && owner.getId().equals(user.getId());

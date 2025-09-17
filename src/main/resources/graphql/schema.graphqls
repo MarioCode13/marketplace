@@ -32,7 +32,6 @@ type User {
 }
 
 type StoreBranding {
-    slug: String
     logoUrl: String
     bannerUrl: String
     themeColor: String
@@ -299,7 +298,14 @@ type Query {
     getBusinessVerificationDocuments(businessId: ID!): [VerificationDocument!]!
     getBusinessDocumentByType(businessId: ID!, documentType: DocumentType!): VerificationDocument
     businessTrustRating(businessId: ID!): BusinessTrustRating
+    isStoreSlugAvailable(slug: String!): Boolean!
+    business(id: ID!): Business
+    myBusiness: Business
+    myBusinesses: [Business!]!
+    getBusinessUsers(businessId: ID!): [BusinessUser!]!
+    getBusinessBySlug(slug: String!): Business
 }
+
 
 type Mutation {
     updateUser(id: ID!, username: String, email: String, firstName: String, lastName: String, bio: String, cityId: ID, customCity: String, contactNumber: String): User
@@ -348,6 +354,10 @@ type Mutation {
     declineBusinessInvitation(notificationId: ID!): Boolean!
     uploadBusinessVerificationDocument(businessId: ID!, documentType: DocumentType!, file: String!): VerificationDocument!
     deleteBusinessVerificationDocument(documentId: ID!, businessId: ID!): Boolean!
+    createBusiness(input: CreateBusinessInput!): Business!
+    linkUserToBusiness(businessId: ID!, userId: ID!, role: BusinessUserRole!): BusinessUser!
+    unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
+    transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
 }
 
 type Country {
@@ -415,7 +425,6 @@ input UpdateBusinessInput {
 }
 
 input UpdateStoreBrandingInput {
-    slug: String
     logoUrl: String
     bannerUrl: String
     themeColor: String
@@ -427,6 +436,7 @@ input UpdateStoreBrandingInput {
     textColor: String
     cardTextColor: String
     backgroundColor: String
+    slug: String
 }
 
 enum BusinessUserRole {
@@ -448,7 +458,6 @@ input CreateBusinessInput {
 }
 
 input CreateStoreBrandingInput {
-    slug: String
     logoUrl: String
     bannerUrl: String
     themeColor: String
@@ -467,20 +476,3 @@ type BusinessTrustRating {
     reviewCount: Int!
 }
 
-extend type Query {
-    isStoreSlugAvailable(slug: String!): Boolean!
-}
-
-extend type Query {
-    business(id: ID!): Business
-    myBusiness: Business
-    myBusinesses: [Business!]!
-    businessUsers(businessId: ID!): [BusinessUser!]!
-}
-
-extend type Mutation {
-    createBusiness(input: CreateBusinessInput!): Business!
-    linkUserToBusiness(businessId: ID!, userId: ID!, role: BusinessUserRole!): BusinessUser!
-    unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
-    transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
-}

@@ -34,7 +34,6 @@ public class StoreBrandingMutationResolver {
         return storeBrandingService.updateStoreBranding(
             userId,
             businessId,
-            input.getSlug(),
             input.getLogoUrl(),
             input.getBannerUrl(),
             input.getThemeColor(),
