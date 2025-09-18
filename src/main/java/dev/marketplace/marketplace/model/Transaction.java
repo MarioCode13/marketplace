@@ -76,9 +76,9 @@ public class Transaction {
     }
     
     public enum TransactionStatus {
-        PENDING,    // Transaction created but not confirmed
-        COMPLETED,  // Transaction completed successfully
-        CANCELLED,  // Transaction was cancelled
-        DISPUTED    // Transaction is under dispute
+        PENDING,
+        COMPLETED,
+        CANCELLED,
+        DISPUTED
     }
 }

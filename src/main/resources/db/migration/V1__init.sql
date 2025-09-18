@@ -649,12 +649,11 @@ WHERE u.email = 'reseller@marketplace.com'
 ON CONFLICT DO NOTHING;
 
 -- Add store branding for reseller
-INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
+INSERT INTO store_branding (business_id, logo_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name)
 SELECT b.id,
        'https://images.unsplash.com/photo-1519125323398-675f0ddb6308?q=80&w=100',
-       'https://images.unsplash.com/photo-1465101046530-73398c7f28ca?q=80&w=800',
        '#e53e3e',
-       '#e53e3e',
+       '#8a5357',
        '#ffffff',
        'light',
        'Welcome to Joe''s Reseller Store! Find top gadgets and more.',
@@ -750,14 +749,17 @@ WHERE u.email = 'admin@admin.com'
 ON CONFLICT DO NOTHING;
 
 -- Store branding for admin (pro store)
-INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, about, store_name )
+INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, text_color, card_text_color, background_color, about, store_name )
 SELECT b.id,
        'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
        'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470',
        '#6470ff',
-       '#ff131a',
-       '#ffffff',
+       '#2d35a4',
+       '#c4c4c4',
        'light',
+       '#f39bfd',
+       '#eeeeee',
+           '#1d2329'
        'Welcome to the Admin Pro Store! We offer the best tech and collectibles.',
        'Admin Pro Store'
 FROM business b

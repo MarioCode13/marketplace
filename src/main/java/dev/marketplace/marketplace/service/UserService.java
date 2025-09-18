@@ -46,10 +46,9 @@ public class UserService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // First try to find by email
+
         Optional<User> userOpt = userRepository.findByEmail(username);
-        
-        // If not found, try to find by username
+
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findByUsername(username);
         }
@@ -66,8 +65,7 @@ public class UserService implements UserDetailsService {
 
     public User registerUser(String username, String email, String password) {
         logger.info("Registering new user - Username: {}, Email: {}", username, email);
-        
-        // Validate input
+
         if (username == null || username.trim().isEmpty()) {
             logger.warn("Registration failed: Username is empty");
             throw new ValidationException("Username is required");
@@ -157,9 +155,8 @@ public class UserService implements UserDetailsService {
     }
 
     public UUID getUserIdByUsername(String username) {
-        // First try to find by username
         Optional<User> userOpt = userRepository.findByUsername(username);
-        // If not found by username, try by email
+
         if (userOpt.isEmpty()) {
             userOpt = userRepository.findByEmail(username);
         }

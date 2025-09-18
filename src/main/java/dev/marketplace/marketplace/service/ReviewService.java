@@ -38,8 +38,7 @@ public class ReviewService {
                              String comment) {
         log.info("Creating review: reviewer={}, reviewed={}, transaction={}, rating={}", 
                 reviewerId, reviewedUserId, transactionId, rating);
-        
-        // Validate rating
+
         if (rating.compareTo(BigDecimal.valueOf(0.5)) < 0 || rating.compareTo(BigDecimal.valueOf(5.0)) > 0) {
             throw new IllegalArgumentException("Rating must be between 0.5 and 5.0");
         }
@@ -58,8 +57,7 @@ public class ReviewService {
         
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new IllegalArgumentException("Transaction not found with ID: " + transactionId));
-        
-        // Validate that the transaction is completed
+
         if (transaction.getStatus() != Transaction.TransactionStatus.COMPLETED) {
             throw new IllegalArgumentException("Can only review completed transactions");
         }
@@ -72,8 +70,7 @@ public class ReviewService {
         if (!transaction.getSeller().getId().equals(reviewedUserId)) {
             throw new IllegalArgumentException("Can only review the seller of the transaction");
         }
-        
-        // Create review
+
         Review review = Review.builder()
                 .reviewer(reviewer)
                 .reviewedUser(reviewedUser)

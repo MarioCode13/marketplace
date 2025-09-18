@@ -214,17 +214,16 @@ public class ListingService {
             String sortBy,
             String sortOrder,
             UUID userId,
-            UUID businessId // Added businessId argument
+            UUID businessId
     ) {
-        // Build Pageable
         Pageable pageable = (limit != null && offset != null) ? PageRequest.of(offset / limit, limit) : Pageable.unpaged();
-        // If categoryId is provided, get all descendant category IDs (including itself)
+
         final List<UUID> categoryIds = (categoryId != null)
             ? categoryService.getAllDescendantCategoryIds(categoryId)
             : null;
-        // Use repository filtering (pseudo-code, adapt to your repository's API)
+
         List<Listing> filteredListings = listingRepository.findAll();
-        // Apply filters manually if repository does not support them
+
         filteredListings = filteredListings.stream()
             .filter(l -> categoryIds == null || (l.getCategory() != null && categoryIds.contains(l.getCategory().getId())))
             .filter(l -> minPrice == null || l.getPrice() >= minPrice)
@@ -237,7 +236,7 @@ public class ListingService {
             .filter(l -> minDate == null || (l.getCreatedAt() != null && !l.getCreatedAt().isBefore(minDate)))
             .filter(l -> maxDate == null || (l.getCreatedAt() != null && !l.getCreatedAt().isAfter(maxDate)))
             .toList();
-        // Sorting
+
         if (sortBy != null && sortOrder != null) {
             java.util.Comparator<Listing> comparator = null;
             if ("price".equalsIgnoreCase(sortBy)) {

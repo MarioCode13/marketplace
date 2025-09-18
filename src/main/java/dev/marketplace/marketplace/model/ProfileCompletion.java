@@ -78,16 +78,14 @@ public class ProfileCompletion {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-    
-    // Helper method to calculate completion percentage
+
     public void calculateCompletionPercentage() {
-        int totalFields = 4; // user info fields: photo, bio, contact, location
+        int totalFields = 4;
         int completedFields = 0;
         if (Boolean.TRUE.equals(hasProfilePhoto)) completedFields++;
         if (Boolean.TRUE.equals(hasBio)) completedFields++;
         if (Boolean.TRUE.equals(hasContactNumber)) completedFields++;
         if (Boolean.TRUE.equals(hasLocation)) completedFields++;
-        // Uploaded docs (ID, driver's license, proof of address)
         int totalDocs = 3;
         int uploadedDocs = 0;
         if (Boolean.TRUE.equals(hasIdDocument)) uploadedDocs++;
@@ -100,8 +98,7 @@ public class ProfileCompletion {
                 .divide(BigDecimal.valueOf(total), 2, java.math.RoundingMode.HALF_UP);
         this.lastCalculated = LocalDateTime.now();
     }
-    
-    // Helper method to get completion level
+
     public String getCompletionLevel() {
         if (completionPercentage == null) return "UNKNOWN";
         

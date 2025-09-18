@@ -36,8 +36,7 @@ public class TransactionService {
     public Transaction createTransaction(UUID listingId, UUID buyerId, BigDecimal salePrice,
                                        String paymentMethod, String notes) {
         log.info("Creating transaction: listing={}, buyer={}, price={}", listingId, buyerId, salePrice);
-        
-        // Validate listing exists and is not already sold
+
         Listing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new IllegalArgumentException("Listing not found with ID: " + listingId));
         
@@ -57,8 +56,7 @@ public class TransactionService {
         if (salePrice.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Sale price must be greater than zero");
         }
-        
-        // Create transaction
+
         Transaction transaction = Transaction.builder()
                 .listing(listing)
                 .seller(listing.getUser())
@@ -71,8 +69,7 @@ public class TransactionService {
                 .build();
         
         Transaction saved = transactionRepository.save(transaction);
-        
-        // Mark listing as sold
+
         listing.setSold(true);
         listingRepository.save(listing);
         

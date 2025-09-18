@@ -46,7 +46,6 @@ public class Category {
         this.name = name;
     }
 
-    // Expose parentId for GraphQL
     public java.util.UUID getParentId() {
         return parent != null ? parent.getId() : null;
     }

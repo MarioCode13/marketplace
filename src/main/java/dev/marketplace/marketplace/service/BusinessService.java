@@ -40,15 +40,15 @@ public class BusinessService {
     @Transactional
     public Business createBusiness(Business business) {
         log.info("Creating business: {}", business.getName());
-        // Validate email uniqueness
+
         if (businessRepository.existsByEmail(business.getEmail())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
         }
-        // Require business email for verification
+
         if (business.getBusinessEmail() == null || business.getBusinessEmail().isBlank()) {
             throw new IllegalArgumentException("Business email is required for verification.");
         }
-        // Generate verification token and set verification flag
+
         business.setEmailVerificationToken(UUID.randomUUID().toString());
         business.setEmailVerified(false);
         // If businessType is not set, default to RESELLER
@@ -56,13 +56,13 @@ public class BusinessService {
             business.setBusinessType(BusinessType.RESELLER);
         }
         Business savedBusiness = businessRepository.save(business);
-        // Only create owner relationship for reseller
+
         BusinessUser ownerRelation = new BusinessUser();
         ownerRelation.setBusiness(savedBusiness);
         ownerRelation.setUser(business.getOwner());
         ownerRelation.setRole(BusinessUserRole.OWNER);
         businessUserRepository.save(ownerRelation);
-        // Send verification email
+
         notificationService.sendBusinessVerificationEmail(
             business.getBusinessEmail(),
             business.getEmailVerificationToken(),
@@ -133,18 +133,16 @@ public class BusinessService {
         Business existingBusiness = businessRepository.findById(business.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + business.getId()));
         
-        // Check permissions
+
         if (!existingBusiness.canUserEditBusiness(requestingUser)) {
             throw new IllegalArgumentException("User does not have permission to edit this business");
         }
-        
-        // Validate email uniqueness if changed
+
         if (!existingBusiness.getEmail().equals(business.getEmail()) && 
             businessRepository.existsByEmailAndIdNot(business.getEmail(), business.getId())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
         }
-        
-        // Update fields
+
         existingBusiness.setName(business.getName());
         existingBusiness.setEmail(business.getEmail());
         existingBusiness.setContactNumber(business.getContactNumber());
@@ -162,12 +160,11 @@ public class BusinessService {
         
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
-        
-        // Check permissions
+
         if (!business.canUserEditBusiness(requestingUser)) {
             throw new IllegalArgumentException("User does not have permission to manage this business");
         }
-        
+
         // Prevent removing the last owner
         if (business.getOwner().getId().equals(user.getId())) {
             long ownerCount = businessUserRepository.countOwnersByBusiness(business);

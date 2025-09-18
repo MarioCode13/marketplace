@@ -58,7 +58,6 @@ public class Review {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        // Automatically set isPositive based on rating
         if (rating != null) {
             isPositive = rating.compareTo(BigDecimal.valueOf(3.5)) >= 0;
         }
@@ -67,19 +66,17 @@ public class Review {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-        // Update isPositive if rating changed
+
         if (rating != null) {
             isPositive = rating.compareTo(BigDecimal.valueOf(3.5)) >= 0;
         }
     }
-    
-    // Helper method to get star display
+
     public String getStarDisplay() {
         if (rating == null) return "0.0";
         return rating.toString();
     }
-    
-    // Helper method to check if rating is valid
+
     public boolean isValidRating() {
         return rating != null && 
                rating.compareTo(BigDecimal.valueOf(0.5)) >= 0 && 

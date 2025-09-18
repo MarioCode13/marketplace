@@ -26,13 +26,11 @@ public class TrustRatingService {
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
     private final BusinessRepository businessRepository;
 
-    // Trust score weights (out of 100)
     private static final BigDecimal DOCUMENT_WEIGHT = BigDecimal.valueOf(30); // 30%
     private static final BigDecimal PROFILE_WEIGHT = BigDecimal.valueOf(20); // 20%
     private static final BigDecimal REVIEW_WEIGHT = BigDecimal.valueOf(30); // 30%
     private static final BigDecimal TRANSACTION_WEIGHT = BigDecimal.valueOf(20); // 20%
-    
-    // Document upload scores (just uploading gives points)
+
     private static final BigDecimal ID_UPLOAD_SCORE = BigDecimal.valueOf(5);
     private static final BigDecimal ADDRESS_UPLOAD_SCORE = BigDecimal.valueOf(3);
     private static final BigDecimal PROFILE_PHOTO_UPLOAD_SCORE = BigDecimal.valueOf(2);

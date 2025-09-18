@@ -71,9 +71,8 @@ public class ListingImageService {
             throw new IllegalArgumentException("Image filename cannot be empty");
         }
         
-        // Check if it's a URL (starts with http/https)
+        // Check if it's a URL (http/https)
         if (filename.startsWith("http://") || filename.startsWith("https://")) {
-            // Validate URL format
             try {
                 new java.net.URL(filename);
                 return; // Valid URL

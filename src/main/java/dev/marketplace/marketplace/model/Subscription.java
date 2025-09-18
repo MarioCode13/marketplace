@@ -119,8 +119,7 @@ public class Subscription {
         MONTHLY,
         YEARLY
     }
-    
-    // Helper methods
+
     public boolean isActive() {
         return status == SubscriptionStatus.ACTIVE || status == SubscriptionStatus.TRIAL;
     }

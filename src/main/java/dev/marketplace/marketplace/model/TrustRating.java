@@ -82,8 +82,7 @@ public class TrustRating {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
-    
-    // Helper method to get star rating (0.0 to 5.0)
+
     public BigDecimal getStarRating() {
         if (overallScore == null || overallScore.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;
@@ -91,8 +90,7 @@ public class TrustRating {
         // Convert 0-100 score to 0-5 stars
         return overallScore.divide(BigDecimal.valueOf(20), 1, java.math.RoundingMode.HALF_UP);
     }
-    
-    // Helper method to get trust level
+
     public String getTrustLevel() {
         if (overallScore == null) return "UNKNOWN";
         

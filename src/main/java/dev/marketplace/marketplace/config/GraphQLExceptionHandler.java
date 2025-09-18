@@ -85,7 +85,6 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
                     .build();
         }
 
-        // For any other exceptions, return a generic error
         return GraphqlErrorBuilder.newError()
                 .errorType(ErrorType.INTERNAL_ERROR)
                 .message("An unexpected error occurred. Please try again.")

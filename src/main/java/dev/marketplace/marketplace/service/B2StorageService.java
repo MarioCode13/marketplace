@@ -43,8 +43,8 @@ public class B2StorageService {
         }
         return originalName
                 .trim()
-                .replaceAll("\\s+", "_")        // Replace spaces with underscores
-                .replaceAll("[^a-zA-Z0-9._-]", ""); // Strip unsafe characters
+                .replaceAll("\\s+", "_")
+                .replaceAll("[^a-zA-Z0-9._-]", "");
     }
 
 //    To be deprecated shortly
