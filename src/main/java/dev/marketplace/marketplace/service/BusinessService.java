@@ -239,4 +239,8 @@ public class BusinessService {
                 .totalReviews(reviewCount != null ? reviewCount.intValue() : 0)
                 .build();
     }
+
+    public List<Listing> getListingsForBusiness(UUID businessId) {
+        return listingRepository.findByBusinessId(businessId);
+    }
 }

@@ -51,18 +51,6 @@ VALUES
     ((SELECT id FROM users WHERE email = 'maria@example.com'), '5 x Bananas', 'Fresh ripe bananas, sold as a bunch of 5, great for snacking or smoothies.', 'ffffffff-ffff-ffff-ffff-fffffffffff3', 8.00, 'EXCELLENT', (SELECT id FROM city WHERE name = 'Kimberley'), NULL, NOW() - INTERVAL '2 days', NOW() + INTERVAL '28 days', false)
 ON CONFLICT (user_id, title) DO NOTHING;
 
-
--- Hardcoded UUIDs for listing images
-INSERT INTO listing_image (id, listing_id, image) VALUES
-('30000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'https://images.unsplash.com/photo-1616410011236-7a42121dd981?q=80&w=1632&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000002', 'https://images.unsplash.com/photo-1525547719571-a2d4ac8945e2?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000002', 'https://plus.unsplash.com/premium_photo-1670274609267-202ec99f8620?q=80&w=736&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000003', 'https://images.unsplash.com/photo-1518443855757-dfadac7101ae?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000006', '20000000-0000-0000-0000-000000000004', 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-('30000000-0000-0000-0000-000000000007', '20000000-0000-0000-0000-000000000005', 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?q=80&w=781&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
-ON CONFLICT (id) DO NOTHING;
-
 -- Insert verification documents for admin (verified)
 INSERT INTO verification_document (user_id, document_type, document_url, status, verified_at, verified_by) 
 SELECT 
@@ -272,4 +260,3 @@ VALUES
   ('40000000-0000-0000-0000-000000000001', (SELECT id FROM users WHERE email = 'admin@admin.com'), 'SYSTEM', 'Welcome to the Admin Pro Store!', NULL, NOW() - INTERVAL '1 day', false, false),
   ('40000000-0000-0000-0000-000000000003', (SELECT id FROM users WHERE email = 'reseller@marketplace.com'), 'INVITATION', 'You have been invited to join Joe''s Reseller Store as a MANAGER.', '{"businessId":"..."}', NOW() - INTERVAL '3 hours', false, true)
 ON CONFLICT (id) DO NOTHING;
-

@@ -304,6 +304,7 @@ type Query {
     myBusinesses: [Business!]!
     getBusinessUsers(businessId: ID!): [BusinessUser!]!
     getBusinessBySlug(slug: String!): Business
+    getBusinessTransactions(businessId: ID!): [Transaction!]!
 }
 
 
@@ -475,4 +476,3 @@ type BusinessTrustRating {
     averageRating: Float!
     reviewCount: Int!
 }
-

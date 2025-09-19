@@ -55,4 +55,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     long countBySellerId(UUID sellerId);
     // Get transaction count for a user as buyer (all statuses)
     long countByBuyerId(UUID buyerId);
+
+    // Find transactions by multiple listings
+    List<Transaction> findByListingIdIn(List<UUID> listingIds);
 }

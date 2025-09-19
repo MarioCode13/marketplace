@@ -85,4 +85,15 @@ public class BusinessQueryResolver {
         return userService.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
     }
+
+    @QueryMapping
+    public List<dev.marketplace.marketplace.model.Transaction> getBusinessTransactions(@Argument UUID businessId) {
+        // Find all listings for the business
+        List<dev.marketplace.marketplace.model.Listing> listings = businessService.getListingsForBusiness(businessId);
+        if (listings == null || listings.isEmpty()) return List.of();
+        // Collect all listing IDs
+        List<UUID> listingIds = listings.stream().map(dev.marketplace.marketplace.model.Listing::getId).toList();
+        // Fetch all transactions for these listings
+        return transactionService.getTransactionsByListingIds(listingIds);
+    }
 }

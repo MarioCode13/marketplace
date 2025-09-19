@@ -303,4 +303,13 @@ public class TransactionService {
         return transactionRepository.findById(transactionId)
                 .map(this::convertToDTO);
     }
+
+    /**
+     * Get transactions by listing IDs
+     */
+    @Transactional(readOnly = true)
+    public List<Transaction> getTransactionsByListingIds(List<UUID> listingIds) {
+        if (listingIds == null || listingIds.isEmpty()) return List.of();
+        return transactionRepository.findByListingIdIn(listingIds);
+    }
 }

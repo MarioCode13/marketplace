@@ -759,7 +759,7 @@ SELECT b.id,
        'light',
        '#f39bfd',
        '#eeeeee',
-           '#1d2329'
+           '#1d2329',
        'Welcome to the Admin Pro Store! We offer the best tech and collectibles.',
        'Admin Pro Store'
 FROM business b

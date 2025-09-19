@@ -91,4 +91,6 @@ public interface ListingRepository extends JpaRepository<Listing, UUID> {
 
     @Query("SELECT l FROM Listing l WHERE l.category.id IN :categoryIds AND l.sold = false")
     List<Listing> findByCategoryIdIn(List<UUID> categoryIds);
+
+    List<Listing> findByBusinessId(UUID businessId);
 }
