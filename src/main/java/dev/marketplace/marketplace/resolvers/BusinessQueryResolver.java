@@ -6,6 +6,7 @@ import dev.marketplace.marketplace.model.BusinessUser;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.BusinessService;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -26,7 +27,8 @@ public class BusinessQueryResolver {
     
     private final BusinessService businessService;
     private final UserService userService;
-    
+    private final TransactionService transactionService;
+
     @QueryMapping
     public Business business(@Argument UUID id) {
         log.info("Fetching business with ID: {}", id);
