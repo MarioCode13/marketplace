@@ -1,6 +1,7 @@
 package dev.marketplace.marketplace.model;
 
 import dev.marketplace.marketplace.enums.Role;
+import dev.marketplace.marketplace.enums.PlanType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -80,19 +81,18 @@ public class User {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "plan_type")
-    private String planType; // FREE, VERIFIED, RESELLER, PRO_STORE
-
     @Transient
     private StoreBranding storeBranding;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "plan_type", nullable = false)
+    private PlanType planType = PlanType.FREE;
 
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
     }
 
-    public String getPlanType() { return planType; }
-    public void setPlanType(String planType) { this.planType = planType; }
     public StoreBranding getStoreBranding() { return storeBranding; }
     public void setStoreBranding(StoreBranding storeBranding) { this.storeBranding = storeBranding; }
 }

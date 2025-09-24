@@ -62,28 +62,48 @@ public class SubscriptionService {
     }
     
     /**
-     * Create a new subscription (called after successful Stripe payment)
+     * Create a new subscription (supports both user-level and business-level subscriptions)
+     * If userId is provided, creates a user-level subscription.
+     * If businessId is provided, creates a business-level subscription.
+     * At least one must be provided.
      */
     @Transactional
     public Subscription createSubscription(UUID userId,
-                                         String stripeSubscriptionId,
-                                         String stripeCustomerId,
-                                         Subscription.PlanType planType,
-                                         BigDecimal amount,
-                                         Subscription.BillingCycle billingCycle) {
-        log.info("Creating subscription for user: {}, plan: {}", userId, planType);
-        
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
-        
+                                           UUID businessId,
+                                           String stripeSubscriptionId,
+                                           String stripeCustomerId,
+                                           Subscription.PlanType planType,
+                                           BigDecimal amount,
+                                           Subscription.BillingCycle billingCycle) {
+        log.info("Creating subscription for user: {}, business: {}, plan: {}", userId, businessId, planType);
+
+        if (userId == null && businessId == null) {
+            throw new IllegalArgumentException("Either userId or businessId must be provided.");
+        }
+        if (userId != null && businessId != null) {
+            throw new IllegalArgumentException("Only one of userId or businessId should be provided for a subscription.");
+        }
+
+        User user = null;
+        Business business = null;
+        if (userId != null) {
+            user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+        }
+        if (businessId != null) {
+            business = businessRepository.findById(businessId)
+                    .orElseThrow(() -> new IllegalArgumentException("Business not found with ID: " + businessId));
+        }
+
         // Calculate period dates
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime periodEnd = billingCycle == Subscription.BillingCycle.MONTHLY 
-                ? now.plusMonths(1) 
+        LocalDateTime periodEnd = billingCycle == Subscription.BillingCycle.MONTHLY
+                ? now.plusMonths(1)
                 : now.plusYears(1);
-        
+
         Subscription subscription = Subscription.builder()
                 .user(user)
+                .business(business)
                 .stripeSubscriptionId(stripeSubscriptionId)
                 .stripeCustomerId(stripeCustomerId)
                 .planType(planType)
@@ -94,20 +114,23 @@ public class SubscriptionService {
                 .currentPeriodEnd(periodEnd)
                 .cancelAtPeriodEnd(false)
                 .build();
-        
+
         Subscription saved = subscriptionRepository.save(subscription);
-        
-        // Update user role to SUBSCRIBED
-        user.setRole(Role.SUBSCRIBED);
-        // set User.planType as String (convert enum to String)
-        user.setPlanType(planType != null ? planType.name() : null);
-        userRepository.save(user);
-        
-        // Update trust rating with subscription bonus
-        trustRatingService.addSubscriptionBonus(userId);
-        
+
+        if (user != null) {
+            // Update user role to SUBSCRIBED
+            user.setRole(Role.SUBSCRIBED);
+            userRepository.save(user);
+            // Update trust rating with subscription bonus
+            trustRatingService.addSubscriptionBonus(user.getId());
+        }
+        if (business != null) {
+            // Optionally, update business status/plan here if needed
+            // e.g., business.setPlanType(planType.name());
+            // businessRepository.save(business);
+        }
+
         log.info("Subscription created successfully: {}", saved.getId());
-        
         return saved;
     }
     
@@ -224,7 +247,6 @@ public class SubscriptionService {
             // Update user role and plan type
             try {
                 user.setRole(Role.SUBSCRIBED);
-                user.setPlanType(planType != null ? planType.name() : null);
                 userRepository.save(user);
                 log.info("[PayFast Sub] User role and planType updated for user {} planType {}", userId, user.getPlanType());
             } catch (Exception e) {
@@ -402,5 +424,48 @@ public class SubscriptionService {
         // For now, just log the action
         log.info("[PayFast] Cancelling recurring profile with ID: {}", payfastProfileId);
         // Example: Use RestTemplate or WebClient to call PayFast API
+    }
+
+    /**
+     * Get business's active subscription
+     */
+    @Transactional(readOnly = true)
+    public Optional<Subscription> getActiveBusinessSubscription(UUID businessId) {
+        return subscriptionRepository.findByBusinessIdAndStatusIn(
+                businessId,
+                List.of(Subscription.SubscriptionStatus.ACTIVE, Subscription.SubscriptionStatus.TRIAL)
+        );
+    }
+
+    /**
+     * Cancel business subscription at period end
+     */
+    @Transactional
+    public Subscription cancelBusinessSubscriptionAtPeriodEnd(UUID businessId) {
+        log.info("Cancelling subscription at period end for business: {}", businessId);
+        Subscription subscription = getActiveBusinessSubscription(businessId)
+                .orElseThrow(() -> new IllegalArgumentException("No active subscription found for business: " + businessId));
+        // Cancel PayFast recurring profile if present
+        if (subscription.getPayfastProfileId() != null && !subscription.getPayfastProfileId().isBlank()) {
+            cancelPayFastProfile(subscription.getPayfastProfileId());
+        }
+        subscription.setCancelAtPeriodEnd(true);
+        Subscription saved = subscriptionRepository.save(subscription);
+        log.info("Business subscription marked for cancellation at period end: {}", subscription.getId());
+        return saved;
+    }
+
+    /**
+     * Reactivate cancelled business subscription
+     */
+    @Transactional
+    public Subscription reactivateBusinessSubscription(UUID businessId) {
+        log.info("Reactivating subscription for business: {}", businessId);
+        Subscription subscription = getActiveBusinessSubscription(businessId)
+                .orElseThrow(() -> new IllegalArgumentException("No active subscription found for business: " + businessId));
+        subscription.setCancelAtPeriodEnd(false);
+        Subscription saved = subscriptionRepository.save(subscription);
+        log.info("Business subscription reactivated: {}", subscription.getId());
+        return saved;
     }
 }

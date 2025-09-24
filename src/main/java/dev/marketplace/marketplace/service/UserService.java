@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import dev.marketplace.marketplace.enums.Role;
+import dev.marketplace.marketplace.enums.PlanType;
 import dev.marketplace.marketplace.exceptions.UserAlreadyExistsException;
 import dev.marketplace.marketplace.exceptions.ValidationException;
 import org.springframework.web.multipart.MultipartFile;
@@ -343,14 +344,6 @@ public class UserService implements UserDetailsService {
         }
     }
 
-    @Transactional
-    public User updateUserPlanType(UUID userId, String planType) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        user.setPlanType(planType);
-        return userRepository.save(user);
-    }
-
     public boolean hasActiveSubscription(UUID userId) {
         return subscriptionRepository.existsByUserIdAndStatusIn(userId, java.util.Arrays.asList(SubscriptionStatus.ACTIVE, SubscriptionStatus.TRIAL));
     }
@@ -362,5 +355,13 @@ public class UserService implements UserDetailsService {
 
     public java.util.Optional<dev.marketplace.marketplace.model.User> findByEmail(String email) {
         return userRepository.findByEmail(email);
+    }
+
+    @Transactional
+    public User updateUserPlanType(UUID userId, PlanType planType) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        user.setPlanType(planType);
+        return userRepository.save(user);
     }
 }

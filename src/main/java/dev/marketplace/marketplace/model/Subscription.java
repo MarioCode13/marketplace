@@ -22,8 +22,13 @@ public class Subscription {
     @Column(columnDefinition = "uuid", updatable = false, nullable = false)
     private java.util.UUID id;
 
+    /**
+     * Either user or business must be set, depending on subscription type.
+     * For user-level subscriptions, set user and leave business null.
+     * For business-level subscriptions, set business and leave user null (or set user as creator).
+     */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id")
     private User user;
     
     @ManyToOne(fetch = FetchType.LAZY)

@@ -94,7 +94,8 @@ public class UserQueryResolver {
 
     @SchemaMapping(typeName = "User", field = "planType")
     public String resolvePlanType(User user) {
-        return user.getPlanType();
+        Optional<Subscription> activeSub = subscriptionService.getActiveSubscription(user.getId());
+        return activeSub.map(sub -> sub.getPlanType() != null ? sub.getPlanType().name() : null).orElse(null);
     }
 
     @SchemaMapping(typeName = "User", field = "storeBranding")

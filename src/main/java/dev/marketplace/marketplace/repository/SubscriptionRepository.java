@@ -49,4 +49,9 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, UUID
 
     // Check if user has active subscription
     boolean existsByUserIdAndStatusIn(UUID userId, List<Subscription.SubscriptionStatus> statuses);
+
+    // Business-level subscription queries
+    Optional<Subscription> findByBusinessIdAndStatusIn(UUID businessId, List<Subscription.SubscriptionStatus> statuses);
+    boolean existsByBusinessIdAndStatusIn(UUID businessId, List<Subscription.SubscriptionStatus> statuses);
+    List<Subscription> findByBusinessIdOrderByCreatedAtDesc(UUID businessId);
 }

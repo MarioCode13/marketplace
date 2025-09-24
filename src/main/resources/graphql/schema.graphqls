@@ -25,7 +25,10 @@ type User {
     profileCompletion: ProfileCompletion
     verificationDocuments: [VerificationDocument!]
     subscription: Subscription
-    planType: String
+    """
+    Computed from the user's active subscription. Not stored on the user.
+    """
+    planType: PlanType
     storeBranding: StoreBranding
     listings: [Listing!]!
     business: Business
@@ -137,9 +140,23 @@ enum SubscriptionStatus {
     TRIAL
 }
 
+input CreateSubscriptionInput {
+    """
+    Either userId or businessId must be provided, but not both.
+    """
+    userId: ID
+    businessId: ID
+    stripeSubscriptionId: String
+    stripeCustomerId: String
+    planType: PlanType!
+    amount: Float!
+    billingCycle: BillingCycle!
+}
+
 type Subscription {
     id: ID!
-    user: User!
+    user: User
+    business: Business
     stripeSubscriptionId: String
     stripeCustomerId: String
     planType: PlanType!
@@ -149,10 +166,11 @@ type Subscription {
     billingCycle: BillingCycle!
     currentPeriodStart: String
     currentPeriodEnd: String
-    cancelAtPeriodEnd: Boolean!
+    cancelAtPeriodEnd: Boolean
     cancelledAt: String
-    createdAt: String!
-    updatedAt: String!
+    createdAt: String
+    updatedAt: String
+    payfastProfileId: String
 }
 
 type SubscriptionStats {
@@ -423,6 +441,8 @@ type Query {
     getBusinessUsers(businessId: ID!): [BusinessUser!]!
     getBusinessBySlug(slug: String!): Business
     getBusinessTransactions(businessId: ID!): [Transaction!]!
+    userSubscriptions(userId: ID!): [Subscription!]!
+    businessSubscriptions(businessId: ID!): [Subscription!]!
 }
 
 
@@ -479,4 +499,5 @@ type Mutation {
     linkUserToBusiness(businessId: ID!, userId: ID!, role: BusinessUserRole!): BusinessUser!
     unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
     transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
+    createSubscription(input: CreateSubscriptionInput!): Subscription!
 }

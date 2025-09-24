@@ -37,7 +37,7 @@ public class PayFastController {
     private static final String RETURN_URL = "http://localhost:3000/subscriptions/success";
     private static final String CANCEL_URL = "http://localhost:3000/subscriptions/cancel";
 //    private static final String NOTIFY_URL = "http://localhost:8080/api/payments/payfast/itn";
-    private static final String NOTIFY_URL = "https://c2b06f3371d3.ngrok-free.app/api/payments/payfast/itn";
+    private static final String NOTIFY_URL = "https://03f0de192067.ngrok-free.app/api/payments/payfast/itn";
     private static final String PASSPHRASE = ""; // Set if you have one in PayFast dashboard
 
     @Autowired

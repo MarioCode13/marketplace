@@ -41,7 +41,6 @@ CREATE TABLE IF NOT EXISTS "users" (
     custom_city VARCHAR(100),
     contact_number VARCHAR(255),
     id_number VARCHAR(255),
-    plan_type VARCHAR(32),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -530,6 +529,7 @@ CREATE TABLE review (
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reviewed_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     transaction_id UUID NOT NULL REFERENCES "transaction"(id) ON DELETE CASCADE,
+    business_id UUID REFERENCES business(id),
     rating DECIMAL(2,1) NOT NULL CHECK (rating >= 0.5 AND rating <= 5.0),
     comment TEXT,
     is_positive BOOLEAN NOT NULL,
@@ -629,9 +629,10 @@ CREATE INDEX idx_store_branding_business_id ON store_branding(business_id);
 -- Add reseller and admin user
 INSERT INTO "users" (username, email, password, role, plan_type, first_name, last_name, bio, city_id, contact_number, created_at, profile_image_url)
 VALUES
-    ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT',
-     'RESELLER','Joe','Reseller','We sell the best gadgets and accessories!', (SELECT id FROM city WHERE name = 'Cape Town'),'+27111222333',NOW(), 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-    ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'PRO_STORE', 'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE name = 'Cape Town'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
+    ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT', 'RESELLER',
+     'Joe','Reseller','We sell the best gadgets and accessories!', (SELECT id FROM city WHERE name = 'Cape Town'),'+27111222333',NOW(), 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
+    ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED', 'PRO_STORE',
+     'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE code = 'ZA'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ON CONFLICT (email) DO NOTHING;
 
 -- RESELLER JOE
@@ -808,4 +809,36 @@ SELECT b.id
 FROM business b
 JOIN users u ON b.owner_id = u.id
 WHERE u.email = 'admin@admin.com'
+ON CONFLICT DO NOTHING;
+
+-- Add subscriptions for resellerjoe and admin
+INSERT INTO subscription (
+    user_id, business_id, plan_type, status, amount, currency, billing_cycle, current_period_start, current_period_end, created_at, updated_at
+) VALUES
+    (
+        (SELECT id FROM users WHERE email = 'reseller@marketplace.com'),
+        (SELECT id FROM business WHERE owner_id = (SELECT id FROM users WHERE email = 'reseller@marketplace.com')),
+        'RESELLER',
+        'ACTIVE',
+        99.00,
+        'USD',
+        'monthly',
+        NOW() - INTERVAL '1 day',
+        NOW() + INTERVAL '29 days',
+        NOW(),
+        NOW()
+    ),
+    (
+        (SELECT id FROM users WHERE email = 'admin@admin.com'),
+        (SELECT id FROM business WHERE owner_id = (SELECT id FROM users WHERE email = 'admin@admin.com')),
+        'PRO_STORE',
+        'ACTIVE',
+        199.00,
+        'USD',
+        'monthly',
+        NOW() - INTERVAL '1 day',
+        NOW() + INTERVAL '29 days',
+        NOW(),
+        NOW()
+    )
 ON CONFLICT DO NOTHING;

@@ -67,6 +67,14 @@ public class BusinessTrustRating {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Transient
+    @Builder.Default
+    private Double averageRating = 0.0;
+
+    @Transient
+    @Builder.Default
+    private Integer reviewCount = 0;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

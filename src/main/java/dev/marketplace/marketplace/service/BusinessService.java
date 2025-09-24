@@ -243,6 +243,8 @@ public class BusinessService {
                 .business(business)
                 .overallScore(avgRating != null ? avgRating : BigDecimal.ZERO)
                 .totalReviews(reviewCount != null ? reviewCount.intValue() : 0)
+                .averageRating(avgRating != null ? avgRating.doubleValue() : 0.0)
+                .reviewCount(reviewCount != null ? reviewCount.intValue() : 0)
                 .build();
     }
 
