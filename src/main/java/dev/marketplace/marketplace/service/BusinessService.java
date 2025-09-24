@@ -142,7 +142,11 @@ public class BusinessService {
             businessRepository.existsByEmailAndIdNot(business.getEmail(), business.getId())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
         }
-
+        // Slug uniqueness validation
+        if (business.getSlug() != null && !business.getSlug().equals(existingBusiness.getSlug()) &&
+            businessRepository.existsBySlugAndIdNot(business.getSlug(), business.getId())) {
+            throw new IllegalArgumentException("Business slug already exists: " + business.getSlug());
+        }
         existingBusiness.setName(business.getName());
         existingBusiness.setEmail(business.getEmail());
         existingBusiness.setContactNumber(business.getContactNumber());
@@ -150,7 +154,9 @@ public class BusinessService {
         existingBusiness.setAddressLine2(business.getAddressLine2());
         existingBusiness.setCity(business.getCity());
         existingBusiness.setPostalCode(business.getPostalCode());
-        
+        if (business.getSlug() != null) {
+            existingBusiness.setSlug(business.getSlug());
+        }
         return businessRepository.save(existingBusiness);
     }
     

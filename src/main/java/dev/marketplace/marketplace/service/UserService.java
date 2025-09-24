@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.Base64;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class UserService implements UserDetailsService {
@@ -35,6 +36,9 @@ public class UserService implements UserDetailsService {
     private final B2StorageService b2StorageService;
     private final CityRepository cityRepository;
     private final SubscriptionRepository subscriptionRepository;
+
+    @Autowired
+    private TrustRatingService trustRatingService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
         this.userRepository = userRepository;
@@ -109,6 +113,7 @@ public class UserService implements UserDetailsService {
 
         User savedUser = userRepository.save(user);
         logger.info("User registered successfully - ID: {}, Email: {}", savedUser.getId(), savedUser.getEmail());
+        trustRatingService.calculateAndUpdateTrustRating(savedUser.getId());
         return savedUser;
     }
 

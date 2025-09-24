@@ -54,4 +54,8 @@ public class StoreBranding {
 
     @Column(name = "background_color")
     private String backgroundColor;
+
+    @Version
+    @Column(name = "version")
+    private Long version;
 }

@@ -57,7 +57,7 @@ public class TransactionService {
             throw new IllegalArgumentException("Sale price must be greater than zero");
         }
 
-        Transaction transaction = Transaction.builder()
+        Transaction.TransactionBuilder transactionBuilder = Transaction.builder()
                 .listing(listing)
                 .seller(listing.getUser())
                 .buyer(buyer)
@@ -65,9 +65,15 @@ public class TransactionService {
                 .saleDate(LocalDateTime.now())
                 .status(Transaction.TransactionStatus.PENDING)
                 .paymentMethod(paymentMethod)
-                .notes(notes)
-                .build();
-        
+                .notes(notes);
+
+        // Link to business if listing is owned by a business
+        if (listing.getBusiness() != null) {
+            transactionBuilder.business(listing.getBusiness());
+        }
+
+        Transaction transaction = transactionBuilder.build();
+
         Transaction saved = transactionRepository.save(transaction);
 
         listing.setSold(true);

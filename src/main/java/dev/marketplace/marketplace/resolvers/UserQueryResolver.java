@@ -14,6 +14,8 @@ import dev.marketplace.marketplace.repository.ProfileCompletionRepository;
 import dev.marketplace.marketplace.repository.StoreBrandingRepository;
 import dev.marketplace.marketplace.repository.BusinessRepository;
 import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.model.Subscription;
+import dev.marketplace.marketplace.service.SubscriptionService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.graphql.data.method.annotation.SchemaMapping;
@@ -41,6 +43,7 @@ public class UserQueryResolver {
     private final StoreBrandingRepository storeBrandingRepository;
     private final ListingService listingService;
     private final BusinessRepository businessRepository;
+    private final SubscriptionService subscriptionService;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(User user) {
@@ -136,6 +139,11 @@ public class UserQueryResolver {
         return businesses.isEmpty() ? null : businesses.get(0);
     }
 
+    @SchemaMapping(typeName = "User", field = "subscription")
+    public Subscription resolveSubscription(User user) {
+        return subscriptionService.getActiveSubscription(user.getId()).orElse(null);
+    }
+
     public UserQueryResolver(
         UserService userService,
         TrustRatingService trustRatingService,
@@ -143,7 +151,8 @@ public class UserQueryResolver {
         ProfileCompletionRepository profileCompletionRepository,
         StoreBrandingRepository storeBrandingRepository,
         ListingService listingService,
-        BusinessRepository businessRepository
+        BusinessRepository businessRepository,
+        SubscriptionService subscriptionService
     ) {
         this.userService = userService;
         this.trustRatingService = trustRatingService;
@@ -152,6 +161,7 @@ public class UserQueryResolver {
         this.storeBrandingRepository = storeBrandingRepository;
         this.listingService = listingService;
         this.businessRepository = businessRepository;
+        this.subscriptionService = subscriptionService;
     }
 
     @QueryMapping

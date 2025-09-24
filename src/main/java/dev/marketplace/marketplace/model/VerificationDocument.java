@@ -71,7 +71,11 @@ public class VerificationDocument {
         ID_CARD("ID Card"),
         DRIVERS_LICENSE("Driver's License"),
         PROOF_OF_ADDRESS("Proof of Address"),
-        PROFILE_PHOTO("Profile Photo");
+        PROFILE_PHOTO("Profile Photo"),
+        BUSINESS_REGISTRATION("Business Registration"),
+        OWNER_IDENTITY("Owner Identity"),
+        BANK_ACCOUNT_VERIFICATION("Bank Account Verification"),
+        TAX_CLEARANCE("Tax Clearance");
         
         private final String displayName;
         

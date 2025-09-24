@@ -34,7 +34,7 @@ public class StoreBrandingService {
     
     @Transactional
     public StoreBranding save(StoreBranding storeBranding) {
-        log.info("Saving store branding for business: {}", storeBranding.getBusiness().getId());
+        log.info("Saving store branding for business: {}, version: {}", storeBranding.getBusiness().getId()  );
         return storeBrandingRepository.save(storeBranding);
     }
     
@@ -56,13 +56,18 @@ public class StoreBrandingService {
         if (!(businessUser.getRole() == BusinessUserRole.OWNER || businessUser.getRole() == BusinessUserRole.MANAGER)) {
             throw new AccessDeniedException("User does not have permission to update branding for this business");
         }
-        StoreBranding storeBranding = findByBusiness(business)
-            .orElseGet(() -> {
-                StoreBranding sb = new StoreBranding();
-                sb.setBusiness(business);
-                sb.setBusinessId(business.getId());
-                return sb;
-            });
+        // Always fetch the latest StoreBranding from the repository
+        Optional<StoreBranding> existingBrandingOpt = storeBrandingRepository.findByBusiness(business);
+        StoreBranding storeBranding;
+        if (existingBrandingOpt.isPresent()) {
+            storeBranding = existingBrandingOpt.get();
+            log.info("Updating existing StoreBranding for business: {}, version: {}", storeBranding.getBusinessId(), storeBranding.getVersion());
+        } else {
+            storeBranding = new StoreBranding();
+            storeBranding.setBusiness(business);
+            storeBranding.setBusinessId(business.getId());
+            log.info("Creating new StoreBranding for business: {}", business.getId());
+        }
         storeBranding.setLogoUrl(logoUrl);
         storeBranding.setBannerUrl(bannerUrl);
         storeBranding.setThemeColor(themeColor);

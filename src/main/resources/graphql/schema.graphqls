@@ -119,10 +119,9 @@ type Review {
 }
 
 enum PlanType {
-    BASIC_MONTHLY
-    BASIC_YEARLY
-    PREMIUM_MONTHLY
-    PREMIUM_YEARLY
+    VERIFIED_USER
+    RESELLER
+    PRO_STORE
 }
 
 enum BillingCycle {
@@ -166,6 +165,10 @@ enum DocumentType {
     PROOF_OF_ADDRESS
     PROFILE_PHOTO
     DRIVERS_LICENSE
+    BUSINESS_REGISTRATION
+    OWNER_IDENTITY
+    BANK_ACCOUNT_VERIFICATION
+    TAX_CLEARANCE
 }
 
 enum VerificationStatus {
@@ -230,6 +233,121 @@ type Notification {
     createdAt: String!
     read: Boolean!
     actionRequired: Boolean!
+}
+
+type Country {
+    id: ID!
+    name: String!
+    code: String!
+}
+
+type Region {
+    id: ID!
+    name: String!
+    country: Country!
+}
+
+type City {
+    id: ID!
+    name: String!
+    region: Region!
+}
+
+type Business {
+    id: ID!
+    name: String!
+    email: String!
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    city: City
+    postalCode: String
+    slug: String
+    owner: User!
+    storeBranding: StoreBranding
+    businessUsers: [BusinessUser!]!
+    businessType: String
+    verificationDocuments: [VerificationDocument!]!
+}
+
+type BusinessUser {
+    id: ID!
+    user: User!
+    role: BusinessUserRole!
+}
+
+type BusinessTrustRating {
+    averageRating: Float!
+    reviewCount: Int!
+}
+
+input UpdateListingInput {
+    id: ID!
+    title: String
+    price: Float
+    description: String
+    images: [String!]
+    condition: Condition
+    categoryId: ID
+    cityId: ID
+    customCity: String
+}
+
+input UpdateStoreBrandingInput {
+    logoUrl: String
+    bannerUrl: String
+    themeColor: String
+    primaryColor: String
+    secondaryColor: String
+    lightOrDark: String
+    about: String
+    storeName: String
+    textColor: String
+    cardTextColor: String
+    backgroundColor: String
+}
+
+input UpdateBusinessInput {
+    businessId: ID!
+    email: String
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    cityId: ID
+    postalCode: String
+    slug: String
+}
+
+input CreateBusinessInput {
+    name: String!
+    email: String!
+    contactNumber: String
+    addressLine1: String
+    addressLine2: String
+    cityId: ID
+    postalCode: String
+    slug: String
+    branding: CreateStoreBrandingInput
+}
+
+input CreateStoreBrandingInput {
+    logoUrl: String
+    bannerUrl: String
+    themeColor: String
+    primaryColor: String
+    secondaryColor: String
+    lightOrDark: String
+    about: String
+    storeName: String
+    textColor: String
+    cardTextColor: String
+    backgroundColor: String
+}
+
+enum BusinessUserRole {
+    OWNER
+    MANAGER
+    CONTRIBUTOR
 }
 
 type Query {
@@ -350,6 +468,8 @@ type Mutation {
         businessId: ID!
         input: UpdateStoreBrandingInput!
     ): StoreBranding
+    updateBusiness(input: UpdateBusinessInput!): Business
+    updateBusinessAndBranding(business: UpdateBusinessInput!, branding: UpdateStoreBrandingInput): Business
     markNotificationRead(notificationId: ID!): Boolean!
     acceptBusinessInvitation(notificationId: ID!): Boolean!
     declineBusinessInvitation(notificationId: ID!): Boolean!
@@ -359,120 +479,4 @@ type Mutation {
     linkUserToBusiness(businessId: ID!, userId: ID!, role: BusinessUserRole!): BusinessUser!
     unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
     transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
-}
-
-type Country {
-    id: ID!
-    name: String!
-    code: String!
-}
-
-type Region {
-    id: ID!
-    name: String!
-    country: Country!
-}
-
-type City {
-    id: ID!
-    name: String!
-    region: Region!
-}
-
-input UpdateListingInput {
-    id: ID!
-    title: String
-    price: Float
-    description: String
-    images: [String!]
-    condition: Condition
-    categoryId: ID
-    cityId: ID
-    customCity: String
-}
-# Business domain
-
-type Business {
-    id: ID!
-    name: String!
-    email: String!
-    contactNumber: String
-    addressLine1: String
-    addressLine2: String
-    city: City
-    postalCode: String
-    slug: String
-    owner: User!
-    storeBranding: StoreBranding
-    businessUsers: [BusinessUser!]!
-    businessType: String # Added
-    verificationDocuments: [VerificationDocument!]!
-}
-
-type BusinessUser {
-    id: ID!
-    user: User!
-    role: BusinessUserRole!
-}
-
-input UpdateBusinessInput {
-    businessId: ID!
-    email: String
-    contactNumber: String
-    addressLine1: String
-    addressLine2: String
-    cityId: ID
-    postalCode: String
-}
-
-input UpdateStoreBrandingInput {
-    logoUrl: String
-    bannerUrl: String
-    themeColor: String
-    primaryColor: String
-    secondaryColor: String
-    lightOrDark: String
-    about: String
-    storeName: String
-    textColor: String
-    cardTextColor: String
-    backgroundColor: String
-    slug: String
-}
-
-enum BusinessUserRole {
-    OWNER
-    MANAGER
-    CONTRIBUTOR
-}
-
-input CreateBusinessInput {
-    name: String!
-    email: String!
-    contactNumber: String
-    addressLine1: String
-    addressLine2: String
-    cityId: ID
-    postalCode: String
-    slug: String
-    branding: CreateStoreBrandingInput
-}
-
-input CreateStoreBrandingInput {
-    logoUrl: String
-    bannerUrl: String
-    themeColor: String
-    primaryColor: String
-    secondaryColor: String
-    lightOrDark: String
-    about: String
-    storeName: String
-    textColor: String
-    cardTextColor: String
-    backgroundColor: String
-}
-
-type BusinessTrustRating {
-    averageRating: Float!
-    reviewCount: Int!
 }

@@ -571,6 +571,7 @@ CREATE TABLE subscription (
     current_period_end TIMESTAMP,
     cancel_at_period_end BOOLEAN DEFAULT FALSE,
     cancelled_at TIMESTAMP,
+    payfast_profile_id VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -588,7 +589,8 @@ CREATE TABLE IF NOT EXISTS store_branding (
     light_or_dark VARCHAR(16),
     text_color VARCHAR(32),
     card_text_color VARCHAR(32),
-    background_color VARCHAR(32)
+    background_color VARCHAR(32),
+    version BIGINT
 );
 
 -- Notification Table
@@ -752,7 +754,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO store_branding (business_id, logo_url, banner_url, theme_color, primary_color, secondary_color, light_or_dark, text_color, card_text_color, background_color, about, store_name )
 SELECT b.id,
        'https://images.unsplash.com/photo-1614851099518-055a1000e6d5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
-       'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?q=80&w=1470',
+       'https://images.unsplash.com/photo-1579548122080-c35fd6820ecb?q=80&w=1740&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
        '#6470ff',
        '#2d35a4',
        '#c4c4c4',
@@ -791,3 +793,19 @@ FROM listing l
         ('iPhone 13 Pro Max - Space Gray', 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?q=80&w=781&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 
 ) AS li(listing_title, image_path) ON l.title = li.listing_title;
+
+-- Add trust rating for Joe's Reseller Store
+INSERT INTO business_trust_rating (business_id)
+SELECT b.id
+FROM business b
+JOIN users u ON b.owner_id = u.id
+WHERE u.email = 'reseller@marketplace.com'
+ON CONFLICT DO NOTHING;
+
+-- Add trust rating for Admin's business
+INSERT INTO business_trust_rating (business_id)
+SELECT b.id
+FROM business b
+JOIN users u ON b.owner_id = u.id
+WHERE u.email = 'admin@admin.com'
+ON CONFLICT DO NOTHING;

@@ -1,11 +1,17 @@
 package dev.marketplace.marketplace.service;
 
+import dev.marketplace.marketplace.enums.BusinessType;
+import dev.marketplace.marketplace.enums.BusinessUserRole;
 import dev.marketplace.marketplace.enums.Role;
 import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.model.BusinessTrustRating;
+import dev.marketplace.marketplace.model.BusinessUser;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.model.Subscription;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.repository.BusinessRepository;
+import dev.marketplace.marketplace.repository.BusinessTrustRatingRepository;
+import dev.marketplace.marketplace.repository.BusinessUserRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.SubscriptionRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
@@ -30,6 +36,8 @@ public class SubscriptionService {
     private final TrustRatingService trustRatingService;
     private final BusinessRepository businessRepository;
     private final ListingRepository listingRepository;
+    private final BusinessUserRepository businessUserRepository;
+    private final BusinessTrustRatingRepository businessTrustRatingRepository;
 
     /**
      * Check if user has active subscription
@@ -91,6 +99,8 @@ public class SubscriptionService {
         
         // Update user role to SUBSCRIBED
         user.setRole(Role.SUBSCRIBED);
+        // set User.planType as String (convert enum to String)
+        user.setPlanType(planType != null ? planType.name() : null);
         userRepository.save(user);
         
         // Update trust rating with subscription bonus
@@ -145,6 +155,10 @@ public class SubscriptionService {
         Subscription subscription = getActiveSubscription(userId)
                 .orElseThrow(() -> new IllegalArgumentException("No active subscription found for user: " + userId));
         
+        // Cancel PayFast recurring profile if present
+        if (subscription.getPayfastProfileId() != null && !subscription.getPayfastProfileId().isBlank()) {
+            cancelPayFastProfile(subscription.getPayfastProfileId());
+        }
         subscription.setCancelAtPeriodEnd(true);
         Subscription saved = subscriptionRepository.save(subscription);
         
@@ -176,9 +190,17 @@ public class SubscriptionService {
      */
     @Transactional
     public void createOrActivatePayFastSubscription(UUID userId, Subscription.PlanType planType) {
+        log.info("[PayFast Sub] Called for userId={}, planType={}", userId, planType);
         if (!hasActiveSubscription(userId)) {
-            User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+            log.debug("[PayFast Sub] No active subscription, proceeding to create for user {} plan {}", userId, planType);
+            User user = null;
+            try {
+                user = userRepository.findById(userId)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+            } catch (Exception e) {
+                log.error("[PayFast Sub] User lookup failed for userId={}", userId, e);
+                throw e;
+            }
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime periodEnd = now.plusMonths(1);
             Subscription subscription = Subscription.builder()
@@ -192,11 +214,89 @@ public class SubscriptionService {
                 .currentPeriodEnd(periodEnd)
                 .cancelAtPeriodEnd(false)
                 .build();
-            subscriptionRepository.save(subscription);
-            user.setRole(Role.SUBSCRIBED);
-            userRepository.save(user);
-            trustRatingService.addSubscriptionBonus(userId);
-            log.info("PayFast subscription created for user: {} with plan: {}", userId, planType);
+            try {
+                subscriptionRepository.save(subscription);
+                log.info("[PayFast Sub] Subscription saved for user {} subscriptionPlan {}", userId, planType);
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to save subscription for userId={}", userId, e);
+                throw e;
+            }
+            // Update user role and plan type
+            try {
+                user.setRole(Role.SUBSCRIBED);
+                user.setPlanType(planType != null ? planType.name() : null);
+                userRepository.save(user);
+                log.info("[PayFast Sub] User role and planType updated for user {} planType {}", userId, user.getPlanType());
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to update user role/planType for userId={}", userId, e);
+                throw e;
+            }
+            // If plan is PRO_STORE and user doesn't already own a business, create one
+            if (planType == Subscription.PlanType.PRO_STORE) {
+                boolean hasOwnerBusiness = false;
+                try {
+                    hasOwnerBusiness = businessRepository.findByOwner(user).isPresent() ||
+                                       !businessRepository.findByUser(user).isEmpty();
+                } catch (Exception e) {
+                    log.error("[PayFast Sub] Error checking business ownership for userId={}", userId, e);
+                }
+                if (!hasOwnerBusiness) {
+                    try {
+                        Business business = new Business();
+                        business.setOwner(user);
+                        // Set required fields for business entity
+                        if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
+                            business.setName(user.getFirstName() + "'s Store");
+                        } else {
+                            business.setName(user.getEmail() + "'s Store");
+                        }
+                        business.setEmail(user.getEmail()); // Set the email field
+                        // Set business type to PRO_STORE for Pro_Store plan
+                        business.setBusinessType(BusinessType.PRO_STORE);
+                        // Set other required fields here if needed
+                        businessRepository.save(business);
+                        log.info("[PayFast Sub] Business created for user {} businessId {}", userId, business.getId());
+
+                        // Create BusinessTrustRating entry for the new business
+                        BusinessTrustRating businessTrustRating = BusinessTrustRating.builder()
+                            .business(business)
+                            .overallScore(BigDecimal.ZERO)
+                            .verificationScore(BigDecimal.ZERO)
+                            .profileScore(BigDecimal.ZERO)
+                            .reviewScore(BigDecimal.ZERO)
+                            .transactionScore(BigDecimal.ZERO)
+                            .totalReviews(0)
+                            .positiveReviews(0)
+                            .totalTransactions(0)
+                            .successfulTransactions(0)
+                            .build();
+                        businessTrustRatingRepository.save(businessTrustRating);
+                        log.info("[PayFast Sub] BusinessTrustRating created for businessId {}", business.getId());
+
+                        // Create BusinessUser entry for owner
+                        BusinessUser businessUser = new BusinessUser();
+                        businessUser.setBusiness(business);
+                        businessUser.setUser(user);
+                        businessUser.setRole(BusinessUserRole.OWNER);
+                        businessUserRepository.save(businessUser);
+                        log.info("[PayFast Sub] BusinessUser OWNER entry created for user {} businessId {}", userId, business.getId());
+                    } catch (Exception e) {
+                        log.error("[PayFast Sub] Failed to create business for userId={}", userId, e);
+                        throw e;
+                    }
+                } else {
+                    log.info("[PayFast Sub] User {} already has a business; skipping creation", userId);
+                }
+            }
+            try {
+                trustRatingService.addSubscriptionBonus(userId);
+                log.info("[PayFast Sub] Trust rating bonus added for userId={}", userId);
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to add trust rating bonus for userId={}", userId, e);
+            }
+            log.info("[PayFast Sub] PayFast subscription created for user: {} with plan: {}", userId, planType);
+        } else {
+            log.info("[PayFast Sub] User {} already has an active subscription, skipping createOrActivatePayFastSubscription", userId);
         }
     }
     
@@ -292,5 +392,15 @@ public class SubscriptionService {
             }
             // Optionally, restore roles and permissions
         }
+    }
+
+    /**
+     * Cancel PayFast recurring profile by profile ID
+     */
+    private void cancelPayFastProfile(String payfastProfileId) {
+        // TODO: Implement actual API call to PayFast to cancel the recurring profile
+        // For now, just log the action
+        log.info("[PayFast] Cancelling recurring profile with ID: {}", payfastProfileId);
+        // Example: Use RestTemplate or WebClient to call PayFast API
     }
 }

@@ -147,6 +147,25 @@ public class BusinessMutationResolver {
 
                 business.setCity(cityService.getCityById((UUID) input.getCityId()));
         }
+        if (input.getSlug() != null) business.setSlug(input.getSlug());
+        return businessService.updateBusiness(business, currentUser);
+    }
+
+    @MutationMapping
+    @Transactional
+    public Business updateBusiness(@Argument UpdateBusinessInput input) {
+        User currentUser = getCurrentUser();
+        Business business = businessService.findById(input.getBusinessId())
+            .orElseThrow(() -> new IllegalArgumentException("Business not found: " + input.getBusinessId()));
+        if (input.getEmail() != null) business.setEmail(input.getEmail());
+        if (input.getContactNumber() != null) business.setContactNumber(input.getContactNumber());
+        if (input.getAddressLine1() != null) business.setAddressLine1(input.getAddressLine1());
+        if (input.getAddressLine2() != null) business.setAddressLine2(input.getAddressLine2());
+        if (input.getPostalCode() != null) business.setPostalCode(input.getPostalCode());
+        if (input.getCityId() != null) {
+            business.setCity(cityService.getCityById((UUID) input.getCityId()));
+        }
+        if (input.getSlug() != null) business.setSlug(input.getSlug());
         return businessService.updateBusiness(business, currentUser);
     }
 

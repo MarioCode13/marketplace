@@ -35,7 +35,7 @@ SELECT
     35 as total_transactions,
     34 as successful_transactions
 FROM "users" u
-WHERE u.email IN ('admin@admin.com', 'test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com', 'lisa@example.com', 'david@example.com', 'maria@example.com')
+WHERE u.email IN ('test@test.com', 'john@example.com', 'sarah@example.com', 'mike@example.com', 'emma@example.com', 'alex@example.com', 'lisa@example.com', 'david@example.com', 'maria@example.com')
 ON CONFLICT (user_id) DO NOTHING;
 
 -- Insert Other Users' Listings
