@@ -2,7 +2,6 @@ package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.UserService;
-import dev.marketplace.marketplace.enums.PlanType;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.stereotype.Controller;
@@ -46,16 +45,5 @@ public class UserMutationResolver {
         userService.updateProfileImage(userId, imageUrl);
 
         return imageUrl;
-    }
-
-    @MutationMapping
-    public User updateUserPlanType(@Argument UUID id, @Argument String planType) {
-        PlanType type;
-        try {
-            type = PlanType.valueOf(planType.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid plan type: " + planType);
-        }
-        return userService.updateUserPlanType(id, type);
     }
 }

@@ -244,13 +244,13 @@ public class SubscriptionService {
                 log.error("[PayFast Sub] Failed to save subscription for userId={}", userId, e);
                 throw e;
             }
-            // Update user role and plan type
+            // Update user role
             try {
                 user.setRole(Role.SUBSCRIBED);
                 userRepository.save(user);
-                log.info("[PayFast Sub] User role and planType updated for user {} planType {}", userId, user.getPlanType());
+                log.info("[PayFast Sub] User role updated for user {}", userId);
             } catch (Exception e) {
-                log.error("[PayFast Sub] Failed to update user role/planType for userId={}", userId, e);
+                log.error("[PayFast Sub] Failed to update user role for userId={}", userId, e);
                 throw e;
             }
             // If plan is PRO_STORE and user doesn't already own a business, create one

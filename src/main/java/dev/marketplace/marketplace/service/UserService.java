@@ -361,7 +361,7 @@ public class UserService implements UserDetailsService {
     public User updateUserPlanType(UUID userId, PlanType planType) {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
-        user.setPlanType(planType);
+        // No planType field anymore, so just return user or handle as needed
         return userRepository.save(user);
     }
 }

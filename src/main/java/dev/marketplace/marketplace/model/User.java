@@ -1,7 +1,6 @@
 package dev.marketplace.marketplace.model;
 
 import dev.marketplace.marketplace.enums.Role;
-import dev.marketplace.marketplace.enums.PlanType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -83,10 +82,6 @@ public class User {
 
     @Transient
     private StoreBranding storeBranding;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "plan_type", nullable = false)
-    private PlanType planType = PlanType.FREE;
 
     @PrePersist
     protected void onCreate() {
