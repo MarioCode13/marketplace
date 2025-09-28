@@ -5,6 +5,9 @@ target/
 !**/src/test/**/target/
 .env
 .env.backup
+application.yml
+application-dev.yml
+application-prod.yml
 
 ### STS ###
 .apt_generated

@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import dev.marketplace.marketplace.model.User;
@@ -31,14 +32,21 @@ import org.slf4j.LoggerFactory;
 @RequestMapping("/api/payments/payfast")
 public class PayFastController {
     private static final Logger log = LoggerFactory.getLogger(PayFastController.class);
-    private static final String MERCHANT_ID = "10040629";
-    private static final String MERCHANT_KEY = "s0cc5tl93gmzu";
-    private static final String PAYFAST_URL = "https://sandbox.payfast.co.za/eng/process";
-    private static final String RETURN_URL = "http://localhost:3000/subscriptions/success";
-    private static final String CANCEL_URL = "http://localhost:3000/subscriptions/cancel";
-//    private static final String NOTIFY_URL = "http://localhost:8080/api/payments/payfast/itn";
-    private static final String NOTIFY_URL = "https://03f0de192067.ngrok-free.app/api/payments/payfast/itn";
-    private static final String PASSPHRASE = ""; // Set if you have one in PayFast dashboard
+
+    @Value("${payfast.merchantId}")
+    private String merchantId;
+    @Value("${payfast.merchantKey}")
+    private String merchantKey;
+    @Value("${payfast.passphrase}")
+    private String passphrase;
+    @Value("${payfast.url}")
+    private String payfastUrl;
+    @Value("${payfast.returnUrl}")
+    private String returnUrl;
+    @Value("${payfast.cancelUrl}")
+    private String cancelUrl;
+    @Value("${payfast.notifyUrl}")
+    private String notifyUrl;
 
     @Autowired
     private UserService userService;
@@ -57,11 +65,8 @@ public class PayFastController {
             @RequestParam String userEmail // new required param
     ) {
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("merchant_id", MERCHANT_ID);
-        params.put("merchant_key", MERCHANT_KEY);
-        params.put("return_url", RETURN_URL);
-        params.put("cancel_url", CANCEL_URL);
-        params.put("notify_url", NOTIFY_URL);
+        params.put("merchant_id", merchantId);
+        params.put("merchant_key", merchantKey);
         params.put("amount", amount);
         params.put("item_name", itemName);
         params.put("subscription_type", "1");
@@ -73,7 +78,7 @@ public class PayFastController {
 
         String signature = generateSignature(params);
 
-        StringBuilder url = new StringBuilder(PAYFAST_URL + "?");
+        StringBuilder url = new StringBuilder(payfastUrl + "?");
         for (Map.Entry<String, String> entry : params.entrySet()) {
             url.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
                .append("=")

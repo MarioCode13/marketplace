@@ -286,6 +286,7 @@ type Business {
     businessUsers: [BusinessUser!]!
     businessType: String
     verificationDocuments: [VerificationDocument!]!
+    trustRating: BusinessTrustRating
 }
 
 type BusinessUser {

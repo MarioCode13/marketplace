@@ -85,4 +85,5 @@ public class BusinessTrustRating {
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
 }

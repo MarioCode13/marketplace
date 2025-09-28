@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.resolvers;
 
+import dev.marketplace.marketplace.dto.BusinessTrustRatingDTO;
 import dev.marketplace.marketplace.model.Business;
 import dev.marketplace.marketplace.model.BusinessTrustRating;
 import dev.marketplace.marketplace.model.BusinessUser;
@@ -58,8 +59,11 @@ public class BusinessQueryResolver {
     }
     
     @QueryMapping
-    public BusinessTrustRating businessTrustRating(@Argument UUID businessId) {
-        return businessService.getBusinessTrustRating(businessId);
+    public BusinessTrustRatingDTO businessTrustRating(@Argument UUID businessId) {
+        BusinessTrustRating entity = businessService.getBusinessTrustRating(businessId);
+        double averageRating = entity.getOverallScore() != null ? entity.getOverallScore().doubleValue() : 0.0;
+        int reviewCount = entity.getTotalReviews();
+        return new BusinessTrustRatingDTO(averageRating, reviewCount);
     }
 
     @QueryMapping
@@ -97,5 +101,13 @@ public class BusinessQueryResolver {
         List<UUID> listingIds = listings.stream().map(dev.marketplace.marketplace.model.Listing::getId).toList();
         // Fetch all transactions for these listings
         return transactionService.getTransactionsByListingIds(listingIds);
+    }
+
+    @SchemaMapping(typeName = "Business", field = "trustRating")
+    public BusinessTrustRatingDTO trustRating(Business business) {
+        BusinessTrustRating entity = businessService.getBusinessTrustRating(business.getId());
+        double averageRating = entity.getOverallScore() != null ? entity.getOverallScore().doubleValue() : 0.0;
+        int reviewCount = entity.getTotalReviews();
+        return new BusinessTrustRatingDTO(averageRating, reviewCount);
     }
 }

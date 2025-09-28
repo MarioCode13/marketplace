@@ -4,6 +4,7 @@ import dev.marketplace.marketplace.enums.BusinessType;
 import dev.marketplace.marketplace.enums.BusinessUserRole;
 import dev.marketplace.marketplace.model.*;
 import dev.marketplace.marketplace.repository.BusinessRepository;
+import dev.marketplace.marketplace.repository.BusinessTrustRatingRepository;
 import dev.marketplace.marketplace.repository.BusinessUserRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.ReviewRepository;
@@ -28,6 +29,7 @@ public class BusinessService {
     private final UserService userService;
     private final NotificationService notificationService;
     private final ReviewRepository reviewRepository;
+    private final BusinessTrustRatingRepository businessTrustRatingRepository;
 
     public Optional<Business> findById(UUID id) {
         return businessRepository.findById(id);
@@ -235,6 +237,11 @@ public class BusinessService {
     }
 
     public BusinessTrustRating getBusinessTrustRating(UUID businessId) {
+        Optional<BusinessTrustRating> trustRatingOpt = businessTrustRatingRepository.findByBusinessId(businessId);
+        if (trustRatingOpt.isPresent()) {
+            return trustRatingOpt.get();
+        }
+        // Fallback: calculate from reviews if not found in DB
         BigDecimal avgRating = reviewRepository.getAverageRatingByBusinessId(businessId);
         Long reviewCount = reviewRepository.countReviewsByBusinessId(businessId);
         Business business = businessRepository.findById(businessId)
