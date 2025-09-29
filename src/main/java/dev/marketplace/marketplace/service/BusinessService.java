@@ -30,6 +30,7 @@ public class BusinessService {
     private final NotificationService notificationService;
     private final ReviewRepository reviewRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
+    private final SubscriptionService subscriptionService;
 
     public Optional<Business> findById(UUID id) {
         return businessRepository.findById(id);
@@ -257,5 +258,9 @@ public class BusinessService {
 
     public List<Listing> getListingsForBusiness(UUID businessId) {
         return listingRepository.findByBusinessId(businessId);
+    }
+
+    public Optional<dev.marketplace.marketplace.model.Subscription> getActiveSubscriptionForBusiness(UUID businessId) {
+        return subscriptionService.getActiveSubscriptionForBusiness(businessId);
     }
 }

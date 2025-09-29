@@ -65,17 +65,8 @@ public class User {
     @Column(name = "contact_number")
     private String contactNumber;
 
-    @Column(name = "proof_of_address_url")
-    private String proofOfAddressUrl;
-
-    @Column(name = "id_photo_url")
-    private String idPhotoUrl;
-
     @Column(name = "id_number")
     private String idNumber;
-
-    @Column(name = "drivers_license_url")
-    private String driversLicenseUrl;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

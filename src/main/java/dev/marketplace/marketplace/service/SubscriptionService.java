@@ -468,4 +468,15 @@ public class SubscriptionService {
         log.info("Business subscription reactivated: {}", subscription.getId());
         return saved;
     }
+
+    /**
+     * Get active subscription for a business
+     */
+    @Transactional(readOnly = true)
+    public Optional<Subscription> getActiveSubscriptionForBusiness(UUID businessId) {
+        return subscriptionRepository.findByBusinessIdAndStatusIn(
+            businessId,
+            List.of(Subscription.SubscriptionStatus.ACTIVE, Subscription.SubscriptionStatus.TRIAL)
+        );
+    }
 }

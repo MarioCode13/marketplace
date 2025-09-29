@@ -40,47 +40,7 @@ public class UserFileUploadController {
         }
     }
 
-    @PostMapping("/upload-id-photo")
-    public ResponseEntity<String> uploadIdPhoto(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
-        try {
-            String token = authHeader.replace("Bearer ", "");
-            UUID userId = jwtUtil.extractUserId(token);
-            userService.uploadIdPhoto(userId, file);
-            return ResponseEntity.ok("ID photo uploaded successfully");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload ID photo: " + e.getMessage());
-        }
-    }
 
-    @PostMapping("/upload-drivers-license")
-    public ResponseEntity<String> uploadDriversLicense(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
-        try {
-            String token = authHeader.replace("Bearer ", "");
-            UUID userId = jwtUtil.extractUserId(token);
-            userService.uploadDriversLicense(userId, file);
-            return ResponseEntity.ok("Driver's license uploaded successfully");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload driver's license: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/upload-proof-of-address")
-    public ResponseEntity<String> uploadProofOfAddress(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {
-        try {
-            String token = authHeader.replace("Bearer ", "");
-            UUID userId = jwtUtil.extractUserId(token);
-            userService.uploadProofOfAddress(userId, file);
-            return ResponseEntity.ok("Proof of address uploaded successfully");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload proof of address: " + e.getMessage());
-        }
-    }
 
     @PostMapping("/upload-profile-image")
     public ResponseEntity<String> uploadProfileImage(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String authHeader) {

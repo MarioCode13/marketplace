@@ -169,17 +169,17 @@ public class BusinessMutationResolver {
         return businessService.updateBusiness(business, currentUser);
     }
 
-    @MutationMapping
-    @Transactional
-    public VerificationDocument uploadBusinessVerificationDocument(@Argument UUID businessId,
-                                                                  @Argument VerificationDocument.DocumentType documentType,
-                                                                  @Argument String file) {
-        // Decode base64 string to byte array
-        byte[] fileData = Base64.getDecoder().decode(file);
-        // Generate a file name
-        String fileName = "business-" + businessId + "-" + documentType + "-" + System.currentTimeMillis();
-        return verificationDocumentService.uploadBusinessDocument(businessId, documentType, fileData, fileName);
-    }
+//    @MutationMapping
+//    @Transactional
+//    public VerificationDocument uploadBusinessVerificationDocument(@Argument UUID businessId,
+//                                                                  @Argument VerificationDocument.DocumentType documentType,
+//                                                                  @Argument String file) {
+//        // Decode base64 string to byte array
+//        byte[] fileData = Base64.getDecoder().decode(file);
+//        // Generate a file name
+//        String fileName = "business-" + businessId + "-" + documentType + "-" + System.currentTimeMillis();
+//        return verificationDocumentService.uploadBusinessDocument(businessId, documentType, fileData, fileName);
+//    }
 
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -53,30 +53,6 @@ public class UserQueryResolver {
         return null;
     }
 
-    @SchemaMapping(typeName = "User", field = "idPhotoUrl")
-    public String resolveIdPhotoUrl(User user) {
-        if (user.getIdPhotoUrl() != null && !user.getIdPhotoUrl().isEmpty()) {
-            return user.getIdPhotoUrl();
-        }
-        return null;
-    }
-
-    @SchemaMapping(typeName = "User", field = "driversLicenseUrl")
-    public String resolveDriversLicenseUrl(User user) {
-        if (user.getDriversLicenseUrl() != null && !user.getDriversLicenseUrl().isEmpty()) {
-            return user.getDriversLicenseUrl();
-        }
-        return null;
-    }
-
-    @SchemaMapping(typeName = "User", field = "proofOfAddressUrl")
-    public String resolveProofOfAddressUrl(User user) {
-        if (user.getProofOfAddressUrl() != null && !user.getProofOfAddressUrl().isEmpty()) {
-            return user.getProofOfAddressUrl();
-        }
-        return null;
-    }
-
     @SchemaMapping(typeName = "User", field = "trustRating")
     public TrustRating resolveTrustRating(User user) {
         return trustRatingService.getTrustRating(user.getId());

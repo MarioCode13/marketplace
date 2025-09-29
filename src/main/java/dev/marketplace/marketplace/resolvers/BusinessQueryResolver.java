@@ -110,4 +110,19 @@ public class BusinessQueryResolver {
         int reviewCount = entity.getTotalReviews();
         return new BusinessTrustRatingDTO(averageRating, reviewCount);
     }
+
+    @SchemaMapping(typeName = "Business", field = "planType")
+    public dev.marketplace.marketplace.enums.PlanType resolvePlanType(Business business) {
+        // Fetch active subscription for business
+        return businessService.getActiveSubscriptionForBusiness(business.getId())
+            .map(sub -> {
+                // Convert Subscription.PlanType to dev.marketplace.marketplace.enums.PlanType
+                try {
+                    return dev.marketplace.marketplace.enums.PlanType.valueOf(sub.getPlanType().name());
+                } catch (Exception e) {
+                    return null;
+                }
+            })
+            .orElse(null);
+    }
 }

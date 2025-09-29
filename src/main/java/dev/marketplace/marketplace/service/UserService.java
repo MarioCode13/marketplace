@@ -285,51 +285,6 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
-    public User uploadIdPhoto(UUID userId, MultipartFile file) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        try {
-            String fileName = "documents/id_photos/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
-            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
-            user.setIdPhotoUrl(url);
-            return userRepository.save(user);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload ID photo", e);
-        }
-    }
-
-    @Transactional
-    public User uploadDriversLicense(UUID userId, MultipartFile file) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        try {
-            String fileName = "documents/drivers_licenses/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
-            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
-            user.setDriversLicenseUrl(url);
-            return userRepository.save(user);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload driver's license", e);
-        }
-    }
-
-    @Transactional
-    public User uploadProofOfAddress(UUID userId, MultipartFile file) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        try {
-            String fileName = "documents/proof_of_address/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-            String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
-            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
-            user.setProofOfAddressUrl(url);
-            return userRepository.save(user);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload proof of address", e);
-        }
-    }
-
-    @Transactional
     public User uploadProfileImage(UUID userId, MultipartFile file) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
