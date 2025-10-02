@@ -31,15 +31,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
 
         String authHeader = request.getHeader("Authorization");
+        String jwt = null;
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            System.out.println("No JWT token found in request headers");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else {
+            // Try to get JWT from cookie
+            if (request.getCookies() != null) {
+                for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+                    if ("jwt".equals(cookie.getName())) {
+                        jwt = cookie.getValue();
+                        System.out.println("JWT token found in cookie");
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (jwt == null) {
+            System.out.println("No JWT token found in request headers or cookies");
             filterChain.doFilter(request, response);
             return;
         }
 
-        String jwt = authHeader.substring(7);
-        
         try {
             String email = jwtUtil.extractEmail(jwt);
             System.out.println("Extracted email from token: " + email);
