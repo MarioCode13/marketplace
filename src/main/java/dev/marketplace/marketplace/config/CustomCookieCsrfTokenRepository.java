@@ -21,6 +21,18 @@ public class CustomCookieCsrfTokenRepository implements CsrfTokenRepository {
 
     @Override
     public void saveToken(CsrfToken token, HttpServletRequest request, HttpServletResponse response) {
+        // If token is null, clear the cookie to avoid NPEs and remove stale tokens
+        if (token == null) {
+            Cookie delete = new Cookie("XSRF-TOKEN", "");
+            delete.setPath("/");
+            delete.setHttpOnly(false);
+            delete.setSecure(false);
+            delete.setMaxAge(0); // delete immediately
+            response.addCookie(delete);
+            System.out.println("DEBUG: Clearing XSRF-TOKEN cookie (token was null)");
+            return;
+        }
+
         // Create the cookie manually instead of using the delegate
         Cookie cookie = new Cookie("XSRF-TOKEN", token.getToken());
         cookie.setPath("/");
