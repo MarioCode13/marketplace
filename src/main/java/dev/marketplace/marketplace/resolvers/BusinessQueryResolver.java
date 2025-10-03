@@ -25,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class BusinessQueryResolver {
-    
+
     private final BusinessService businessService;
     private final UserService userService;
     private final TransactionService transactionService;
@@ -36,28 +36,27 @@ public class BusinessQueryResolver {
         return businessService.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + id));
     }
-    
+
     @QueryMapping
     public Business myBusiness() {
         User currentUser = getCurrentUser();
         log.info("Fetching business for user: {}", currentUser.getId());
-        return businessService.findOwnedByUser(currentUser)
-                .orElseThrow(() -> new IllegalArgumentException("No business found for user"));
+        return businessService.findOwnedByUser(currentUser).orElse(null);
     }
-    
+
     @QueryMapping
     public List<Business> myBusinesses() {
         User currentUser = getCurrentUser();
         log.info("Fetching all businesses for user: {}", currentUser.getId());
         return businessService.findByUser(currentUser);
     }
-    
+
     @QueryMapping
     public List<BusinessUser> getBusinessUsers(@Argument UUID businessId) {
         log.info("Fetching users for business: {}", businessId);
         return businessService.getBusinessUsers(businessId);
     }
-    
+
     @QueryMapping
     public BusinessTrustRatingDTO businessTrustRating(@Argument UUID businessId) {
         BusinessTrustRating entity = businessService.getBusinessTrustRating(businessId);
@@ -73,20 +72,21 @@ public class BusinessQueryResolver {
 
     @SchemaMapping
     public List<BusinessUser> getBusinessUsers(Business business) {
-        return business.getBusinessUsers();
+        // Avoid LazyInitializationException by fetching via service/repository
+        return businessService.getBusinessUsers(business.getId());
     }
-    
+
     @SchemaMapping
     public User user(BusinessUser businessUser) {
         return businessUser.getUser();
     }
-    
+
     private User getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalArgumentException("User not authenticated");
         }
-        
+
         String email = authentication.getName();
         return userService.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));

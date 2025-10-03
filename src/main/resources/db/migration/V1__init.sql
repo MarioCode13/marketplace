@@ -455,7 +455,7 @@ CREATE TABLE trust_rating (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     overall_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-    verification_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    verified_id BOOLEAN NOT NULL DEFAULT FALSE,
     profile_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     review_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     transaction_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
@@ -793,20 +793,75 @@ FROM listing l
 ) AS li(listing_title, image_path) ON l.title = li.listing_title;
 
 -- Add trust rating for Joe's Reseller Store
-INSERT INTO business_trust_rating (business_id)
-SELECT b.id
+INSERT INTO business_trust_rating (
+    business_id,
+    overall_score,
+    verification_score,
+    profile_score,
+    review_score,
+    transaction_score,
+    total_reviews,
+    positive_reviews,
+    total_transactions,
+    successful_transactions,
+    last_calculated,
+    created_at,
+    updated_at
+)
+SELECT
+    b.id,
+    4.90,
+    4.70,
+    4.80,
+    4.80,
+    4.50,
+    20,
+    18,
+    20,
+    18,
+    NOW(),
+    NOW(),
+    NOW()
 FROM business b
-JOIN users u ON b.owner_id = u.id
+         JOIN users u ON b.owner_id = u.id
 WHERE u.email = 'reseller@marketplace.com'
 ON CONFLICT DO NOTHING;
 
--- Add trust rating for Admin's business
-INSERT INTO business_trust_rating (business_id)
-SELECT b.id
+-- Add trust rating for Admin Store
+INSERT INTO business_trust_rating (
+    business_id,
+    overall_score,
+    verification_score,
+    profile_score,
+    review_score,
+    transaction_score,
+    total_reviews,
+    positive_reviews,
+    total_transactions,
+    successful_transactions,
+    last_calculated,
+    created_at,
+    updated_at
+)
+SELECT
+    b.id,
+    4.90,
+    4.70,
+    4.80,
+    4.80,
+    4.50,
+    20,
+    18,
+    20,
+    18,
+    NOW(),
+    NOW(),
+    NOW()
 FROM business b
-JOIN users u ON b.owner_id = u.id
+         JOIN users u ON b.owner_id = u.id
 WHERE u.email = 'admin@admin.com'
 ON CONFLICT DO NOTHING;
+
 
 -- Add subscriptions for resellerjoe and admin
 INSERT INTO subscription (

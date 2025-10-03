@@ -41,11 +41,11 @@ public class TrustRating {
     @Column(name = "transaction_score", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal transactionScore = BigDecimal.ZERO;
-    
-    @Column(name = "verification_score", nullable = false, precision = 5, scale = 2)
+
+    @Column(name = "verified_id", nullable = false)
     @Builder.Default
-    private BigDecimal verificationScore = BigDecimal.ZERO;
-    
+    private boolean verifiedID = false;
+
     @Column(name = "total_reviews", nullable = false)
     @Builder.Default
     private Integer totalReviews = 0;
@@ -71,6 +71,7 @@ public class TrustRating {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
     
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

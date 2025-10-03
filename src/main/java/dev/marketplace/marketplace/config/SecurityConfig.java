@@ -69,7 +69,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/", "/health", "/graphql", "/graphiql", "/playground",
-                                "/api/users/**", "/pghero/**", "/error",
+                                "/api/users/**", "/api/auth/login", "/api/auth/logout", "/pghero/**", "/error",
                                 "/api/payments/payfast/itn"
                         ).permitAll()
                         .anyRequest().authenticated()

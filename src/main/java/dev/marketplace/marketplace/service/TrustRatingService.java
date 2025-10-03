@@ -70,7 +70,6 @@ public class TrustRatingService {
 
         // Update trust rating
         trustRating.setProfileScore(profileCompletionScore);
-        trustRating.setVerificationScore(verificationScore);
         trustRating.setReviewScore(reviewScore);
         trustRating.setTransactionScore(transactionScore);
         trustRating.setOverallScore(overallScore);
