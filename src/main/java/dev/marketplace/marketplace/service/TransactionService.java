@@ -28,7 +28,8 @@ public class TransactionService {
     private final ListingRepository listingRepository;
     private final UserRepository userRepository;
     private final ListingImageService imageService;
-    
+    private final ListingService listingService;
+
     /**
      * Create a transaction when a listing is sold to a specific buyer
      */
@@ -44,14 +45,25 @@ public class TransactionService {
             throw new IllegalArgumentException("Listing is already sold");
         }
         
-        // Validate buyer exists and is not the seller
+        // Validate buyer exists
         User buyer = userRepository.findById(buyerId)
                 .orElseThrow(() -> new IllegalArgumentException("Buyer not found with ID: " + buyerId));
-        
-        if (buyer.getId().equals(listing.getUser().getId())) {
+
+        // Determine seller: listing may belong to a user or a business (business owner)
+        User seller = null;
+        if (listing.getUser() != null) {
+            seller = listing.getUser();
+        } else if (listing.getBusiness() != null) {
+            seller = listing.getBusiness().getOwner();
+        }
+        if (seller == null) {
+            throw new IllegalArgumentException("Listing has no associated seller");
+        }
+
+        if (buyer.getId().equals(seller.getId())) {
             throw new IllegalArgumentException("Buyer cannot be the same as seller");
         }
-        
+
         // Validate sale price
         if (salePrice.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Sale price must be greater than zero");
@@ -59,7 +71,7 @@ public class TransactionService {
 
         Transaction.TransactionBuilder transactionBuilder = Transaction.builder()
                 .listing(listing)
-                .seller(listing.getUser())
+                .seller(seller)
                 .buyer(buyer)
                 .salePrice(salePrice)
                 .saleDate(LocalDateTime.now())
@@ -74,14 +86,18 @@ public class TransactionService {
 
         Transaction transaction = transactionBuilder.build();
 
-        Transaction saved = transactionRepository.save(transaction);
+        // Immediate-complete flow (synchronous in-person sale): mark listing as sold now
+        transaction = transactionRepository.save(transaction);
 
-        listing.setSold(true);
-        listingRepository.save(listing);
-        
-        log.info("Transaction created successfully: {}", saved.getId());
-        
-        return saved;
+        // Mark listing as sold (decrement quantity or archive) using seller as actor
+        listingService.markListingAsSold(listingId, seller.getId());
+
+        // Mark transaction completed
+        transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
+        Transaction completed = transactionRepository.save(transaction);
+
+        log.info("Transaction created and completed: {}", completed.getId());
+        return completed;
     }
     
     /**
@@ -104,6 +120,9 @@ public class TransactionService {
             throw new IllegalArgumentException("Transaction is not in pending status");
         }
         
+        // Mark listing as sold (handles quantity decrement/archival) using the seller as actor
+        listingService.markListingAsSold(transaction.getListing().getId(), sellerId);
+
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         Transaction saved = transactionRepository.save(transaction);
         
@@ -243,6 +262,7 @@ public class TransactionService {
                 preSignedUrls,
                 listing.getCategory(),
                 listing.getPrice(),
+                listing.getQuantity(),
                 listing.getCity(),
                 listing.getCustomCity(),
                 listing.getCondition().name(),

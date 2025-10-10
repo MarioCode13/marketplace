@@ -16,6 +16,7 @@ public record ListingDTO(
         List<String> images,
         Category category,
         double price,
+        int quantity,
         City city,
         String customCity,
         String condition,

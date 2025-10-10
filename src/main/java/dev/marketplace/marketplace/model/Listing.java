@@ -42,6 +42,7 @@ public class Listing {
 
     private double price;
     private boolean sold = false;
+    private int quantity = 1;
     @ManyToOne
     @JoinColumn(name = "city_id")
     private City city;
@@ -79,6 +80,7 @@ public class Listing {
         this.category = builder.category;
         this.price = builder.price;
         this.sold = builder.sold;
+        this.quantity = builder.quantity;
         this.city = builder.city;
         this.customCity = builder.customCity;
         this.condition = builder.condition;
@@ -106,6 +108,7 @@ public class Listing {
         private Business business;
         private User createdBy; // Tracks who created the listing (for audit)
         private boolean archived = false; // Archived state for expiry/deletion
+        private int quantity = 1;
 
         public Builder id(UUID id) {
             this.id = id;
@@ -187,6 +190,11 @@ public class Listing {
             return this;
         }
 
+        public Builder quantity(int quantity) {
+            this.quantity = quantity;
+            return this;
+        }
+
         public Listing build() {
             if (title == null || title.trim().isEmpty()) {
                 throw new IllegalArgumentException("Title is required");
@@ -200,7 +208,10 @@ public class Listing {
             if (price <= 0) {
                 throw new IllegalArgumentException("Price must be positive");
             }
-            
+            if (this.quantity < 0) {
+                throw new IllegalArgumentException("Quantity cannot be negative");
+            }
+
             if (this.expiresAt == null) {
                 this.expiresAt = this.createdAt.plusDays(30);
             }

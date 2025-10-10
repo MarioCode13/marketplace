@@ -25,17 +25,20 @@ public class ListingService {
     private final ListingRepository listingRepository;
     private final CategoryService categoryService;
     private final CityService cityService;
+    private final SubscriptionService subscriptionService;
 
     public ListingService(ListingRepository listingRepository,
                           ListingImageService imageService,
                           ListingAuthorizationService authorizationService,
                           CategoryService categoryService,
-                          CityService cityService) {
+                          CityService cityService,
+                          SubscriptionService subscriptionService) {
         this.listingRepository = listingRepository;
         this.imageService = imageService;
         this.authorizationService = authorizationService;
         this.categoryService = categoryService;
         this.cityService = cityService;
+        this.subscriptionService = subscriptionService;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, UUID categoryId, Double minPrice, Double maxPrice) {
@@ -62,6 +65,7 @@ public class ListingService {
                 preSignedUrls,
                 listing.getCategory(),
                 listing.getPrice(),
+                listing.getQuantity(),
                 listing.getCity(),
                 listing.getCustomCity(),
                 listing.getCondition().name(),
@@ -89,7 +93,7 @@ public class ListingService {
 
     @Transactional
     public Listing createListing(String title, String description, List<String> imageUrls,
-                                 UUID categoryId, double price, UUID cityId, String customCity, Condition condition, UUID userId) {
+                                 UUID categoryId, double price, UUID cityId, String customCity, Condition condition, UUID userId, Integer quantity) {
         imageService.validateImages(imageUrls);
         cityService.validateCityOrCustomCity(cityId, customCity);
         List<String> imageFilenames = imageService.convertUrlsToFilenames(imageUrls);
@@ -102,22 +106,40 @@ public class ListingService {
         if (currentListings >= maxListings) {
             throw new ListingLimitExceededException("Listing limit reached for your plan. Upgrade your plan to create more listings.");
         }
-        // If you want to use PlanType logic, you can do something like:
-        // PlanType planType = PlanType.FREE; // Replace with actual logic to fetch user's plan
+        // Determine allowed quantity based on subscription plan
+        int listingQuantity = 1; // default
+        boolean canSpecifyQuantity = false;
+        try {
+            var activeSub = subscriptionService.getActiveSubscription(userId);
+            if (activeSub.isPresent()) {
+                var plan = activeSub.get().getPlanType();
+                if (plan == dev.marketplace.marketplace.model.Subscription.PlanType.RESELLER || plan == dev.marketplace.marketplace.model.Subscription.PlanType.PRO_STORE) {
+                    canSpecifyQuantity = true;
+                }
+            }
+        } catch (Exception ignored) {
+            // if subscription service fails, fall back to default
+        }
+
+        if (quantity != null && canSpecifyQuantity) {
+            listingQuantity = Math.max(0, quantity);
+        }
+
         Listing listing = new Listing.Builder()
-            .title(title)
-            .description(description)
-            .images(imageFilenames)
-            .category(category)
-            .price(price)
-            .city(city)
-            .customCity(customCity)
-            .condition(condition)
-            .user(user)
-            .archived(false)
-            .sold(false)
-            .createdAt(java.time.LocalDateTime.now())
-            .build();
+              .title(title)
+              .description(description)
+              .images(imageFilenames)
+              .category(category)
+              .price(price)
+              .quantity(listingQuantity)
+              .city(city)
+              .customCity(customCity)
+              .condition(condition)
+              .user(user)
+              .archived(false)
+              .sold(false)
+              .createdAt(java.time.LocalDateTime.now())
+              .build();
         return listingRepository.save(listing);
     }
 
@@ -144,6 +166,25 @@ public class ListingService {
                 throw new RuntimeException("Category not found: " + input.categoryId());
             }
             listing.setCategory(category);
+        }
+        // Handle quantity update: only allowed for RESELLER and PRO_STORE plans
+        if (input.quantity() != null) {
+            boolean allowed = false;
+            try {
+                var activeSub = subscriptionService.getActiveSubscription(userId);
+                if (activeSub.isPresent()) {
+                    var plan = activeSub.get().getPlanType();
+                    if (plan == dev.marketplace.marketplace.model.Subscription.PlanType.RESELLER
+                            || plan == dev.marketplace.marketplace.model.Subscription.PlanType.PRO_STORE) {
+                        allowed = true;
+                    }
+                }
+            } catch (Exception ignored) {}
+            if (allowed) {
+                int newQty = Math.max(0, input.quantity());
+                listing.setQuantity(newQty);
+            }
+            // if not allowed, silently ignore client-supplied quantity
         }
         return listingRepository.save(listing);
     }
@@ -244,5 +285,40 @@ public class ListingService {
     public List<ListingDTO> getListingsByUserId(UUID userId) {
         List<Listing> listings = listingRepository.findByUserId(userId);
         return listings.stream().map(this::convertToDTO).toList();
+    }
+
+    @Transactional
+    public Listing markListingAsSold(UUID listingId, UUID userId) {
+        // Load with pessimistic lock to avoid concurrent oversells
+        Listing listing = listingRepository.findByIdForUpdate(listingId)
+                .orElseThrow(() -> new IllegalArgumentException("Listing not found with ID: " + listingId));
+
+        // Authorization: allow if user is owner or is associated with the listing's business
+        boolean allowed = false;
+        if (listing.getUser() != null && listing.getUser().getId().equals(userId)) {
+            allowed = true;
+        } else if (listing.getBusiness() != null) {
+            try {
+                dev.marketplace.marketplace.model.Business userBusiness = authorizationService.getBusinessForUser(userId);
+                if (userBusiness != null && listing.getBusiness() != null && userBusiness.getId().equals(listing.getBusiness().getId())) {
+                    allowed = true;
+                }
+            } catch (Exception ignored) {}
+        }
+        if (!allowed) {
+            throw new RuntimeException("Unauthorized to mark this listing as sold");
+        }
+
+        // Business logic: decrement quantity if more than 1, otherwise mark sold/archived
+        int qty = listing.getQuantity();
+        if (qty > 1) {
+            listing.setQuantity(qty - 1);
+        } else {
+            listing.setQuantity(0);
+            listing.setSold(true);
+            listing.setArchived(true);
+        }
+
+        return listingRepository.save(listing);
     }
 }

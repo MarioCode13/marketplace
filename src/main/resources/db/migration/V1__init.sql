@@ -429,6 +429,7 @@ CREATE TABLE IF NOT EXISTS listing (
     created_by UUID REFERENCES users(id),
     category_id UUID NOT NULL REFERENCES category(id),
     price DOUBLE PRECISION NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
     sold BOOLEAN DEFAULT FALSE,
     city_id UUID REFERENCES city(id),
     custom_city VARCHAR(100),
@@ -515,10 +516,6 @@ CREATE TABLE "transaction" (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE UNIQUE INDEX unique_completed_transaction_per_listing
-ON "transaction" (listing_id)
-WHERE status = 'COMPLETED';
 
 -- Review System table
 CREATE TABLE review (

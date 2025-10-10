@@ -57,7 +57,7 @@ public class AuthController {
                 .build();
         response.addHeader("Set-Cookie", authCookie.toString());
 
-        // Set CSRF cookie (readable by JS)
+        // Set CSRF cookie
         String csrfToken = UUID.randomUUID().toString();
         ResponseCookie csrfCookie = ResponseCookie.from("XSRF-TOKEN", csrfToken)
                 .httpOnly(false)

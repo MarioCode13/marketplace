@@ -64,9 +64,26 @@ public class ListingAuthorizationService {
     }
 
     private void checkOwnership(Listing listing, UUID userId) {
-        if (!listing.getUser().getId().equals(userId)) {
-            throw new AccessDeniedException("You can only modify your own listings");
+        // Listing can be owned by a user OR a business. Handle both cases.
+        if (listing.getUser() != null) {
+            if (!listing.getUser().getId().equals(userId)) {
+                throw new AccessDeniedException("You can only modify your own listings");
+            }
+            return;
         }
+
+        if (listing.getBusiness() != null) {
+            // Validate user exists and check business ownership/association
+            User user = validateUserExists(userId);
+            Business business = listing.getBusiness();
+            if (business.isOwner(user) || business.hasUser(user)) {
+                return;
+            }
+            throw new AccessDeniedException("You are not authorized to modify listings for this business");
+        }
+
+        // No owner information on listing
+        throw new AccessDeniedException("You can only modify your own listings");
     }
 
     public Business getBusinessForUser(UUID userId) {

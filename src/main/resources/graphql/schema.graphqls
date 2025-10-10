@@ -67,6 +67,7 @@ type Listing {
     category: Category
     price: Float!
     sold: Boolean!
+    quantity: Int!
     city: City
     customCity: String
     condition: Condition!
@@ -311,6 +312,7 @@ input UpdateListingInput {
     categoryId: ID
     cityId: ID
     customCity: String
+    quantity: Int
 }
 
 input UpdateStoreBrandingInput {
@@ -463,6 +465,7 @@ type Mutation {
         images: [String!]!
         categoryId: ID!
         userId: ID!
+        quantity: Int
     ): Listing!
     deleteListing(listingId: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!

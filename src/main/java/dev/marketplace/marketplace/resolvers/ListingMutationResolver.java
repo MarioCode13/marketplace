@@ -33,9 +33,10 @@ public class ListingMutationResolver {
                                  @Argument Condition condition,
                                  @Argument UUID categoryId,
                                  @Argument UUID userId,
+                                 @Argument Integer quantity,
                                  @Argument UUID cityId,
                                  @Argument String customCity) {
-        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId);
+        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId, quantity);
     }
 
     @MutationMapping
@@ -51,12 +52,12 @@ public class ListingMutationResolver {
         return listingService.updateListing(input, userId);
     }
 
-//    @MutationMapping
-//    public Listing markListingAsSold(@Argument Long listingId,
-//                                    @AuthenticationPrincipal UserDetails userDetails) {
-//        Long userId = userService.getUserIdByUsername(userDetails.getUsername());
-//        return listingService.markListingAsSold(listingId, userId);
-//    }
+    @MutationMapping
+    public Listing markListingAsSold(@Argument UUID id,
+                                    @AuthenticationPrincipal UserDetails userDetails) {
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
+        return listingService.markListingAsSold(id, userId);
+    }
 
 
 }

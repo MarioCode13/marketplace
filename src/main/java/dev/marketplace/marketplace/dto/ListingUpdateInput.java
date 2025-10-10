@@ -13,5 +13,6 @@ public record ListingUpdateInput(
         Condition condition,
         UUID categoryId,
         UUID cityId,
-        String customCity
+        String customCity,
+        Integer quantity
 ) {}
