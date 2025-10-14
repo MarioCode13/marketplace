@@ -37,8 +37,6 @@ public class PayFastController {
     private String merchantId;
     @Value("${payfast.merchantKey}")
     private String merchantKey;
-    @Value("${payfast.passphrase}")
-    private String passphrase;
     @Value("${payfast.url}")
     private String payfastUrl;
     @Value("${payfast.returnUrl}")
