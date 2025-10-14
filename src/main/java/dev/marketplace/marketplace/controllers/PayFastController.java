@@ -1,5 +1,6 @@
 package dev.marketplace.marketplace.controllers;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -28,6 +29,7 @@ import dev.marketplace.marketplace.model.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true", matchIfMissing = false)
 @RestController
 @RequestMapping("/api/payments/payfast")
 public class PayFastController {
