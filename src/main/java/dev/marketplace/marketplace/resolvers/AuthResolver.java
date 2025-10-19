@@ -5,6 +5,7 @@ import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.security.JwtUtil;
 import dev.marketplace.marketplace.service.UserService;
 import graphql.schema.DataFetchingEnvironment;
+import graphql.GraphQLContext;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -16,7 +17,6 @@ import dev.marketplace.marketplace.exceptions.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
 import java.util.Optional;
 import jakarta.servlet.http.Cookie;
 
@@ -34,8 +34,8 @@ public class AuthResolver {
 
     @MutationMapping
     public AuthResponseDto register(@Argument String username, @Argument String email, @Argument String password, DataFetchingEnvironment env) {
-        Map<String, Object> contextMap = (Map<String, Object>) env.getContext();
-        HttpServletResponse response = (HttpServletResponse) contextMap.get("jakarta.servlet.http.HttpServletResponse");
+        GraphQLContext graphQLContext = env.getGraphQlContext();
+        HttpServletResponse response = graphQLContext.get("jakarta.servlet.http.HttpServletResponse");
         logger.info("Registration attempt - Username: {}, Email: {}", username, email);
         try {
             User user = userService.registerUser(username, email, password);
@@ -65,8 +65,8 @@ public class AuthResolver {
 
     @MutationMapping
     public AuthResponseDto login(@Argument String emailOrUsername, @Argument String password, DataFetchingEnvironment env) {
-        Map<String, Object> contextMap = (Map<String, Object>) env.getContext();
-        HttpServletResponse response = (HttpServletResponse) contextMap.get("jakarta.servlet.http.HttpServletResponse");
+        GraphQLContext graphQLContext = env.getGraphQlContext();
+        HttpServletResponse response = graphQLContext.get("jakarta.servlet.http.HttpServletResponse");
         logger.info("Login attempt - EmailOrUsername: {}", emailOrUsername);
         try {
             if (emailOrUsername == null || emailOrUsername.trim().isEmpty()) {

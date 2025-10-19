@@ -71,6 +71,19 @@ CREATE TABLE IF NOT EXISTS business_user (
     UNIQUE(business_id, user_id)
 );
 
+-- Invitation Table
+CREATE TABLE IF NOT EXISTS invitation (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    recipient_email VARCHAR(255),
+    business_id UUID NOT NULL REFERENCES business(id) ON DELETE CASCADE,
+    role VARCHAR(20),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Category Table
 CREATE TABLE IF NOT EXISTS category (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -596,6 +609,19 @@ CREATE TABLE IF NOT EXISTS notification (
     data TEXT,
     read BOOLEAN NOT NULL DEFAULT FALSE,
     action_required BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Invitation Table
+CREATE TABLE IF NOT EXISTS invitation (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    recipient_email VARCHAR(255),
+    business_id UUID NOT NULL REFERENCES business(id) ON DELETE CASCADE,
+    role VARCHAR(20),
+    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

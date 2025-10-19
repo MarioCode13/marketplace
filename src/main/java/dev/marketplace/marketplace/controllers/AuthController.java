@@ -25,7 +25,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> body, HttpServletResponse response) {
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body, jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
         String providedToken = body.get("token");
         String emailOrUsername = body.get("emailOrUsername");
         String password = body.get("password");
@@ -48,10 +48,12 @@ public class AuthController {
             token = jwtUtil.generateToken(user.getEmail(), user.getRole().name(), user.getId());
         }
 
+        boolean isSecure = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+
         ResponseCookie authCookie = ResponseCookie.from("auth-token", token)
                 .httpOnly(true)
-                .secure(false) // set true in production behind HTTPS
-                .sameSite("Lax")
+                .secure(isSecure)
+                .sameSite(isSecure ? "None" : "Lax")
                 .maxAge(60 * 60 * 24 * 7)
                 .path("/")
                 .build();
@@ -61,8 +63,8 @@ public class AuthController {
         String csrfToken = UUID.randomUUID().toString();
         ResponseCookie csrfCookie = ResponseCookie.from("XSRF-TOKEN", csrfToken)
                 .httpOnly(false)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(isSecure)
+                .sameSite(isSecure ? "None" : "Lax")
                 .maxAge(60 * 60 * 24 * 7)
                 .path("/")
                 .build();
@@ -71,8 +73,8 @@ public class AuthController {
         // Clear legacy cookie if present
         ResponseCookie legacy = ResponseCookie.from("jwt", "")
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(isSecure)
+                .sameSite(isSecure ? "None" : "Lax")
                 .maxAge(0)
                 .path("/")
                 .build();
@@ -82,12 +84,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletResponse response) {
+    public ResponseEntity<?> logout(jakarta.servlet.http.HttpServletRequest request, HttpServletResponse response) {
+        boolean isSecure = request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
         // Clear auth-token
         ResponseCookie clearAuth = ResponseCookie.from("auth-token", "")
                 .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(isSecure)
+                .sameSite(isSecure ? "None" : "Lax")
                 .maxAge(0)
                 .path("/")
                 .build();
@@ -96,8 +99,8 @@ public class AuthController {
         // Clear XSRF token
         ResponseCookie clearXsrf = ResponseCookie.from("XSRF-TOKEN", "")
                 .httpOnly(false)
-                .secure(false)
-                .sameSite("Lax")
+                .secure(isSecure)
+                .sameSite(isSecure ? "None" : "Lax")
                 .maxAge(0)
                 .path("/")
                 .build();

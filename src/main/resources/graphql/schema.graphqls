@@ -366,6 +366,16 @@ input CreateStoreBrandingInput {
     backgroundColor: String
 }
 
+type Invitation {
+    id: ID!
+    sender: User!
+    recipientEmail: String!
+    role: BusinessUserRole!
+    status: String!
+    createdAt: String!
+    updatedAt: String!
+}
+
 enum BusinessUserRole {
     OWNER
     MANAGER
@@ -505,4 +515,7 @@ type Mutation {
     unlinkUserFromBusiness(businessId: ID!, userId: ID!): Boolean!
     transferBusinessOwnership(businessId: ID!, newOwnerId: ID!): Boolean!
     createSubscription(input: CreateSubscriptionInput!): Subscription!
+    sendInvitation(businessId: ID!, recipientEmail: String!, role: BusinessUserRole!): Invitation!
+    acceptInvitation(invitationId: ID!): Invitation!
+    declineInvitation(invitationId: ID!): Invitation!
 }
