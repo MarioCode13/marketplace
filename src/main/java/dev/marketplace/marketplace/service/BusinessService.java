@@ -28,6 +28,8 @@ public class BusinessService {
     private final ListingRepository listingRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final ListingImageService listingImageService;
+    private final B2StorageService b2StorageService;
     private final ReviewRepository reviewRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
     private final SubscriptionService subscriptionService;
@@ -65,6 +67,35 @@ public class BusinessService {
         ownerRelation.setUser(business.getOwner());
         ownerRelation.setRole(BusinessUserRole.OWNER);
         businessUserRepository.save(ownerRelation);
+
+        // Delete the owner's personal listings because the user account has been converted to a business account
+        try {
+            UUID ownerId = business.getOwner() != null ? business.getOwner().getId() : null;
+            if (ownerId != null) {
+                log.info("Deleting personal listings for user {} as they become a business owner", ownerId);
+                java.util.List<dev.marketplace.marketplace.model.Listing> ownerListings = listingRepository.findAllByUserId(ownerId);
+                if (!ownerListings.isEmpty()) {
+                    // First remove images from B2 for each listing
+                    ownerListings.forEach(l -> {
+                        if (l.getImages() != null) {
+                            l.getImages().forEach(img -> {
+                                try {
+                                    String filename = listingImageService.extractFilenameFromUrl(img);
+                                    b2StorageService.deleteImage(filename);
+                                } catch (Exception e) {
+                                    log.warn("Failed to delete listing image from B2: {} (listing={}), error={}", img, l.getId(), e.getMessage());
+                                }
+                            });
+                        }
+                    });
+                     listingRepository.deleteAll(ownerListings);
+                     log.info("Deleted {} listings for user {}", ownerListings.size(), ownerId);
+                 }
+             }
+         } catch (Exception ex) {
+             log.warn("Failed to delete personal listings for new business owner: {}", ex.getMessage());
+             // Swallowing exception to avoid failing business creation, but log it for investigation
+         }
 
         notificationService.sendBusinessVerificationEmail(
             business.getBusinessEmail(),
