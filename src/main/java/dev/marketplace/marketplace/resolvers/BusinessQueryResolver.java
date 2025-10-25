@@ -41,7 +41,9 @@ public class BusinessQueryResolver {
     public Business myBusiness() {
         User currentUser = getCurrentUser();
         log.info("Fetching business for user: {}", currentUser.getId());
-        return businessService.findOwnedByUser(currentUser).orElse(null);
+        // Return any business the user is associated with (owner, contributor, etc.)
+        List<Business> businesses = businessService.findByUser(currentUser);
+        return businesses.isEmpty() ? null : businesses.get(0);
     }
 
     @QueryMapping

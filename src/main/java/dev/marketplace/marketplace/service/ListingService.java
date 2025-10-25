@@ -26,19 +26,25 @@ public class ListingService {
     private final CategoryService categoryService;
     private final CityService cityService;
     private final SubscriptionService subscriptionService;
+    private final dev.marketplace.marketplace.repository.BusinessRepository businessRepository;
+    private final dev.marketplace.marketplace.repository.BusinessUserRepository businessUserRepository;
 
     public ListingService(ListingRepository listingRepository,
                           ListingImageService imageService,
                           ListingAuthorizationService authorizationService,
                           CategoryService categoryService,
                           CityService cityService,
-                          SubscriptionService subscriptionService) {
+                          SubscriptionService subscriptionService,
+                          dev.marketplace.marketplace.repository.BusinessRepository businessRepository,
+                          dev.marketplace.marketplace.repository.BusinessUserRepository businessUserRepository) {
         this.listingRepository = listingRepository;
         this.imageService = imageService;
         this.authorizationService = authorizationService;
         this.categoryService = categoryService;
         this.cityService = cityService;
         this.subscriptionService = subscriptionService;
+        this.businessRepository = businessRepository;
+        this.businessUserRepository = businessUserRepository;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, UUID categoryId, Double minPrice, Double maxPrice) {
@@ -93,19 +99,33 @@ public class ListingService {
 
     @Transactional
     public Listing createListing(String title, String description, List<String> imageUrls,
-                                 UUID categoryId, double price, UUID cityId, String customCity, Condition condition, UUID userId, Integer quantity) {
+                                 UUID categoryId, double price, UUID cityId, String customCity, Condition condition, UUID userId, Integer quantity, UUID businessId) {
         imageService.validateImages(imageUrls);
         cityService.validateCityOrCustomCity(cityId, customCity);
         List<String> imageFilenames = imageService.convertUrlsToFilenames(imageUrls);
         User user = authorizationService.validateUserExists(userId);
         Category category = categoryService.findById(categoryId);
         City city = cityId != null ? cityService.getCityById(cityId) : null;
-        // Example: enforce a simple listing limit for demonstration
-        int maxListings = 10; // This should be dynamic based on plan, but kept simple here
-        long currentListings = listingRepository.countByUserIdAndSoldFalseAndArchivedFalse(userId);
-        if (currentListings >= maxListings) {
-            throw new ListingLimitExceededException("Listing limit reached for your plan. Upgrade your plan to create more listings.");
+        
+        Business business = null;
+        if (businessId != null) {
+            // Validate business exists
+            business = businessRepository.findById(businessId)
+                    .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
+            
+            // Validate user has permission to create listings for this business
+            if (!business.canUserCreateListings(user)) {
+                throw new RuntimeException("User does not have permission to create listings for this business");
+            }
+        } else {
+            // Personal listing - enforce limit
+            int maxListings = 10; // This should be dynamic based on plan, but kept simple here
+            long currentListings = listingRepository.countByUserIdAndSoldFalseAndArchivedFalse(userId);
+            if (currentListings >= maxListings) {
+                throw new ListingLimitExceededException("Listing limit reached for your plan. Upgrade your plan to create more listings.");
+            }
         }
+        
         // Determine allowed quantity based on subscription plan
         int listingQuantity = 1; // default
         boolean canSpecifyQuantity = false;
@@ -125,7 +145,7 @@ public class ListingService {
             listingQuantity = Math.max(0, quantity);
         }
 
-        Listing listing = new Listing.Builder()
+        Listing.Builder listingBuilder = new Listing.Builder()
               .title(title)
               .description(description)
               .images(imageFilenames)
@@ -135,11 +155,25 @@ public class ListingService {
               .city(city)
               .customCity(customCity)
               .condition(condition)
-              .user(user)
               .archived(false)
               .sold(false)
-              .createdAt(java.time.LocalDateTime.now())
-              .build();
+              .createdAt(java.time.LocalDateTime.now());
+        
+        // Set ownership fields based on whether this is a business or personal listing
+        if (business != null) {
+            // Business listing: set business, user (business owner), and createdBy (actual creator)
+            listingBuilder
+                .business(business)
+                .user(business.getOwner())  // Business owner for the listing
+                .createdBy(user);  // Actual creator for audit
+        } else {
+            // Personal listing: user creates for themselves
+            listingBuilder
+                .user(user)
+                .createdBy(user);
+        }
+        
+        Listing listing = listingBuilder.build();
         return listingRepository.save(listing);
     }
 

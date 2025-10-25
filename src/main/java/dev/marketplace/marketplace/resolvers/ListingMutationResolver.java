@@ -35,8 +35,9 @@ public class ListingMutationResolver {
                                  @Argument UUID userId,
                                  @Argument Integer quantity,
                                  @Argument UUID cityId,
-                                 @Argument String customCity) {
-        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId, quantity);
+                                 @Argument String customCity,
+                                 @Argument UUID businessId) {
+        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId, quantity, businessId);
     }
 
     @MutationMapping

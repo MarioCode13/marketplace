@@ -476,6 +476,7 @@ type Mutation {
         categoryId: ID!
         userId: ID!
         quantity: Int
+        businessId: ID
     ): Listing!
     deleteListing(listingId: ID!): Boolean!
     markListingAsSold(id: ID!): Listing!
