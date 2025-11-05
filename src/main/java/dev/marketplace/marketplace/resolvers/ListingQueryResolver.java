@@ -2,21 +2,17 @@ package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.dto.ListingDTO;
 import dev.marketplace.marketplace.dto.ListingPageResponse;
-import dev.marketplace.marketplace.model.Listing;
-import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
-import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @CrossOrigin(origins = "http://localhost:3000")
@@ -118,10 +114,9 @@ public class ListingQueryResolver {
             @Argument Integer limit,
             @Argument Integer offset
     ) {
-        User user = userService.getUserByEmail(userDetails.getUsername())
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        List<ListingDTO> allListings = listingService.getListingsByUserId(user.getId());
+        // Use the UserService method that returns the user's UUID to avoid loading the User entity here
+        UUID userId = userService.getUserIdByUsername(userDetails.getUsername());
+        List<ListingDTO> allListings = listingService.getListingsByUserId(userId);
         int totalCount = allListings.size();
         
         // Apply pagination if parameters are provided

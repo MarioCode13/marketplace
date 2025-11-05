@@ -1,6 +1,8 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
@@ -23,7 +25,7 @@ public class UserMutationResolver {
     }
 
     @MutationMapping
-    public User updateUser(
+    public UserDTO updateUser(
             @Argument UUID id,
             @Argument String username,
             @Argument String email,
@@ -34,7 +36,8 @@ public class UserMutationResolver {
             @Argument String customCity,
             @Argument String contactNumber
     ) {
-        return userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity, contactNumber);
+        User updated = userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity, contactNumber);
+        return UserMapper.toDto(updated);
     }
 
     @MutationMapping

@@ -2,6 +2,8 @@ package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Invitation;
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.InvitationService;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.enums.BusinessUserRole;
@@ -55,5 +57,15 @@ public class InvitationResolver {
     public Invitation declineInvitation(@Argument UUID invitationId, @AuthenticationPrincipal UserDetails userDetails) {
         UUID responderId = userService.getUserIdByUsername(userDetails.getUsername());
         return invitationService.respondToInvitation(invitationId, Invitation.InvitationStatus.DECLINED, responderId);
+    }
+
+    @org.springframework.graphql.data.method.annotation.SchemaMapping(typeName = "Invitation", field = "sender")
+    public UserDTO sender(Invitation invitation) {
+        return UserMapper.toDto(invitation.getSender());
+    }
+
+    @org.springframework.graphql.data.method.annotation.SchemaMapping(typeName = "Invitation", field = "recipient")
+    public UserDTO recipient(Invitation invitation) {
+        return UserMapper.toDto(invitation.getRecipient());
     }
 }

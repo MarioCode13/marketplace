@@ -1,7 +1,7 @@
 package dev.marketplace.marketplace.dto;
 
 import dev.marketplace.marketplace.model.Category;
-import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.dto.UserDTO;
 import dev.marketplace.marketplace.model.City;
 import dev.marketplace.marketplace.model.Business;
 
@@ -20,7 +20,7 @@ public record ListingDTO(
         City city,
         String customCity,
         String condition,
-        User user,
+        UserDTO user,
         Business business,
         LocalDateTime createdAt,
         boolean sold,

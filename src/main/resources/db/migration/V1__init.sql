@@ -487,6 +487,7 @@ CREATE TABLE IF NOT EXISTS business_trust_rating (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     business_id UUID NOT NULL UNIQUE REFERENCES business(id) ON DELETE CASCADE,
     overall_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    verified_with_third_party BOOLEAN NOT NULL DEFAULT FALSE,
     verification_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     profile_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     review_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,

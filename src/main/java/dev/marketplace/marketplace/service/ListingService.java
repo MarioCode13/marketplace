@@ -5,6 +5,8 @@ import dev.marketplace.marketplace.dto.ListingPageResponse;
 import dev.marketplace.marketplace.dto.ListingUpdateInput;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.*;
+import dev.marketplace.marketplace.mapper.UserMapper;
+import dev.marketplace.marketplace.dto.UserDTO;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -75,7 +77,7 @@ public class ListingService {
                 listing.getCity(),
                 listing.getCustomCity(),
                 listing.getCondition().name(),
-                listing.getUser(),
+                UserMapper.toDto(listing.getUser()),
                 listing.getBusiness(),
                 listing.getCreatedAt(),
                 listing.isSold(),

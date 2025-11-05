@@ -1,6 +1,8 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Review;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.ReviewService;
 import dev.marketplace.marketplace.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +64,16 @@ public class ReviewResolver {
     @QueryMapping
     public List<Review> getUserReviews(@Argument UUID userId) {
         return reviewService.getUserReviews(userId);
+    }
+
+    @org.springframework.graphql.data.method.annotation.SchemaMapping(typeName = "Review", field = "reviewer")
+    public UserDTO reviewer(Review review) {
+        return UserMapper.toDto(review.getReviewer());
+    }
+    
+    @org.springframework.graphql.data.method.annotation.SchemaMapping(typeName = "Review", field = "reviewedUser")
+    public UserDTO reviewedUser(Review review) {
+        return UserMapper.toDto(review.getReviewedUser());
     }
     
     /**

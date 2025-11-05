@@ -1,7 +1,6 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Transaction;
-import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.service.TransactionService;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.dto.TransactionDTO;
@@ -28,35 +27,37 @@ public class TransactionResolver {
      * Create a transaction when a listing is sold to a specific buyer
      */
     @MutationMapping
-    public Transaction createTransaction(@Argument UUID listingId,
-                                       @Argument UUID buyerId,
-                                       @Argument BigDecimal salePrice,
-                                       @Argument String paymentMethod,
-                                       @Argument String notes,
-                                       @AuthenticationPrincipal UserDetails userDetails) {
-        UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.createTransaction(listingId, buyerId, salePrice, paymentMethod, notes);
+    public TransactionDTO createTransaction(@Argument UUID listingId,
+                                        @Argument UUID buyerId,
+                                        @Argument BigDecimal salePrice,
+                                        @Argument String paymentMethod,
+                                        @Argument String notes,
+                                        @AuthenticationPrincipal UserDetails userDetails) {
+        Transaction created = transactionService.createTransaction(listingId, buyerId, salePrice, paymentMethod, notes);
+        return transactionService.getTransactionDTO(created.getId()).orElse(null);
     }
     
     /**
      * Complete a transaction (confirm the sale)
      */
     @MutationMapping
-    public Transaction completeTransaction(@Argument UUID transactionId,
+    public TransactionDTO completeTransaction(@Argument UUID transactionId,
                                          @AuthenticationPrincipal UserDetails userDetails) {
         UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.completeTransaction(transactionId, sellerId);
+        Transaction completed = transactionService.completeTransaction(transactionId, sellerId);
+        return transactionService.getTransactionDTO(completed.getId()).orElse(null);
     }
     
     /**
      * Cancel a transaction
      */
     @MutationMapping
-    public Transaction cancelTransaction(@Argument UUID transactionId,
+    public TransactionDTO cancelTransaction(@Argument UUID transactionId,
                                        @Argument String reason,
                                        @AuthenticationPrincipal UserDetails userDetails) {
         UUID sellerId = userService.getUserIdByUsername(userDetails.getUsername());
-        return transactionService.cancelTransaction(transactionId, sellerId, reason);
+        Transaction cancelled = transactionService.cancelTransaction(transactionId, sellerId, reason);
+        return transactionService.getTransactionDTO(cancelled.getId()).orElse(null);
     }
     
     /**
@@ -108,8 +109,8 @@ public class TransactionResolver {
      * Get all transactions for a listing
      */
     @QueryMapping
-    public List<Transaction> getListingTransactions(@Argument UUID listingId) {
-        return transactionService.getListingTransactions(listingId);
+    public List<TransactionDTO> getListingTransactions(@Argument UUID listingId) {
+        return transactionService.getTransactionsByListingIdsDTO(List.of(listingId));
     }
     
     /**

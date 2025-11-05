@@ -1,7 +1,7 @@
 package dev.marketplace.marketplace.dto;
 
 import dev.marketplace.marketplace.model.Transaction;
-import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.dto.UserDTO;
 import dev.marketplace.marketplace.model.Transaction.TransactionStatus;
 
 import java.math.BigDecimal;
@@ -12,8 +12,8 @@ import java.util.UUID;
 public record TransactionDTO(
         UUID id,
         ListingDTO listing,
-        User seller,
-        User buyer,
+        UserDTO seller,
+        UserDTO buyer,
         BigDecimal salePrice,
         LocalDateTime saleDate,
         TransactionStatus status,
@@ -26,8 +26,8 @@ public record TransactionDTO(
         return new TransactionDTO(
                 transaction.getId(),
                 listingDTO,
-                transaction.getSeller(),
-                transaction.getBuyer(),
+                dev.marketplace.marketplace.mapper.UserMapper.toDto(transaction.getSeller()),
+                dev.marketplace.marketplace.mapper.UserMapper.toDto(transaction.getBuyer()),
                 transaction.getSalePrice(),
                 transaction.getSaleDate(),
                 transaction.getStatus(),

@@ -6,6 +6,8 @@ import dev.marketplace.marketplace.model.VerificationDocument;
 import dev.marketplace.marketplace.model.ProfileCompletion;
 import dev.marketplace.marketplace.model.Listing;
 import dev.marketplace.marketplace.dto.ListingDTO;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.service.TrustRatingService;
 import dev.marketplace.marketplace.service.VerificationDocumentService;
@@ -46,7 +48,8 @@ public class UserQueryResolver {
     private final SubscriptionService subscriptionService;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
-    public String resolveProfileImageUrl(User user) {
+    public String resolveProfileImageUrl(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         if (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty()) {
             return user.getProfileImageUrl();
         }
@@ -54,36 +57,45 @@ public class UserQueryResolver {
     }
 
     @SchemaMapping(typeName = "User", field = "trustRating")
-    public TrustRating resolveTrustRating(User user) {
+    public TrustRating resolveTrustRating(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         return trustRatingService.getTrustRating(user.getId());
     }
 
     @SchemaMapping(typeName = "User", field = "verificationDocuments")
-    public List<VerificationDocument> resolveVerificationDocuments(User user) {
+    public List<VerificationDocument> resolveVerificationDocuments(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         return verificationDocumentService.getUserDocuments(user.getId());
     }
 
     @SchemaMapping(typeName = "User", field = "profileCompletion")
-    public ProfileCompletion resolveProfileCompletion(User user) {
+    public ProfileCompletion resolveProfileCompletion(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         return profileCompletionRepository.findByUserId(user.getId()).orElse(null);
     }
 
     @SchemaMapping(typeName = "User", field = "planType")
-    public String resolvePlanType(User user) {
+    public String resolvePlanType(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         Optional<Subscription> activeSub = subscriptionService.getActiveSubscription(user.getId());
         return activeSub.map(sub -> sub.getPlanType() != null ? sub.getPlanType().name() : null).orElse(null);
     }
 
     @SchemaMapping(typeName = "User", field = "storeBranding")
-    public dev.marketplace.marketplace.model.StoreBranding resolveStoreBranding(User user) {
+    public dev.marketplace.marketplace.model.StoreBranding resolveStoreBranding(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
+        // Fetch User entity to use repository methods that expect User
+        Optional<User> userEntityOpt = userService.findById(user.getId());
+        if (userEntityOpt.isEmpty()) return null;
+        User userEntity = userEntityOpt.get();
         // Try to find business where user is owner
-        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(user);
+        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(userEntity);
         Business business = null;
         if (ownedBusiness.isPresent()) {
             business = ownedBusiness.get();
         } else {
             // Optionally, return first business where user is a team member
-            List<Business> businesses = businessRepository.findByUser(user);
+            List<Business> businesses = businessRepository.findByUser(userEntity);
             if (!businesses.isEmpty()) {
                 business = businesses.get(0);
             }
@@ -100,24 +112,30 @@ public class UserQueryResolver {
     }
 
     @SchemaMapping(typeName = "User", field = "listings")
-    public List<ListingDTO> getListings(User user) {
+    public List<ListingDTO> getListings(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         return listingService.getListingsByUserId(user.getId());
     }
 
     @SchemaMapping(typeName = "User", field = "business")
-    public Business resolveBusiness(User user) {
+    public Business resolveBusiness(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
+        Optional<User> userEntityOpt = userService.findById(user.getId());
+        if (userEntityOpt.isEmpty()) return null;
+        User userEntity = userEntityOpt.get();
         // Try to find business where user is owner
-        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(user);
+        Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(userEntity);
         if (ownedBusiness.isPresent()) {
             return ownedBusiness.get();
         }
         // Optionally, return first business where user is a team member
-        List<Business> businesses = businessRepository.findByUser(user);
+        List<Business> businesses = businessRepository.findByUser(userEntity);
         return businesses.isEmpty() ? null : businesses.get(0);
     }
 
     @SchemaMapping(typeName = "User", field = "subscription")
-    public Subscription resolveSubscription(User user) {
+    public Subscription resolveSubscription(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
         return subscriptionService.getActiveSubscription(user.getId()).orElse(null);
     }
 
@@ -142,28 +160,28 @@ public class UserQueryResolver {
     }
 
     @QueryMapping
-    public User getUserById(@Argument UUID id) {
-        return userService.getUserById(id);
+    public UserDTO getUserById(@Argument UUID id) {
+        return UserMapper.toDto(userService.getUserById(id));
     }
 
     @QueryMapping
-    public User user(@Argument UUID id) {
-        return userService.getUserById(id);
+    public UserDTO user(@Argument UUID id) {
+        return UserMapper.toDto(userService.getUserById(id));
     }
 
     @QueryMapping
-    public List<User> getAllUsers() {
-        return userService.getAllUsers();
+    public List<UserDTO> getAllUsers() {
+        return userService.getAllUsers().stream().map(UserMapper::toDto).toList();
     }
     
     @QueryMapping
-    public List<User> searchUsers(@Argument String searchTerm) {
-        return userService.searchUsers(searchTerm);
+    public List<UserDTO> searchUsers(@Argument String searchTerm) {
+        return userService.searchUsers(searchTerm).stream().map(UserMapper::toDto).toList();
     }
 
-    public User getUserByEmail(@Argument String email) {
+    public UserDTO getUserByEmail(@Argument String email) {
         Optional<User> userOpt = userService.getUserByEmail(email);
-        return userOpt.orElseThrow(() -> new RuntimeException("User not found"));
+        return userOpt.map(UserMapper::toDto).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     @QueryMapping
@@ -178,7 +196,7 @@ public class UserQueryResolver {
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
-    public User me() {
+    public UserDTO me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         System.out.println("Authentication: " + authentication);
@@ -194,6 +212,7 @@ public class UserQueryResolver {
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
             return userService.getUserByEmail(email)
+                    .map(UserMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found"));
         } else {
             throw new RuntimeException("Invalid authentication details");

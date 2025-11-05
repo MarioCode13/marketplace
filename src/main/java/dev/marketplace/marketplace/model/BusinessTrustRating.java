@@ -67,6 +67,10 @@ public class BusinessTrustRating {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @Column(name = "verified_with_third_party", nullable = false)
+    @Builder.Default
+    private boolean verifiedWithThirdParty = false;
+
     @Transient
     @Builder.Default
     private Double averageRating = 0.0;

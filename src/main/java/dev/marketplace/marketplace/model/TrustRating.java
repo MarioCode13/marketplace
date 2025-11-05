@@ -84,6 +84,15 @@ public class TrustRating {
         updatedAt = LocalDateTime.now();
     }
 
+    // Provide a standard getter name for GraphQL/property access
+    public boolean isVerifiedId() {
+        return this.verifiedID;
+    }
+
+    public boolean getVerifiedId() {
+        return this.verifiedID;
+    }
+
     public BigDecimal getStarRating() {
         if (overallScore == null || overallScore.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;

@@ -10,5 +10,11 @@ import lombok.NoArgsConstructor;
 public class BusinessTrustRatingDTO {
     private double averageRating;
     private int reviewCount;
-}
+    private boolean verifiedWithThirdParty;
 
+    public BusinessTrustRatingDTO(double averageRating, int reviewCount) {
+        this.averageRating = averageRating;
+        this.reviewCount = reviewCount;
+        this.verifiedWithThirdParty = false;
+    }
+}

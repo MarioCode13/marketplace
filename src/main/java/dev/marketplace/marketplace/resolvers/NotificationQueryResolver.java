@@ -1,6 +1,8 @@
 package dev.marketplace.marketplace.resolvers;
 
 import dev.marketplace.marketplace.model.Notification;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.NotificationService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -20,5 +22,10 @@ public class NotificationQueryResolver {
     @QueryMapping
     public List<Notification> notifications(@Argument UUID userId) {
         return notificationService.getNotificationsForUser(userId);
+    }
+
+    @org.springframework.graphql.data.method.annotation.SchemaMapping(typeName = "Notification", field = "user")
+    public UserDTO user(Notification notification) {
+        return UserMapper.toDto(notification.getUser());
     }
 }

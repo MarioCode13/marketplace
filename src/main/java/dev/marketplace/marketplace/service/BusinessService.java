@@ -102,7 +102,6 @@ public class BusinessService {
             business.getEmailVerificationToken(),
             business.getName()
         );
-        log.info("Created business with ID: {}", savedBusiness.getId());
         return savedBusiness;
     }
     
@@ -162,7 +161,6 @@ public class BusinessService {
 
     @Transactional
     public Business updateBusiness(Business business, User requestingUser) {
-        log.info("Updating business: {}", business.getId());
         
         Business existingBusiness = businessRepository.findById(business.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + business.getId()));

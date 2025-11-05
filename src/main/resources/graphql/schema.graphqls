@@ -225,6 +225,7 @@ type TrustRating {
     updatedAt: String!
     starRating: Float!
     trustLevel: String!
+    verifiedId: Boolean!
 }
 
 type ProfileCompletion {
@@ -300,6 +301,7 @@ type BusinessUser {
 type BusinessTrustRating {
     averageRating: Float!
     reviewCount: Int!
+    verifiedWithThirdParty: Boolean!
 }
 
 input UpdateListingInput {

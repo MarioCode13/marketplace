@@ -266,7 +266,7 @@ public class TransactionService {
                 listing.getCity(),
                 listing.getCustomCity(),
                 listing.getCondition().name(),
-                listing.getUser(),
+                dev.marketplace.marketplace.mapper.UserMapper.toDto(listing.getUser()),
                 listing.getBusiness(),
                 listing.getCreatedAt(),
                 listing.isSold(),
@@ -337,5 +337,17 @@ public class TransactionService {
     public List<Transaction> getTransactionsByListingIds(List<UUID> listingIds) {
         if (listingIds == null || listingIds.isEmpty()) return List.of();
         return transactionRepository.findByListingIdIn(listingIds);
+    }
+
+    /**
+     * Get transactions by listing IDs (DTO)
+     */
+    @Transactional(readOnly = true)
+    public List<TransactionDTO> getTransactionsByListingIdsDTO(List<UUID> listingIds) {
+        if (listingIds == null || listingIds.isEmpty()) return List.of();
+        return transactionRepository.findByListingIdIn(listingIds)
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
     }
 }

@@ -5,6 +5,8 @@ import dev.marketplace.marketplace.model.Business;
 import dev.marketplace.marketplace.model.BusinessTrustRating;
 import dev.marketplace.marketplace.model.BusinessUser;
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.dto.UserDTO;
+import dev.marketplace.marketplace.mapper.UserMapper;
 import dev.marketplace.marketplace.service.BusinessService;
 import dev.marketplace.marketplace.service.UserService;
 import dev.marketplace.marketplace.service.TransactionService;
@@ -18,7 +20,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Controller
@@ -64,7 +65,8 @@ public class BusinessQueryResolver {
         BusinessTrustRating entity = businessService.getBusinessTrustRating(businessId);
         double averageRating = entity.getOverallScore() != null ? entity.getOverallScore().doubleValue() : 0.0;
         int reviewCount = entity.getTotalReviews();
-        return new BusinessTrustRatingDTO(averageRating, reviewCount);
+        boolean verified = entity.isVerifiedWithThirdParty();
+        return new BusinessTrustRatingDTO(averageRating, reviewCount, verified);
     }
 
     @QueryMapping
@@ -79,8 +81,13 @@ public class BusinessQueryResolver {
     }
 
     @SchemaMapping
-    public User user(BusinessUser businessUser) {
-        return businessUser.getUser();
+    public UserDTO user(BusinessUser businessUser) {
+        return UserMapper.toDto(businessUser.getUser());
+    }
+
+    @SchemaMapping(typeName = "Business", field = "owner")
+    public UserDTO owner(Business business) {
+        return UserMapper.toDto(business.getOwner());
     }
 
     private User getCurrentUser() {
@@ -110,7 +117,8 @@ public class BusinessQueryResolver {
         BusinessTrustRating entity = businessService.getBusinessTrustRating(business.getId());
         double averageRating = entity.getOverallScore() != null ? entity.getOverallScore().doubleValue() : 0.0;
         int reviewCount = entity.getTotalReviews();
-        return new BusinessTrustRatingDTO(averageRating, reviewCount);
+        boolean verified = entity.isVerifiedWithThirdParty();
+        return new BusinessTrustRatingDTO(averageRating, reviewCount, verified);
     }
 
     @SchemaMapping(typeName = "Business", field = "planType")
