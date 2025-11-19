@@ -181,11 +181,9 @@ public class ListingService {
 
     @Transactional
     public Listing updateListing(ListingUpdateInput input, UUID userId) {
-        Listing listing = listingRepository.findById(input.id())
-                .orElseThrow(() -> new RuntimeException("Listing not found"));
-        if (!listing.getUser().getId().equals(userId)) {
-            throw new RuntimeException("Unauthorized update attempt");
-        }
+        // Use the authorization service to validate the caller has permission to update the listing.
+        // This handles both personal listings (listing.user) and business listings (listing.business)
+        Listing listing = authorizationService.checkUpdatePermission(input.id(), userId);
         if (input.title() != null) listing.setTitle(input.title());
         if (input.price() != null) listing.setPrice(input.price());
         if (input.description() != null) listing.setDescription(input.description());
