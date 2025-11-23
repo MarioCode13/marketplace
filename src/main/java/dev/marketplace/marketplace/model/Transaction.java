@@ -39,6 +39,10 @@ public class Transaction {
     @JoinColumn(name = "business_id")
     private Business business;
 
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer quantity = 1;
+
     @Column(name = "sale_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal salePrice;
     

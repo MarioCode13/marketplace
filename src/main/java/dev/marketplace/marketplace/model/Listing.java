@@ -65,6 +65,8 @@ public class Listing {
     private User createdBy; // Tracks who created the listing (for audit)
 
     private boolean archived = false; // Archived state for expiry/deletion
+    private LocalDateTime soldAt; // Timestamp when listing was sold (nullable)
+    private java.math.BigDecimal soldPrice; // Price at which it was sold (nullable)
 
     @PrePersist
     public void setExpiration() {
@@ -89,6 +91,8 @@ public class Listing {
         this.business = builder.business;
         this.createdBy = builder.createdBy;
         this.archived = builder.archived;
+        this.soldAt = builder.soldAt;
+        this.soldPrice = builder.soldPrice;
     }
 
     public static class Builder {
@@ -109,6 +113,8 @@ public class Listing {
         private User createdBy; // Tracks who created the listing (for audit)
         private boolean archived = false; // Archived state for expiry/deletion
         private int quantity = 1;
+        private LocalDateTime soldAt;
+        private java.math.BigDecimal soldPrice;
 
         public Builder id(UUID id) {
             this.id = id;
@@ -192,6 +198,16 @@ public class Listing {
 
         public Builder quantity(int quantity) {
             this.quantity = quantity;
+            return this;
+        }
+
+        public Builder soldAt(LocalDateTime soldAt) {
+            this.soldAt = soldAt;
+            return this;
+        }
+
+        public Builder soldPrice(java.math.BigDecimal soldPrice) {
+            this.soldPrice = soldPrice;
             return this;
         }
 

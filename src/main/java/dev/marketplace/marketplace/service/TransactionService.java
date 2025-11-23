@@ -41,15 +41,7 @@ public class TransactionService {
         Listing listing = listingRepository.findById(listingId)
                 .orElseThrow(() -> new IllegalArgumentException("Listing not found with ID: " + listingId));
         
-        if (listing.isSold()) {
-            throw new IllegalArgumentException("Listing is already sold");
-        }
-        
-        // Validate buyer exists
-        User buyer = userRepository.findById(buyerId)
-                .orElseThrow(() -> new IllegalArgumentException("Buyer not found with ID: " + buyerId));
-
-        // Determine seller: listing may belong to a user or a business (business owner)
+        // Check stock/availability using listingService which performs locking and decrementation
         User seller = null;
         if (listing.getUser() != null) {
             seller = listing.getUser();
@@ -60,6 +52,10 @@ public class TransactionService {
             throw new IllegalArgumentException("Listing has no associated seller");
         }
 
+        // Validate buyer exists
+        User buyer = userRepository.findById(buyerId)
+                .orElseThrow(() -> new IllegalArgumentException("Buyer not found with ID: " + buyerId));
+
         if (buyer.getId().equals(seller.getId())) {
             throw new IllegalArgumentException("Buyer cannot be the same as seller");
         }
@@ -69,10 +65,14 @@ public class TransactionService {
             throw new IllegalArgumentException("Sale price must be greater than zero");
         }
 
+        // Attempt to decrement stock / mark sold accordingly. This will throw if out of stock.
+        Listing updatedListing = listingService.markListingAsSold(listingId, seller.getId());
+
         Transaction.TransactionBuilder transactionBuilder = Transaction.builder()
-                .listing(listing)
+                .listing(updatedListing)
                 .seller(seller)
                 .buyer(buyer)
+                .quantity(1)
                 .salePrice(salePrice)
                 .saleDate(LocalDateTime.now())
                 .status(Transaction.TransactionStatus.PENDING)
@@ -80,19 +80,15 @@ public class TransactionService {
                 .notes(notes);
 
         // Link to business if listing is owned by a business
-        if (listing.getBusiness() != null) {
-            transactionBuilder.business(listing.getBusiness());
+        if (updatedListing.getBusiness() != null) {
+            transactionBuilder.business(updatedListing.getBusiness());
         }
 
         Transaction transaction = transactionBuilder.build();
 
-        // Immediate-complete flow (synchronous in-person sale): mark listing as sold now
+        // Save transaction then immediately mark completed for immediate flow
         transaction = transactionRepository.save(transaction);
 
-        // Mark listing as sold (decrement quantity or archive) using seller as actor
-        listingService.markListingAsSold(listingId, seller.getId());
-
-        // Mark transaction completed
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         Transaction completed = transactionRepository.save(transaction);
 
@@ -155,9 +151,10 @@ public class TransactionService {
         transaction.setNotes(transaction.getNotes() + "\nCancelled: " + reason);
         Transaction saved = transactionRepository.save(transaction);
         
-        // Mark listing as not sold
+        // Restore listing quantity
         Listing listing = transaction.getListing();
-        listing.setSold(false);
+        listing.setQuantity(listing.getQuantity() + (transaction.getQuantity() == null ? 1 : transaction.getQuantity()));
+        listing.setSold(listing.getQuantity() == 0 ? true : false);
         listingRepository.save(listing);
         
         log.info("Transaction cancelled successfully: {}", transactionId);

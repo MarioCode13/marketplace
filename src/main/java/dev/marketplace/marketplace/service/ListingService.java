@@ -343,14 +343,20 @@ public class ListingService {
             throw new RuntimeException("Unauthorized to mark this listing as sold");
         }
 
-        // Business logic: decrement quantity if more than 1, otherwise mark sold/archived
+        // Business logic: prevent selling when out of stock
         int qty = listing.getQuantity();
+        if (qty <= 0) {
+            throw new IllegalArgumentException("Listing is out of stock");
+        }
+
+        // decrement quantity or mark sold/archived when reaching zero
         if (qty > 1) {
             listing.setQuantity(qty - 1);
         } else {
             listing.setQuantity(0);
             listing.setSold(true);
             listing.setArchived(true);
+            listing.setSoldAt(java.time.LocalDateTime.now());
         }
 
         return listingRepository.save(listing);

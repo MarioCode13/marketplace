@@ -444,6 +444,8 @@ CREATE TABLE IF NOT EXISTS listing (
     price DOUBLE PRECISION NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
     sold BOOLEAN DEFAULT FALSE,
+    sold_at TIMESTAMP,
+    sold_price DECIMAL(10,2),
     city_id UUID REFERENCES city(id),
     custom_city VARCHAR(100),
     condition VARCHAR(32),
@@ -522,6 +524,8 @@ CREATE TABLE "transaction" (
     listing_id UUID NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
     seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    business_id UUID REFERENCES business(id),
+    quantity INTEGER NOT NULL DEFAULT 1,
     sale_price DECIMAL(10,2) NOT NULL,
     sale_date TIMESTAMP NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
@@ -635,6 +639,8 @@ CREATE INDEX idx_review_reviewed_user_id ON review(reviewed_user_id);
 CREATE INDEX idx_transaction_listing_id ON "transaction"(listing_id);
 CREATE INDEX idx_transaction_seller_id ON "transaction"(seller_id);
 CREATE INDEX idx_transaction_status ON "transaction"(status);
+CREATE INDEX idx_transaction_business_id ON "transaction"(business_id);
+CREATE INDEX idx_transaction_quantity ON "transaction"(quantity);
 CREATE INDEX idx_review_transaction_id ON review(transaction_id);
 CREATE INDEX idx_review_rating ON review(rating);
 CREATE INDEX idx_profile_completion_user_id ON profile_completion(user_id);
@@ -646,6 +652,7 @@ CREATE INDEX idx_business_user_business_id ON business_user(business_id);
 CREATE INDEX idx_business_user_user_id ON business_user(user_id);
 CREATE INDEX idx_business_user_role ON business_user(role);
 CREATE INDEX idx_store_branding_business_id ON store_branding(business_id);
+CREATE INDEX idx_listing_sold_at ON listing(sold_at);
 
 -- Add reseller and admin user
 INSERT INTO "users" (username, email, password, role, first_name, last_name, bio, city_id, contact_number, created_at, profile_image_url)
