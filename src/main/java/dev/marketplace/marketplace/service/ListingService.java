@@ -6,7 +6,6 @@ import dev.marketplace.marketplace.dto.ListingUpdateInput;
 import dev.marketplace.marketplace.enums.Condition;
 import dev.marketplace.marketplace.model.*;
 import dev.marketplace.marketplace.mapper.UserMapper;
-import dev.marketplace.marketplace.dto.UserDTO;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,8 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import dev.marketplace.marketplace.exceptions.ListingLimitExceededException;
-import dev.marketplace.marketplace.enums.BusinessType;
-import dev.marketplace.marketplace.enums.PlanType;
 
 @Service
 public class ListingService {
@@ -29,7 +26,6 @@ public class ListingService {
     private final CityService cityService;
     private final SubscriptionService subscriptionService;
     private final dev.marketplace.marketplace.repository.BusinessRepository businessRepository;
-    private final dev.marketplace.marketplace.repository.BusinessUserRepository businessUserRepository;
 
     public ListingService(ListingRepository listingRepository,
                           ListingImageService imageService,
@@ -37,8 +33,7 @@ public class ListingService {
                           CategoryService categoryService,
                           CityService cityService,
                           SubscriptionService subscriptionService,
-                          dev.marketplace.marketplace.repository.BusinessRepository businessRepository,
-                          dev.marketplace.marketplace.repository.BusinessUserRepository businessUserRepository) {
+                          dev.marketplace.marketplace.repository.BusinessRepository businessRepository) {
         this.listingRepository = listingRepository;
         this.imageService = imageService;
         this.authorizationService = authorizationService;
@@ -46,7 +41,6 @@ public class ListingService {
         this.cityService = cityService;
         this.subscriptionService = subscriptionService;
         this.businessRepository = businessRepository;
-        this.businessUserRepository = businessUserRepository;
     }
 
     public ListingPageResponse getListings(Integer limit, Integer offset, UUID categoryId, Double minPrice, Double maxPrice) {
