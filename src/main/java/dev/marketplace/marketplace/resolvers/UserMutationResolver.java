@@ -34,9 +34,10 @@ public class UserMutationResolver {
             @Argument String bio,
             @Argument UUID cityId,
             @Argument String customCity,
-            @Argument String contactNumber
+            @Argument String contactNumber,
+            @Argument String idNumber
     ) {
-        User updated = userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity, contactNumber);
+        User updated = userService.updateUser(id, username, email, firstName, lastName, bio, cityId, customCity, contactNumber, idNumber);
         return UserMapper.toDto(updated);
     }
 

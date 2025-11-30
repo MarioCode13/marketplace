@@ -96,6 +96,12 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Spring Security test helpers -->
+		<dependency>
+			<groupId>org.springframework.security</groupId>
+			<artifactId>spring-security-test</artifactId>
+			<scope>test</scope>
+		</dependency>
 			<!-- B2 SDK Core -->
 			<dependency>
 				<groupId>com.backblaze.b2</groupId>

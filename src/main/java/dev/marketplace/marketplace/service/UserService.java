@@ -118,7 +118,7 @@ public class UserService implements UserDetailsService {
         return savedUser;
     }
 
-    public User updateUser(UUID userId, String username, String email, String firstName, String lastName, String bio, UUID cityId, String customCity, String contactNumber) {
+    public User updateUser(UUID userId, String username, String email, String firstName, String lastName, String bio, UUID cityId, String customCity, String contactNumber, String idNumber) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -155,6 +155,9 @@ public class UserService implements UserDetailsService {
         }
         if (contactNumber != null) {
             user.setContactNumber(contactNumber);
+        }
+        if (idNumber != null) {
+            user.setIdNumber(idNumber);
         }
 
         return userRepository.save(user);

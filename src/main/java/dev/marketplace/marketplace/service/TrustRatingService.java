@@ -212,6 +212,25 @@ public class TrustRatingService {
                 .orElseGet(() -> calculateAndUpdateTrustRating(userId));
     }
     
+    /**
+     * Mark a user's ID as verified. Creates a TrustRating if missing, marks verifiedID=true
+     * and recalculates the trust rating.
+     */
+    @Transactional
+    public void markVerifiedID(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        TrustRating trustRating = trustRatingRepository.findByUserId(userId)
+                .orElse(TrustRating.builder().user(user).build());
+
+        trustRating.setVerifiedID(true);
+        trustRatingRepository.save(trustRating);
+
+        // Recalculate full trust rating after marking verified ID
+        calculateAndUpdateTrustRating(userId);
+    }
+
     @Transactional
     public void updateProfileCompletion(UUID userId) {
         User user = userRepository.findById(userId)
