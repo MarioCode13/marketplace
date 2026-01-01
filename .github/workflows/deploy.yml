@@ -32,7 +32,7 @@ jobs:
           source: target/*.jar
           target: /home/deploy/apps/dealio/
 
-      - name: Restart service
+      - name: Restart service with environment
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -40,16 +40,21 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-            export DB_URL=${{ secrets.DB_URL }}
-            export DB_USERNAME=${{ secrets.DB_USERNAME }}
-            export JWT_SECRET=${{ secrets.JWT_SECRET }}
-            export OMNICHECK_API_KEY=${{ secrets.OMNICHECK_API_KEY }}
-            export ALLOWED_ORIGINS="${{ secrets.ALLOWED_ORIGINS }}"
-            export PAYFAST_MERCHANT_ID=${{ secrets.PAYFAST_MERCHANT_ID }}
-            export PAYFAST_MERCHANT_KEY=${{ secrets.PAYFAST_MERCHANT_KEY }}
-            export PAYFAST_PASSPHRASE=${{ secrets.PAYFAST_PASSPHRASE }}
-            export PORT=8080
-            export SPRING_PROFILES_ACTIVE=prod
+            # Set environment for systemd
+            sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
+            sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
+            sudo systemctl set-environment JWT_SECRET=${{ secrets.JWT_SECRET }}
+            sudo systemctl set-environment OMNICHECK_API_KEY=${{ secrets.OMNICHECK_API_KEY }}
+            sudo systemctl set-environment ALLOWED_ORIGINS="${{ secrets.ALLOWED_ORIGINS }}"
+            sudo systemctl set-environment PAYFAST_MERCHANT_ID=${{ secrets.PAYFAST_MERCHANT_ID }}
+            sudo systemctl set-environment PAYFAST_MERCHANT_KEY=${{ secrets.PAYFAST_MERCHANT_KEY }}
+            sudo systemctl set-environment PAYFAST_PASSPHRASE=${{ secrets.PAYFAST_PASSPHRASE }}
+            sudo systemctl set-environment PORT=8080
+            sudo systemctl set-environment SPRING_PROFILES_ACTIVE=prod
+
+            # Move the JAR into place
             mv /home/deploy/apps/dealio/*.jar /home/deploy/apps/dealio/DealioApp.jar
+
+            # Restart systemd service
             sudo systemctl restart dealio
