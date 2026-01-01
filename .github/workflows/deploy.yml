@@ -30,7 +30,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           source: target/*.jar
-          target: /home/deploy/apps/dealio/DealioApp.jar
+          target: /home/deploy/apps/dealio/
 
       - name: Restart service
         uses: appleboy/ssh-action@v0.1.6
@@ -51,4 +51,5 @@ jobs:
             export PAYFAST_PASSPHRASE=${{ secrets.PAYFAST_PASSPHRASE }}
             export PORT=8080
             export SPRING_PROFILES_ACTIVE=prod
+            mv /home/deploy/apps/dealio/*.jar /home/deploy/apps/dealio/DealioApp.jar
             sudo systemctl restart dealio
