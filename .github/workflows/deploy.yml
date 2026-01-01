@@ -30,7 +30,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           source: target/*.jar
-          target: /home/deploy/apps/dealio/
+          target: /home/deploy/apps/dealio/DealioApp.jar
 
       - name: Restart service
         uses: appleboy/ssh-action@v0.1.6
