@@ -1,0 +1,54 @@
+name: Deploy Dealio
+
+on:
+  push:
+    branches:
+      - main  # run deploy only on main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build JAR
+        run: ./mvnw clean package -DskipTests
+
+      - name: Copy JAR to droplet
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          source: target/*.jar
+          target: /home/deploy/apps/dealio/
+
+      - name: Restart service
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          script: |
+            export DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            export DB_URL=${{ secrets.DB_URL }}
+            export DB_USERNAME=${{ secrets.DB_USERNAME }}
+            export JWT_SECRET=${{ secrets.JWT_SECRET }}
+            export OMNICHECK_API_KEY=${{ secrets.OMNICHECK_API_KEY }}
+            export ALLOWED_ORIGINS="${{ secrets.ALLOWED_ORIGINS }}"
+            export PAYFAST_MERCHANT_ID=${{ secrets.PAYFAST_MERCHANT_ID }}
+            export PAYFAST_MERCHANT_KEY=${{ secrets.PAYFAST_MERCHANT_KEY }}
+            export PAYFAST_PASSPHRASE=${{ secrets.PAYFAST_PASSPHRASE }}
+            export PORT=8080
+            export SPRING_PROFILES_ACTIVE=prod
+            sudo systemctl restart dealio
