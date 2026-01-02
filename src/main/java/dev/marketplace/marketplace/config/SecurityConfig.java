@@ -69,7 +69,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/", "/health", "/graphql", "/graphiql", "/playground",
-                                "/api/users/**", "/api/auth/login", "/api/auth/logout", "/pghero/**", "/error",
+                                "/graphql/api/auth/login", "/graphql/api/auth/logout",
+                                "/graphiql", "/playground",
+                                "/api/users/**", "/pghero/**", "/error",
                                 "/api/payments/payfast/itn"
                         ).permitAll()
                         .anyRequest().authenticated()
@@ -88,6 +90,7 @@ public class SecurityConfig {
                 "https://marketplace-gg45hy8vp-mariocode13s-projects.vercel.app",
                 "https://marketplace-fe-theta.vercel.app",
                 "https://www.dealio.org.za/",
+                "https://www.dealio.org.za",
                 "http://142.93.45.161"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
