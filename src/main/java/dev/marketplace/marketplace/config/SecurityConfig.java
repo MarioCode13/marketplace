@@ -68,12 +68,14 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/", "/health", "/graphql", "/graphiql", "/playground",
-                                "/graphql/api/auth/login", "/graphql/api/auth/logout",
-                                "/graphiql", "/playground",
-                                "/api/users/**", "/pghero/**", "/error",
+                                "/",
+                                "/health",
+                                "/graphiql",
+                                "/playground",
+                                "/error",
                                 "/api/payments/payfast/itn"
                         ).permitAll()
+                        .requestMatchers("/graphql/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
