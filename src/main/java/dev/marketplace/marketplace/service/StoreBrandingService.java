@@ -34,7 +34,12 @@ public class StoreBrandingService {
     
     @Transactional
     public StoreBranding save(StoreBranding storeBranding) {
-        log.info("Saving store branding for business: {}, version: {}", storeBranding.getBusiness().getId()  );
+        // Ensure version is not null to avoid Hibernate incrementing a null value on commit
+        if (storeBranding.getVersion() == null) {
+            storeBranding.setVersion(0L);
+        }
+        UUID businessId = storeBranding.getBusiness() != null ? storeBranding.getBusiness().getId() : storeBranding.getBusinessId();
+        log.info("Saving store branding for business: {}, version: {}", businessId, storeBranding.getVersion());
         return storeBrandingRepository.save(storeBranding);
     }
     
@@ -46,6 +51,13 @@ public class StoreBrandingService {
 
     @Transactional
     public StoreBranding updateStoreBranding(UUID userId, UUID businessId, String logoUrl, String bannerUrl, String themeColor, String primaryColor, String secondaryColor, String lightOrDark, String about, String storeName, String backgroundColor, String textColor, String cardTextColor) {
+        // Ensure any null version values in DB are fixed before loading the entity
+        try {
+            storeBrandingRepository.setVersionToZeroIfNull(businessId);
+        } catch (Exception e) {
+            log.warn("Failed to set null versions to zero for business {}: {}", businessId, e.getMessage());
+        }
+
         Business business = businessRepository.findById(businessId)
             .orElseThrow(() -> new IllegalArgumentException("Business not found"));
         User user = userRepository.findById(userId)

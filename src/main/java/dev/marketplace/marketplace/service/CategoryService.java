@@ -26,6 +26,11 @@ public class CategoryService {
                 .orElseThrow(() -> new RuntimeException("Category not found: " + id));
     }
 
+    public Category findBySlug(String slug) {
+        return categoryRepository.findBySlugIgnoreCase(slug)
+                .orElseThrow(() -> new RuntimeException("Category not found: " + slug));
+    }
+
     public List<UUID> getAllDescendantCategoryIds(UUID parentId) {
         Category parent = findById(parentId);
         List<UUID> ids = new ArrayList<>();

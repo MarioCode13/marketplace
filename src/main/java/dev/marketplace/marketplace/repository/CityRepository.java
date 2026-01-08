@@ -13,4 +13,6 @@ public interface CityRepository extends JpaRepository<City, UUID> {
 
     List<City> findByRegionId(UUID regionId);
     boolean existsByNameIgnoreCase(String name);
+
+    java.util.Optional<City> findBySlugIgnoreCase(String slug);
 }

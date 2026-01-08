@@ -1,5 +1,9 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- NOTE: GraphQL duplicate-type errors (Country/Region/City) arise from multiple .graphqls files
+-- defining the same types. Keep a single definition in src/main/resources/graphql/schema.graphqls
+-- and use "extend type" in other files if you need to add fields.
+
 -- Country Table
 CREATE TABLE IF NOT EXISTS country (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -19,6 +23,7 @@ CREATE TABLE IF NOT EXISTS region (
 CREATE TABLE IF NOT EXISTS city (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(100) NOT NULL,
+    slug VARCHAR(120) NOT NULL UNIQUE,
     region_id UUID REFERENCES region(id),
     CONSTRAINT unique_city_per_region UNIQUE (name, region_id)
 );
@@ -88,6 +93,7 @@ CREATE TABLE IF NOT EXISTS invitation (
 CREATE TABLE IF NOT EXISTS category (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
     parent_id UUID REFERENCES category(id) ON DELETE SET NULL,
     CONSTRAINT unique_category_name_per_parent UNIQUE (name, parent_id)
 );
@@ -111,327 +117,587 @@ INSERT INTO region (name, country_id) VALUES
 ON CONFLICT (name, country_id) DO NOTHING;
 
 -- Expanded South African cities
-INSERT INTO city (name, region_id) VALUES
-    ('Johannesburg', (SELECT id FROM region WHERE name = 'Gauteng')),
-    ('Pretoria', (SELECT id FROM region WHERE name = 'Gauteng')),
-    ('Sandton', (SELECT id FROM region WHERE name = 'Gauteng')),
-    ('Midrand', (SELECT id FROM region WHERE name = 'Gauteng')),
-    ('Centurion', (SELECT id FROM region WHERE name = 'Gauteng')),
-    ('Cape Town', (SELECT id FROM region WHERE name = 'Western Cape')),
-    ('Stellenbosch', (SELECT id FROM region WHERE name = 'Western Cape')),
-    ('Paarl', (SELECT id FROM region WHERE name = 'Western Cape')),
-    ('George', (SELECT id FROM region WHERE name = 'Western Cape')),
-    ('Knysna', (SELECT id FROM region WHERE name = 'Western Cape')),
-    ('Durban', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-    ('Pietermaritzburg', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-    ('Richards Bay', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-    ('Ballito', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-    ('Umhlanga', (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
-    ('Port Elizabeth', (SELECT id FROM region WHERE name = 'Eastern Cape')),
-    ('East London', (SELECT id FROM region WHERE name = 'Eastern Cape')),
-    ('Grahamstown', (SELECT id FROM region WHERE name = 'Eastern Cape')),
-    ('Jeffreys Bay', (SELECT id FROM region WHERE name = 'Eastern Cape')),
-    ('Bloemfontein', (SELECT id FROM region WHERE name = 'Free State')),
-    ('Welkom', (SELECT id FROM region WHERE name = 'Free State')),
-    ('Polokwane', (SELECT id FROM region WHERE name = 'Limpopo')),
-    ('Thohoyandou', (SELECT id FROM region WHERE name = 'Limpopo')),
-    ('Tzaneen', (SELECT id FROM region WHERE name = 'Limpopo')),
-    ('Nelspruit', (SELECT id FROM region WHERE name = 'Mpumalanga')),
-    ('White River', (SELECT id FROM region WHERE name = 'Mpumalanga')),
-    ('Sabie', (SELECT id FROM region WHERE name = 'Mpumalanga')),
-    ('Mahikeng', (SELECT id FROM region WHERE name = 'North West')),
-    ('Rustenburg', (SELECT id FROM region WHERE name = 'North West')),
-    ('Kimberley', (SELECT id FROM region WHERE name = 'Northern Cape')),
-    ('Upington', (SELECT id FROM region WHERE name = 'Northern Cape'))
+INSERT INTO city (name, slug, region_id) VALUES
+    ('Johannesburg', lower(regexp_replace('Johannesburg', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Gauteng')),
+    ('Pretoria', lower(regexp_replace('Pretoria', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Gauteng')),
+    ('Sandton', lower(regexp_replace('Sandton', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Gauteng')),
+    ('Midrand', lower(regexp_replace('Midrand', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Gauteng')),
+    ('Centurion', lower(regexp_replace('Centurion', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Gauteng')),
+    ('Cape Town', lower(regexp_replace('Cape Town', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Western Cape')),
+    ('Stellenbosch', lower(regexp_replace('Stellenbosch', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Western Cape')),
+    ('Paarl', lower(regexp_replace('Paarl', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Western Cape')),
+    ('George', lower(regexp_replace('George', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Western Cape')),
+    ('Knysna', lower(regexp_replace('Knysna', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Western Cape')),
+    ('Durban', lower(regexp_replace('Durban', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+    ('Pietermaritzburg', lower(regexp_replace('Pietermaritzburg', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+    ('Richards Bay', lower(regexp_replace('Richards Bay', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+    ('Ballito', lower(regexp_replace('Ballito', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+    ('Umhlanga', lower(regexp_replace('Umhlanga', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'KwaZulu-Natal')),
+    ('Port Elizabeth', lower(regexp_replace('Port Elizabeth', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Eastern Cape')),
+    ('East London', lower(regexp_replace('East London', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Eastern Cape')),
+    ('Grahamstown', lower(regexp_replace('Grahamstown', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Eastern Cape')),
+    ('Jeffreys Bay', lower(regexp_replace('Jeffreys Bay', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Eastern Cape')),
+    ('Bloemfontein', lower(regexp_replace('Bloemfontein', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Free State')),
+    ('Welkom', lower(regexp_replace('Welkom', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Free State')),
+    ('Polokwane', lower(regexp_replace('Polokwane', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Limpopo')),
+    ('Thohoyandou', lower(regexp_replace('Thohoyandou', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Limpopo')),
+    ('Tzaneen', lower(regexp_replace('Tzaneen', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Limpopo')),
+    ('Nelspruit', lower(regexp_replace('Nelspruit', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Mpumalanga')),
+    ('White River', lower(regexp_replace('White River', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Mpumalanga')),
+    ('Sabie', lower(regexp_replace('Sabie', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Mpumalanga')),
+    ('Mahikeng', lower(regexp_replace('Mahikeng', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'North West')),
+    ('Rustenburg', lower(regexp_replace('Rustenburg', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'North West')),
+    ('Kimberley', lower(regexp_replace('Kimberley', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Northern Cape')),
+    ('Upington', lower(regexp_replace('Upington', '[^a-zA-Z0-9]+', '-', 'g')), (SELECT id FROM region WHERE name = 'Northern Cape'))
 ON CONFLICT (name, region_id) DO NOTHING;
 
 
 -- =========================
 -- Core Categories (now using UUIDs)
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111111', 'Electronics', NULL),
-    ('22222222-2222-2222-2222-222222222222', 'Fashion & Accessories', NULL),
-    ('33333333-3333-3333-3333-333333333333', 'Home & Garden', NULL),
-    ('44444444-4444-4444-4444-444444444444', 'Sports & Outdoors', NULL),
-    ('55555555-5555-5555-5555-555555555555', 'Books & Media', NULL),
-    ('66666666-6666-6666-6666-666666666666', 'Automotive', NULL),
-    ('77777777-7777-7777-7777-777777777777', 'Toys & Games', NULL),
-    ('88888888-8888-8888-8888-888888888888', 'Health & Beauty', NULL),
-    ('99999999-9999-9999-9999-999999999999', 'Art & Collectibles', NULL),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Musical Instruments', NULL),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Tools & Hardware', NULL),
-    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Pet Supplies', NULL),
-    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Baby & Kids', NULL),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Office & Business', NULL),
-    ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'Food & Beverages', NULL)
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111111', 'Electronics', lower(regexp_replace('Electronics', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('22222222-2222-2222-2222-222222222222', 'Fashion & Accessories', lower(regexp_replace('Fashion & Accessories', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('33333333-3333-3333-3333-333333333333', 'Home & Garden', lower(regexp_replace('Home & Garden', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('44444444-4444-4444-4444-444444444444', 'Sports & Outdoors', lower(regexp_replace('Sports & Outdoors', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('55555555-5555-5555-5555-555555555555', 'Books & Media', lower(regexp_replace('Books & Media', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('66666666-6666-6666-6666-666666666666', 'Automotive', lower(regexp_replace('Automotive', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('77777777-7777-7777-7777-777777777777', 'Toys & Games', lower(regexp_replace('Toys & Games', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('88888888-8888-8888-8888-888888888888', 'Health & Beauty', lower(regexp_replace('Health & Beauty', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('99999999-9999-9999-9999-999999999999', 'Art & Collectibles', lower(regexp_replace('Art & Collectibles', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Musical Instruments', lower(regexp_replace('Musical Instruments', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Tools & Hardware', lower(regexp_replace('Tools & Hardware', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('cccccccc-cccc-cccc-cccc-cccccccccccc', 'Pet Supplies', lower(regexp_replace('Pet Supplies', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('dddddddd-dddd-dddd-dddd-dddddddddddd', 'Baby & Kids', lower(regexp_replace('Baby & Kids', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', 'Office & Business', lower(regexp_replace('Office & Business', '[^a-zA-Z0-9]+', '-', 'g')), NULL),
+    ('ffffffff-ffff-ffff-ffff-ffffffffffff', 'Food & Beverages', lower(regexp_replace('Food & Beverages', '[^a-zA-Z0-9]+', '-', 'g')), NULL)
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Electronics subcategories
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111112', 'Computers & Tablets', '11111111-1111-1111-1111-111111111111'),
-    ('11111111-1111-1111-1111-111111111113', 'Phones & Accessories', '11111111-1111-1111-1111-111111111111'),
-    ('11111111-1111-1111-1111-111111111114', 'Cameras & Photography', '11111111-1111-1111-1111-111111111111'),
-    ('11111111-1111-1111-1111-111111111115', 'Audio & Video', '11111111-1111-1111-1111-111111111111'),
-    ('11111111-1111-1111-1111-111111111116', 'Gaming', '11111111-1111-1111-1111-111111111111')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111112', 'Computers & Tablets',
+     (SELECT c.slug || '-' || lower(regexp_replace('Computers & Tablets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111111'),
+     '11111111-1111-1111-1111-111111111111'),
+    ('11111111-1111-1111-1111-111111111113', 'Phones & Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Phones & Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111111'),
+     '11111111-1111-1111-1111-111111111111'),
+    ('11111111-1111-1111-1111-111111111114', 'Cameras & Photography',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cameras & Photography','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111111'),
+     '11111111-1111-1111-1111-111111111111'),
+    ('11111111-1111-1111-1111-111111111115', 'Audio & Video',
+     (SELECT c.slug || '-' || lower(regexp_replace('Audio & Video','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111111'),
+     '11111111-1111-1111-1111-111111111111'),
+    ('11111111-1111-1111-1111-111111111116', 'Gaming',
+     (SELECT c.slug || '-' || lower(regexp_replace('Gaming','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111111'),
+     '11111111-1111-1111-1111-111111111111')
 ON CONFLICT (id) DO NOTHING;
 
 -- Computers sub-subcategories
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111201', 'Laptops', '11111111-1111-1111-1111-111111111112'),
-    ('11111111-1111-1111-1111-111111111202', 'Desktops', '11111111-1111-1111-1111-111111111112'),
-    ('11111111-1111-1111-1111-111111111203', 'Tablets', '11111111-1111-1111-1111-111111111112'),
-    ('11111111-1111-1111-1111-111111111204', 'Components', '11111111-1111-1111-1111-111111111112'),
-    ('11111111-1111-1111-1111-111111111205', 'Accessories & Peripherals', '11111111-1111-1111-1111-111111111112')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111201', 'Laptops',
+     (SELECT c.slug || '-' || lower(regexp_replace('Laptops','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111112'),
+     '11111111-1111-1111-1111-111111111112'),
+    ('11111111-1111-1111-1111-111111111202', 'Desktops',
+     (SELECT c.slug || '-' || lower(regexp_replace('Desktops','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111112'),
+     '11111111-1111-1111-1111-111111111112'),
+    ('11111111-1111-1111-1111-111111111203', 'Tablets',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tablets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111112'),
+     '11111111-1111-1111-1111-111111111112'),
+    ('11111111-1111-1111-1111-111111111204', 'Components',
+     (SELECT c.slug || '-' || lower(regexp_replace('Components','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111112'),
+     '11111111-1111-1111-1111-111111111112'),
+    ('11111111-1111-1111-1111-111111111205', 'Accessories & Peripherals',
+     (SELECT c.slug || '-' || lower(regexp_replace('Accessories & Peripherals','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111112'),
+     '11111111-1111-1111-1111-111111111112')
 ON CONFLICT (id) DO NOTHING;
 
 -- Components
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111301', 'CPU', '11111111-1111-1111-1111-111111111204'),
-    ('11111111-1111-1111-1111-111111111302', 'GPU', '11111111-1111-1111-1111-111111111204'),
-    ('11111111-1111-1111-1111-111111111303', 'RAM & Storage', '11111111-1111-1111-1111-111111111204'),
-    ('11111111-1111-1111-1111-111111111304', 'Motherboards', '11111111-1111-1111-1111-111111111204'),
-    ('11111111-1111-1111-1111-111111111305', 'Power Supplies', '11111111-1111-1111-1111-111111111204'),
-    ('11111111-1111-1111-1111-111111111306', 'Cooling', '11111111-1111-1111-1111-111111111204')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111301', 'CPU',
+     (SELECT c.slug || '-' || lower(regexp_replace('CPU','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204'),
+     '11111111-1111-1111-1111-111111111204'),
+    ('11111111-1111-1111-1111-111111111302', 'GPU',
+     (SELECT c.slug || '-' || lower(regexp_replace('GPU','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204'),
+     '11111111-1111-1111-1111-111111111204'),
+    ('11111111-1111-1111-1111-111111111303', 'RAM & Storage',
+     (SELECT c.slug || '-' || lower(regexp_replace('RAM & Storage','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204'),
+     '11111111-1111-1111-1111-111111111204'),
+    ('11111111-1111-1111-1111-111111111304', 'Motherboards',
+     (SELECT c.slug || '-' || lower(regexp_replace('Motherboards','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204'),
+     '11111111-1111-1111-1111-111111111204'),
+    ('11111111-1111-1111-1111-111111111305', 'Power Supplies',
+     (SELECT c.slug || '-' || lower(regexp_replace('Power Supplies','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204'),
+     '11111111-1111-1111-1111-111111111204'),
+    ('11111111-1111-1111-1111-111111111306', 'Cooling',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cooling','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111204')
+     , '11111111-1111-1111-1111-111111111204')
 ON CONFLICT (id) DO NOTHING;
 
 -- Accessories & Peripherals
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111307', 'Keyboards', '11111111-1111-1111-1111-111111111205'),
-    ('11111111-1111-1111-1111-111111111308', 'Mice', '11111111-1111-1111-1111-111111111205'),
-    ('11111111-1111-1111-1111-111111111309', 'Monitors', '11111111-1111-1111-1111-111111111205'),
-    ('11111111-1111-1111-1111-111111111310', 'Cables & Hubs', '11111111-1111-1111-1111-111111111205'),
-    ('11111111-1111-1111-1111-111111111311', 'Docking Stations', '11111111-1111-1111-1111-111111111205')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111307', 'Keyboards',
+     (SELECT c.slug || '-' || lower(regexp_replace('Keyboards','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111205'),
+     '11111111-1111-1111-1111-111111111205'),
+    ('11111111-1111-1111-1111-111111111308', 'Mice',
+     (SELECT c.slug || '-' || lower(regexp_replace('Mice','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111205'),
+     '11111111-1111-1111-1111-111111111205'),
+    ('11111111-1111-1111-1111-111111111309', 'Monitors',
+     (SELECT c.slug || '-' || lower(regexp_replace('Monitors','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111205'),
+     '11111111-1111-1111-1111-111111111205'),
+    ('11111111-1111-1111-1111-111111111310', 'Cables & Hubs',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cables & Hubs','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111205'),
+     '11111111-1111-1111-1111-111111111205'),
+    ('11111111-1111-1111-1111-111111111311', 'Docking Stations',
+     (SELECT c.slug || '-' || lower(regexp_replace('Docking Stations','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111205'),
+     '11111111-1111-1111-1111-111111111205')
 ON CONFLICT (id) DO NOTHING;
 
 -- Phones & Accessories
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111312', 'Smartphones', '11111111-1111-1111-1111-111111111113'),
-    ('11111111-1111-1111-1111-111111111313', 'Cases & Covers', '11111111-1111-1111-1111-111111111113'),
-    ('11111111-1111-1111-1111-111111111314', 'Chargers & Cables', '11111111-1111-1111-1111-111111111113'),
-    ('11111111-1111-1111-1111-111111111315', 'Headphones & Earphones', '11111111-1111-1111-1111-111111111113')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111312', 'Smartphones',
+     (SELECT c.slug || '-' || lower(regexp_replace('Smartphones','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111113'),
+     '11111111-1111-1111-1111-111111111113'),
+    ('11111111-1111-1111-1111-111111111313', 'Cases & Covers',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cases & Covers','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111113'),
+     '11111111-1111-1111-1111-111111111113'),
+    ('11111111-1111-1111-1111-111111111314', 'Chargers & Cables',
+     (SELECT c.slug || '-' || lower(regexp_replace('Chargers & Cables','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111113'),
+     '11111111-1111-1111-1111-111111111113'),
+    ('11111111-1111-1111-1111-111111111315', 'Headphones & Earphones',
+     (SELECT c.slug || '-' || lower(regexp_replace('Headphones & Earphones','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111113'),
+     '11111111-1111-1111-1111-111111111113')
 ON CONFLICT (id) DO NOTHING;
 
 -- Cameras
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111316', 'DSLR & Mirrorless', '11111111-1111-1111-1111-111111111114'),
-    ('11111111-1111-1111-1111-111111111317', 'Lenses & Filters', '11111111-1111-1111-1111-111111111114'),
-    ('11111111-1111-1111-1111-111111111318', 'Tripods & Mounts', '11111111-1111-1111-1111-111111111114'),
-    ('11111111-1111-1111-1111-111111111319', 'Camera Bags & Storage', '11111111-1111-1111-1111-111111111114')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111316', 'DSLR & Mirrorless',
+     (SELECT c.slug || '-' || lower(regexp_replace('DSLR & Mirrorless','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111114'),
+     '11111111-1111-1111-1111-111111111114'),
+    ('11111111-1111-1111-1111-111111111317', 'Lenses & Filters',
+     (SELECT c.slug || '-' || lower(regexp_replace('Lenses & Filters','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111114'),
+     '11111111-1111-1111-1111-111111111114'),
+    ('11111111-1111-1111-1111-111111111318', 'Tripods & Mounts',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tripods & Mounts','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111114'),
+     '11111111-1111-1111-1111-111111111114'),
+    ('11111111-1111-1111-1111-111111111319', 'Camera Bags & Storage',
+     (SELECT c.slug || '-' || lower(regexp_replace('Camera Bags & Storage','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111114'),
+     '11111111-1111-1111-1111-111111111114')
 ON CONFLICT (id) DO NOTHING;
 
 -- Audio & Video
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111320', 'Speakers', '11111111-1111-1111-1111-111111111115'),
-    ('11111111-1111-1111-1111-111111111321', 'Headphones', '11111111-1111-1111-1111-111111111115'),
-    ('11111111-1111-1111-1111-111111111322', 'TVs & Projectors', '11111111-1111-1111-1111-111111111115'),
-    ('11111111-1111-1111-1111-111111111323', 'Streaming Devices', '11111111-1111-1111-1111-111111111115')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111320', 'Speakers',
+     (SELECT c.slug || '-' || lower(regexp_replace('Speakers','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111115'),
+     '11111111-1111-1111-1111-111111111115'),
+    ('11111111-1111-1111-1111-111111111321', 'Headphones',
+     (SELECT c.slug || '-' || lower(regexp_replace('Headphones','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111115'),
+     '11111111-1111-1111-1111-111111111115'),
+    ('11111111-1111-1111-1111-111111111322', 'TVs & Projectors',
+     (SELECT c.slug || '-' || lower(regexp_replace('TVs & Projectors','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111115'),
+     '11111111-1111-1111-1111-111111111115'),
+    ('11111111-1111-1111-1111-111111111323', 'Streaming Devices',
+     (SELECT c.slug || '-' || lower(regexp_replace('Streaming Devices','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111115'),
+     '11111111-1111-1111-1111-111111111115')
 ON CONFLICT (id) DO NOTHING;
 
 -- Gaming
-INSERT INTO category (id, name, parent_id) VALUES
-    ('11111111-1111-1111-1111-111111111324', 'Consoles', '11111111-1111-1111-1111-111111111116'),
-    ('11111111-1111-1111-1111-111111111325', 'Games', '11111111-1111-1111-1111-111111111116'),
-    ('11111111-1111-1111-1111-111111111326', 'Controllers & Accessories', '11111111-1111-1111-1111-111111111116'),
-    ('11111111-1111-1111-1111-111111111327', 'VR Headsets', '11111111-1111-1111-1111-111111111116')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('11111111-1111-1111-1111-111111111324', 'Consoles',
+     (SELECT c.slug || '-' || lower(regexp_replace('Consoles','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111116'),
+     '11111111-1111-1111-1111-111111111116'),
+    ('11111111-1111-1111-1111-111111111325', 'Games',
+     (SELECT c.slug || '-' || lower(regexp_replace('Games','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111116'),
+     '11111111-1111-1111-1111-111111111116'),
+    ('11111111-1111-1111-1111-111111111326', 'Controllers & Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Controllers & Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111116'),
+     '11111111-1111-1111-1111-111111111116'),
+    ('11111111-1111-1111-1111-111111111327', 'VR Headsets',
+     (SELECT c.slug || '-' || lower(regexp_replace('VR Headsets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '11111111-1111-1111-1111-111111111116'),
+     '11111111-1111-1111-1111-111111111116')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Fashion & Accessories
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222222401', 'Men''s Fashion', '22222222-2222-2222-2222-222222222222'),
-    ('22222222-2222-2222-2222-222222222402', 'Women''s Fashion', '22222222-2222-2222-2222-222222222222'),
-    ('22222222-2222-2222-2222-222222222403', 'Jewelry & Watches', '22222222-2222-2222-2222-222222222222'),
-    ('22222222-2222-2222-2222-222222222404', 'Bags & Luggage', '22222222-2222-2222-2222-222222222222'),
-    ('22222222-2222-2222-2222-222222222405', 'Accessories', '22222222-2222-2222-2222-222222222222')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222222401', 'Men''s Fashion',
+     (SELECT c.slug || '-' || lower(regexp_replace('Men''s Fashion','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222222'),
+     '22222222-2222-2222-2222-222222222222'),
+    ('22222222-2222-2222-2222-222222222402', 'Women''s Fashion',
+     (SELECT c.slug || '-' || lower(regexp_replace('Women''s Fashion','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222222'),
+     '22222222-2222-2222-2222-222222222222'),
+    ('22222222-2222-2222-2222-222222222403', 'Jewelry & Watches',
+     (SELECT c.slug || '-' || lower(regexp_replace('Jewelry & Watches','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222222'),
+     '22222222-2222-2222-2222-222222222222'),
+    ('22222222-2222-2222-2222-222222222404', 'Bags & Luggage',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bags & Luggage','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222222'),
+     '22222222-2222-2222-2222-222222222222'),
+    ('22222222-2222-2222-2222-222222222405', 'Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222222'),
+     '22222222-2222-2222-2222-222222222222')
 ON CONFLICT (id) DO NOTHING;
 
 -- Men
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222225501', 'Tops', '22222222-2222-2222-2222-222222222401'),
-    ('22222222-2222-2222-2222-222222225502', 'Bottoms', '22222222-2222-2222-2222-222222222401'),
-    ('22222222-2222-2222-2222-222222225503', 'Shoes', '22222222-2222-2222-2222-222222222401'),
-    ('22222222-2222-2222-2222-222222225504', 'Underwear', '22222222-2222-2222-2222-222222222401'),
-    ('22222222-2222-2222-2222-222222225505', 'Outerwear', '22222222-2222-2222-2222-222222222401')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222225501', 'Tops',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tops','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222401'),
+     '22222222-2222-2222-2222-222222222401'),
+    ('22222222-2222-2222-2222-222222225502', 'Bottoms',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bottoms','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222401'),
+     '22222222-2222-2222-2222-222222222401'),
+    ('22222222-2222-2222-2222-222222225503', 'Shoes',
+     (SELECT c.slug || '-' || lower(regexp_replace('Shoes','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222401'),
+     '22222222-2222-2222-2222-222222222401'),
+    ('22222222-2222-2222-2222-222222225504', 'Underwear',
+     (SELECT c.slug || '-' || lower(regexp_replace('Underwear','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222401'),
+     '22222222-2222-2222-2222-222222222401'),
+    ('22222222-2222-2222-2222-222222225505', 'Outerwear',
+     (SELECT c.slug || '-' || lower(regexp_replace('Outerwear','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222401'),
+     '22222222-2222-2222-2222-222222222401')
 ON CONFLICT (id) DO NOTHING;
 
 -- Women
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222225506', 'Tops', '22222222-2222-2222-2222-222222222402'),
-    ('22222222-2222-2222-2222-222222225507', 'Bottoms', '22222222-2222-2222-2222-222222222402'),
-    ('22222222-2222-2222-2222-222222225508', 'Dresses', '22222222-2222-2222-2222-222222222402'),
-    ('22222222-2222-2222-2222-222222225509', 'Shoes', '22222222-2222-2222-2222-222222222402'),
-    ('22222222-2222-2222-2222-222222225510', 'Underwear', '22222222-2222-2222-2222-222222222402'),
-    ('22222222-2222-2222-2222-222222225511', 'Outerwear', '22222222-2222-2222-2222-222222222402')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222225506', 'Tops',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tops','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402'),
+    ('22222222-2222-2222-2222-222222225507', 'Bottoms',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bottoms','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402'),
+    ('22222222-2222-2222-2222-222222225508', 'Dresses',
+     (SELECT c.slug || '-' || lower(regexp_replace('Dresses','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402'),
+    ('22222222-2222-2222-2222-222222225509', 'Shoes',
+     (SELECT c.slug || '-' || lower(regexp_replace('Shoes','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402'),
+    ('22222222-2222-2222-2222-222222225510', 'Underwear',
+     (SELECT c.slug || '-' || lower(regexp_replace('Underwear','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402'),
+    ('22222222-2222-2222-2222-222222225511', 'Outerwear',
+     (SELECT c.slug || '-' || lower(regexp_replace('Outerwear','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222402'),
+     '22222222-2222-2222-2222-222222222402')
 ON CONFLICT (id) DO NOTHING;
 
 -- Jewelry & Watches
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222225512', 'Rings', '22222222-2222-2222-2222-222222222403'),
-    ('22222222-2222-2222-2222-222222225513', 'Necklaces', '22222222-2222-2222-2222-222222222403'),
-    ('22222222-2222-2222-2222-222222225514', 'Bracelets', '22222222-2222-2222-2222-222222222403'),
-    ('22222222-2222-2222-2222-222222225515', 'Watches', '22222222-2222-2222-2222-222222222403')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222225512', 'Rings',
+     (SELECT c.slug || '-' || lower(regexp_replace('Rings','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222403'),
+     '22222222-2222-2222-2222-222222222403'),
+    ('22222222-2222-2222-2222-222222225513', 'Necklaces',
+     (SELECT c.slug || '-' || lower(regexp_replace('Necklaces','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222403'),
+     '22222222-2222-2222-2222-222222222403'),
+    ('22222222-2222-2222-2222-222222225514', 'Bracelets',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bracelets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222403'),
+     '22222222-2222-2222-2222-222222222403'),
+    ('22222222-2222-2222-2222-222222225515', 'Watches',
+     (SELECT c.slug || '-' || lower(regexp_replace('Watches','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222403'),
+     '22222222-2222-2222-2222-222222222403')
 ON CONFLICT (id) DO NOTHING;
 
 -- Bags & Luggage
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222225516', 'Handbags', '22222222-2222-2222-2222-222222222404'),
-    ('22222222-2222-2222-2222-222222225517', 'Backpacks', '22222222-2222-2222-2222-222222222404'),
-    ('22222222-2222-2222-2222-222222225518', 'Suitcases', '22222222-2222-2222-2222-222222222404')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222225516', 'Handbags',
+     (SELECT c.slug || '-' || lower(regexp_replace('Handbags','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222404'),
+     '22222222-2222-2222-2222-222222222404'),
+    ('22222222-2222-2222-2222-222222225517', 'Backpacks',
+     (SELECT c.slug || '-' || lower(regexp_replace('Backpacks','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222404'),
+     '22222222-2222-2222-2222-222222222404'),
+    ('22222222-2222-2222-2222-222222225518', 'Suitcases',
+     (SELECT c.slug || '-' || lower(regexp_replace('Suitcases','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222404'),
+     '22222222-2222-2222-2222-222222222404')
 ON CONFLICT (id) DO NOTHING;
 
 -- Accessories
-INSERT INTO category (id, name, parent_id) VALUES
-    ('22222222-2222-2222-2222-222222225519', 'Belts', '22222222-2222-2222-2222-222222222405'),
-    ('22222222-2222-2222-2222-222222225520', 'Hats & Caps', '22222222-2222-2222-2222-222222222405'),
-    ('22222222-2222-2222-2222-222222225521', 'Sunglasses', '22222222-2222-2222-2222-222222222405'),
-    ('22222222-2222-2222-2222-222222225522', 'Scarves', '22222222-2222-2222-2222-222222222405')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('22222222-2222-2222-2222-222222225519', 'Belts',
+     (SELECT c.slug || '-' || lower(regexp_replace('Belts','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222405'),
+     '22222222-2222-2222-2222-222222222405'),
+    ('22222222-2222-2222-2222-222222225520', 'Hats & Caps',
+     (SELECT c.slug || '-' || lower(regexp_replace('Hats & Caps','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222405'),
+     '22222222-2222-2222-2222-222222222405'),
+    ('22222222-2222-2222-2222-222222225521', 'Sunglasses',
+     (SELECT c.slug || '-' || lower(regexp_replace('Sunglasses','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222405'),
+     '22222222-2222-2222-2222-222222222405'),
+    ('22222222-2222-2222-2222-222222225522', 'Scarves',
+     (SELECT c.slug || '-' || lower(regexp_replace('Scarves','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '22222222-2222-2222-2222-222222222405'),
+     '22222222-2222-2222-2222-222222222405')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Home & Garden
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333336001', 'Furniture', '33333333-3333-3333-3333-333333333333'),
-    ('33333333-3333-3333-3333-333333336002', 'Kitchen & Dining', '33333333-3333-3333-3333-333333333333'),
-    ('33333333-3333-3333-3333-333333336003', 'Garden & Outdoor', '33333333-3333-3333-3333-333333333333'),
-    ('33333333-3333-3333-3333-333333336004', 'Home Decor', '33333333-3333-3333-3333-333333333333'),
-    ('33333333-3333-3333-3333-333333336005', 'Bedding & Bath', '33333333-3333-3333-3333-333333333333')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333336001', 'Furniture',
+     (SELECT c.slug || '-' || lower(regexp_replace('Furniture','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333333333'),
+     '33333333-3333-3333-3333-333333333333'),
+    ('33333333-3333-3333-3333-333333336002', 'Kitchen & Dining',
+     (SELECT c.slug || '-' || lower(regexp_replace('Kitchen & Dining','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333333333'),
+     '33333333-3333-3333-3333-333333333333'),
+    ('33333333-3333-3333-3333-333333336003', 'Garden & Outdoor',
+     (SELECT c.slug || '-' || lower(regexp_replace('Garden & Outdoor','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333333333'),
+     '33333333-3333-3333-3333-333333333333'),
+    ('33333333-3333-3333-3333-333333336004', 'Home Decor',
+     (SELECT c.slug || '-' || lower(regexp_replace('Home Decor','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333333333'),
+     '33333333-3333-3333-3333-333333333333'),
+    ('33333333-3333-3333-3333-333333336005', 'Bedding & Bath',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bedding & Bath','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333333333'),
+     '33333333-3333-3333-3333-333333333333')
 ON CONFLICT (id) DO NOTHING;
 
 -- Furniture
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333337001', 'Living Room', '33333333-3333-3333-3333-333333336001'),
-    ('33333333-3333-3333-3333-333333337002', 'Bedroom', '33333333-3333-3333-3333-333333336001'),
-    ('33333333-3333-3333-3333-333333337003', 'Office Furniture', '33333333-3333-3333-3333-333333336001')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333337001', 'Living Room',
+     (SELECT c.slug || '-' || lower(regexp_replace('Living Room','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336001'),
+     '33333333-3333-3333-3333-333333336001'),
+    ('33333333-3333-3333-3333-333333337002', 'Bedroom',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bedroom','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336001'),
+     '33333333-3333-3333-3333-333333336001'),
+    ('33333333-3333-3333-3333-333333337003', 'Office Furniture',
+     (SELECT c.slug || '-' || lower(regexp_replace('Office Furniture','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336001'),
+     '33333333-3333-3333-3333-333333336001')
 ON CONFLICT (id) DO NOTHING;
 
 -- Kitchen & Dining
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333337041', 'Cookware', '33333333-3333-3333-3333-333333336002'),
-    ('33333333-3333-3333-3333-333333337042', 'Tableware', '33333333-3333-3333-3333-333333336002'),
-    ('33333333-3333-3333-3333-333333337043', 'Small Appliances', '33333333-3333-3333-3333-333333336002')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333337041', 'Cookware',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cookware','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336002'),
+     '33333333-3333-3333-3333-333333336002'),
+    ('33333333-3333-3333-3333-333333337042', 'Tableware',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tableware','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336002'),
+     '33333333-3333-3333-3333-333333336002'),
+    ('33333333-3333-3333-3333-333333337043', 'Small Appliances',
+     (SELECT c.slug || '-' || lower(regexp_replace('Small Appliances','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336002'),
+     '33333333-3333-3333-3333-333333336002')
 ON CONFLICT (id) DO NOTHING;
 
 -- Garden & Outdoor
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333337071', 'Garden Tools', '33333333-3333-3333-3333-333333336003'),
-    ('33333333-3333-3333-3333-333333337072', 'Outdoor Furniture', '33333333-3333-3333-3333-333333336003'),
-    ('33333333-3333-3333-3333-333333337073', 'Grills & BBQ', '33333333-3333-3333-3333-333333336003')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333337071', 'Garden Tools',
+     (SELECT c.slug || '-' || lower(regexp_replace('Garden Tools','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336003'),
+     '33333333-3333-3333-3333-333333336003'),
+    ('33333333-3333-3333-3333-333333337072', 'Outdoor Furniture',
+     (SELECT c.slug || '-' || lower(regexp_replace('Outdoor Furniture','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336003'),
+     '33333333-3333-3333-3333-333333336003'),
+    ('33333333-3333-3333-3333-333333337073', 'Grills & BBQ',
+     (SELECT c.slug || '-' || lower(regexp_replace('Grills & BBQ','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336003'),
+     '33333333-3333-3333-3333-333333336003')
 ON CONFLICT (id) DO NOTHING;
 
 -- Home Decor
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333337101', 'Lighting', '33333333-3333-3333-3333-333333336004'),
-    ('33333333-3333-3333-3333-333333337102', 'Rugs & Carpets', '33333333-3333-3333-3333-333333336004'),
-    ('33333333-3333-3333-3333-333333337103', 'Wall Art & Decor', '33333333-3333-3333-3333-333333336004')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333337101', 'Lighting',
+     (SELECT c.slug || '-' || lower(regexp_replace('Lighting','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336004'),
+     '33333333-3333-3333-3333-333333336004'),
+    ('33333333-3333-3333-3333-333333337102', 'Rugs & Carpets',
+     (SELECT c.slug || '-' || lower(regexp_replace('Rugs & Carpets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336004'),
+     '33333333-3333-3333-3333-333333336004'),
+    ('33333333-3333-3333-3333-333333337103', 'Wall Art & Decor',
+     (SELECT c.slug || '-' || lower(regexp_replace('Wall Art & Decor','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336004'),
+     '33333333-3333-3333-3333-333333336004')
 ON CONFLICT (id) DO NOTHING;
 
 -- Bedding & Bath
-INSERT INTO category (id, name, parent_id) VALUES
-    ('33333333-3333-3333-3333-333333337131', 'Bedding', '33333333-3333-3333-3333-333333336005'),
-    ('33333333-3333-3333-3333-333333337132', 'Bath', '33333333-3333-3333-3333-333333336005')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('33333333-3333-3333-3333-333333337131', 'Bedding',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bedding','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336005'),
+     '33333333-3333-3333-3333-333333336005'),
+    ('33333333-3333-3333-3333-333333337132', 'Bath',
+     (SELECT c.slug || '-' || lower(regexp_replace('Bath','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '33333333-3333-3333-3333-333333336005'),
+     '33333333-3333-3333-3333-333333336005')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Sports & Outdoors
-INSERT INTO category (id, name, parent_id) VALUES
-    ('44444444-4444-4444-4444-444444448001', 'Fitness', '44444444-4444-4444-4444-444444444444'),
-    ('44444444-4444-4444-4444-444444448002', 'Outdoor Recreation', '44444444-4444-4444-4444-444444444444'),
-    ('44444444-4444-4444-4444-444444448003', 'Team Sports', '44444444-4444-4444-4444-444444444444'),
-    ('44444444-4444-4444-4444-444444448004', 'Cycling', '44444444-4444-4444-4444-444444444444')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('44444444-4444-4444-4444-444444448001', 'Fitness',
+     (SELECT c.slug || '-' || lower(regexp_replace('Fitness','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '44444444-4444-4444-4444-444444444444'),
+     '44444444-4444-4444-4444-444444444444'),
+    ('44444444-4444-4444-4444-444444448002', 'Outdoor Recreation',
+     (SELECT c.slug || '-' || lower(regexp_replace('Outdoor Recreation','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '44444444-4444-4444-4444-444444444444'),
+     '44444444-4444-4444-4444-444444444444'),
+    ('44444444-4444-4444-4444-444444448003', 'Team Sports',
+     (SELECT c.slug || '-' || lower(regexp_replace('Team Sports','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '44444444-4444-4444-4444-444444444444'),
+     '44444444-4444-4444-4444-444444444444'),
+    ('44444444-4444-4444-4444-444444448004', 'Cycling',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cycling','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '44444444-4444-4444-4444-444444444444'),
+     '44444444-4444-4444-4444-444444444444')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Automotive
-INSERT INTO category (id, name, parent_id) VALUES
-    ('66666666-6666-6666-6666-666666669001', 'Car Parts & Accessories', '66666666-6666-6666-6666-666666666666'),
-    ('66666666-6666-6666-6666-666666669002', 'Motorcycles & Scooters', '66666666-6666-6666-6666-666666666666'),
-    ('66666666-6666-6666-6666-666666669003', 'Tires & Wheels', '66666666-6666-6666-6666-666666666666'),
-    ('66666666-6666-6666-6666-666666669004', 'Car Electronics', '66666666-6666-6666-6666-666666666666'),
-    ('66666666-6666-6666-6666-666666669005', 'Tools & Garage', '66666666-6666-6666-6666-666666666666')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('66666666-6666-6666-6666-666666669001', 'Car Parts & Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Car Parts & Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '66666666-6666-6666-6666-666666666666'),
+     '66666666-6666-6666-6666-666666666666'),
+    ('66666666-6666-6666-6666-666666669002', 'Motorcycles & Scooters',
+     (SELECT c.slug || '-' || lower(regexp_replace('Motorcycles & Scooters','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '66666666-6666-6666-6666-666666666666'),
+     '66666666-6666-6666-6666-666666666666'),
+    ('66666666-6666-6666-6666-666666669003', 'Tires & Wheels',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tires & Wheels','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '66666666-6666-6666-6666-666666666666'),
+     '66666666-6666-6666-6666-666666666666'),
+    ('66666666-6666-6666-6666-666666669004', 'Car Electronics',
+     (SELECT c.slug || '-' || lower(regexp_replace('Car Electronics','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '66666666-6666-6666-6666-666666666666'),
+     '66666666-6666-6666-6666-666666666666'),
+    ('66666666-6666-6666-6666-666666669005', 'Tools & Garage',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tools & Garage','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '66666666-6666-6666-6666-666666666666'),
+     '66666666-6666-6666-6666-666666666666')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Toys & Games
-INSERT INTO category (id, name, parent_id) VALUES
-    ('77777777-7777-7777-7777-777777779001', 'Action Figures & Collectibles', '77777777-7777-7777-7777-777777777777'),
-    ('77777777-7777-7777-7777-777777779002', 'Board Games & Puzzles', '77777777-7777-7777-7777-777777777777'),
-    ('77777777-7777-7777-7777-777777779003', 'Dolls & Accessories', '77777777-7777-7777-7777-777777777777'),
-    ('77777777-7777-7777-7777-777777779004', 'Outdoor Play', '77777777-7777-7777-7777-777777777777'),
-    ('77777777-7777-7777-7777-777777779005', 'Educational Toys', '77777777-7777-7777-7777-777777777777')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('77777777-7777-7777-7777-777777779001', 'Action Figures & Collectibles',
+     (SELECT c.slug || '-' || lower(regexp_replace('Action Figures & Collectibles','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '77777777-7777-7777-7777-777777777777'),
+     '77777777-7777-7777-7777-777777777777'),
+    ('77777777-7777-7777-7777-777777779002', 'Board Games & Puzzles',
+     (SELECT c.slug || '-' || lower(regexp_replace('Board Games & Puzzles','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '77777777-7777-7777-7777-777777777777'),
+     '77777777-7777-7777-7777-777777777777'),
+    ('77777777-7777-7777-7777-777777779003', 'Dolls & Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Dolls & Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '77777777-7777-7777-7777-777777777777'),
+     '77777777-7777-7777-7777-777777777777'),
+    ('77777777-7777-7777-7777-777777779004', 'Outdoor Play',
+     (SELECT c.slug || '-' || lower(regexp_replace('Outdoor Play','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '77777777-7777-7777-7777-777777777777'),
+     '77777777-7777-7777-7777-777777777777'),
+    ('77777777-7777-7777-7777-777777779005', 'Educational Toys',
+     (SELECT c.slug || '-' || lower(regexp_replace('Educational Toys','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '77777777-7777-7777-7777-777777777777'),
+     '77777777-7777-7777-7777-777777777777')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Health & Beauty
-INSERT INTO category (id, name, parent_id) VALUES
-    ('88888888-8888-8888-8888-888888889001', 'Makeup', '88888888-8888-8888-8888-888888888888'),
-    ('88888888-8888-8888-8888-888888889002', 'Skincare', '88888888-8888-8888-8888-888888888888'),
-    ('88888888-8888-8888-8888-888888889003', 'Hair Care', '88888888-8888-8888-8888-888888888888'),
-    ('88888888-8888-8888-8888-888888889004', 'Personal Care', '88888888-8888-8888-8888-888888888888'),
-    ('88888888-8888-8888-8888-888888889005', 'Supplements', '88888888-8888-8888-8888-888888888888')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('88888888-8888-8888-8888-888888889001', 'Makeup',
+     (SELECT c.slug || '-' || lower(regexp_replace('Makeup','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '88888888-8888-8888-8888-888888888888'),
+     '88888888-8888-8888-8888-888888888888'),
+    ('88888888-8888-8888-8888-888888889002', 'Skincare',
+     (SELECT c.slug || '-' || lower(regexp_replace('Skincare','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '88888888-8888-8888-8888-888888888888'),
+     '88888888-8888-8888-8888-888888888888'),
+    ('88888888-8888-8888-8888-888888889003', 'Hair Care',
+     (SELECT c.slug || '-' || lower(regexp_replace('Hair Care','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '88888888-8888-8888-8888-888888888888'),
+     '88888888-8888-8888-8888-888888888888'),
+    ('88888888-8888-8888-8888-888888889004', 'Personal Care',
+     (SELECT c.slug || '-' || lower(regexp_replace('Personal Care','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '88888888-8888-8888-8888-888888888888'),
+     '88888888-8888-8888-8888-888888888888'),
+    ('88888888-8888-8888-8888-888888889005', 'Supplements',
+     (SELECT c.slug || '-' || lower(regexp_replace('Supplements','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '88888888-8888-8888-8888-888888888888'),
+     '88888888-8888-8888-8888-888888888888')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Art & Collectibles
-INSERT INTO category (id, name, parent_id) VALUES
-    ('99999999-9999-9999-9999-999999999201', 'Paintings', '99999999-9999-9999-9999-999999999999'),
-    ('99999999-9999-9999-9999-999999999202', 'Sculptures', '99999999-9999-9999-9999-999999999999'),
-    ('99999999-9999-9999-9999-999999999203', 'Collectibles', '99999999-9999-9999-9999-999999999999')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('99999999-9999-9999-9999-999999999201', 'Paintings',
+     (SELECT c.slug || '-' || lower(regexp_replace('Paintings','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '99999999-9999-9999-9999-999999999999'),
+     '99999999-9999-9999-9999-999999999999'),
+    ('99999999-9999-9999-9999-999999999202', 'Sculptures',
+     (SELECT c.slug || '-' || lower(regexp_replace('Sculptures','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '99999999-9999-9999-9999-999999999999'),
+     '99999999-9999-9999-9999-999999999999'),
+    ('99999999-9999-9999-9999-999999999203', 'Collectibles',
+     (SELECT c.slug || '-' || lower(regexp_replace('Collectibles','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = '99999999-9999-9999-9999-999999999999'),
+     '99999999-9999-9999-9999-999999999999')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Musical Instruments
-INSERT INTO category (id, name, parent_id) VALUES
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'Guitars', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'Keyboards & Pianos', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'Drums & Percussion', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
-    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4', 'Wind Instruments', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'Guitars',
+     (SELECT c.slug || '-' || lower(regexp_replace('Guitars','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'Keyboards & Pianos',
+     (SELECT c.slug || '-' || lower(regexp_replace('Keyboards & Pianos','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'Drums & Percussion',
+     (SELECT c.slug || '-' || lower(regexp_replace('Drums & Percussion','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+    ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4', 'Wind Instruments',
+     (SELECT c.slug || '-' || lower(regexp_replace('Wind Instruments','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'),
+     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Tools & Hardware
-INSERT INTO category (id, name, parent_id) VALUES
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1', 'Hand Tools', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2', 'Power Tools', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3', 'Tool Storage', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
-    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb4', 'Safety Equipment', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1', 'Hand Tools',
+     (SELECT c.slug || '-' || lower(regexp_replace('Hand Tools','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2', 'Power Tools',
+     (SELECT c.slug || '-' || lower(regexp_replace('Power Tools','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3', 'Tool Storage',
+     (SELECT c.slug || '-' || lower(regexp_replace('Tool Storage','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+    ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb4', 'Safety Equipment',
+     (SELECT c.slug || '-' || lower(regexp_replace('Safety Equipment','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'),
+     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Pet Supplies
-INSERT INTO category (id, name, parent_id) VALUES
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'Dog Supplies', 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc2', 'Cat Supplies', 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc3', 'Fish & Aquatic', 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc4', 'Small Pets', 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
-    ('cccccccc-cccc-cccc-cccc-ccccccccccc5', 'Birds', 'cccccccc-cccc-cccc-cccc-cccccccccccc')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc1', 'Dog Supplies',
+     (SELECT c.slug || '-' || lower(regexp_replace('Dog Supplies','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+     'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc2', 'Cat Supplies',
+     (SELECT c.slug || '-' || lower(regexp_replace('Cat Supplies','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+     'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc3', 'Fish & Aquatic',
+     (SELECT c.slug || '-' || lower(regexp_replace('Fish & Aquatic','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+     'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc4', 'Small Pets',
+     (SELECT c.slug || '-' || lower(regexp_replace('Small Pets','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+     'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+    ('cccccccc-cccc-cccc-cccc-ccccccccccc5', 'Birds',
+     (SELECT c.slug || '-' || lower(regexp_replace('Birds','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'cccccccc-cccc-cccc-cccc-cccccccccccc'),
+     'cccccccc-cccc-cccc-cccc-cccccccccccc')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Baby & Kids
-INSERT INTO category (id, name, parent_id) VALUES
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd1', 'Clothing', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd2', 'Toys', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd3', 'Gear & Accessories', 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
-    ('dddddddd-dddd-dddd-dddd-ddddddddddd4', 'Feeding & Nursing', 'dddddddd-dddd-dddd-dddd-dddddddddddd')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd1', 'Clothing',
+     (SELECT c.slug || '-' || lower(regexp_replace('Clothing','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+     'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd2', 'Toys',
+     (SELECT c.slug || '-' || lower(regexp_replace('Toys','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+     'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd3', 'Gear & Accessories',
+     (SELECT c.slug || '-' || lower(regexp_replace('Gear & Accessories','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+     'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+    ('dddddddd-dddd-dddd-dddd-ddddddddddd4', 'Feeding & Nursing',
+     (SELECT c.slug || '-' || lower(regexp_replace('Feeding & Nursing','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+     'dddddddd-dddd-dddd-dddd-dddddddddddd')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Office & Business
-INSERT INTO category (id, name, parent_id) VALUES
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 'Office Supplies', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2', 'Stationery', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3', 'Furniture', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
-    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee4', 'Technology', 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee1', 'Office Supplies',
+     (SELECT c.slug || '-' || lower(regexp_replace('Office Supplies','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee2', 'Stationery',
+     (SELECT c.slug || '-' || lower(regexp_replace('Stationery','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee3', 'Furniture',
+     (SELECT c.slug || '-' || lower(regexp_replace('Furniture','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+    ('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeee4', 'Technology',
+     (SELECT c.slug || '-' || lower(regexp_replace('Technology','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+     'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee')
 ON CONFLICT (id) DO NOTHING;
 
 -- =========================
 -- Food & Beverages
-INSERT INTO category (id, name, parent_id) VALUES
-    ('ffffffff-ffff-ffff-ffff-fffffffffff1', 'Beverages', 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
-    ('ffffffff-ffff-ffff-ffff-fffffffffff2', 'Snacks', 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
-    ('ffffffff-ffff-ffff-ffff-fffffffffff3', 'Groceries', 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
-    ('ffffffff-ffff-ffff-ffff-fffffffffff4', 'Specialty Foods', 'ffffffff-ffff-ffff-ffff-ffffffffffff')
+INSERT INTO category (id, name, slug, parent_id) VALUES
+    ('ffffffff-ffff-ffff-ffff-fffffffffff1', 'Beverages',
+     (SELECT c.slug || '-' || lower(regexp_replace('Beverages','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+     'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+    ('ffffffff-ffff-ffff-ffff-fffffffffff2', 'Snacks',
+     (SELECT c.slug || '-' || lower(regexp_replace('Snacks','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+     'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+    ('ffffffff-ffff-ffff-ffff-fffffffffff3', 'Groceries',
+     (SELECT c.slug || '-' || lower(regexp_replace('Groceries','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+     'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+    ('ffffffff-ffff-ffff-ffff-fffffffffff4', 'Specialty Foods',
+     (SELECT c.slug || '-' || lower(regexp_replace('Specialty Foods','[^a-zA-Z0-9]+','-','g')) FROM category c WHERE c.id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
+     'ffffffff-ffff-ffff-ffff-ffffffffffff')
 ON CONFLICT (id) DO NOTHING;
 
 -- Listing Table
@@ -618,19 +884,6 @@ CREATE TABLE IF NOT EXISTS notification (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Invitation Table
-CREATE TABLE IF NOT EXISTS invitation (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    recipient_email VARCHAR(255),
-    business_id UUID NOT NULL REFERENCES business(id) ON DELETE CASCADE,
-    role VARCHAR(20),
-    status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Indexes for performance
 CREATE INDEX idx_trust_rating_user_id ON trust_rating(user_id);
 CREATE INDEX idx_verification_document_user_id ON verification_document(user_id);
@@ -660,7 +913,7 @@ VALUES
     ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT',
      'Joe','Reseller','We sell the best gadgets and accessories!', (SELECT id FROM city WHERE name = 'Cape Town'),'+27111222333',NOW(), 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
     ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED',
-     'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE name = 'Cape Town'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
+     'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE name = 'Johannesburg'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ON CONFLICT (email) DO NOTHING;
 
 -- RESELLER JOE

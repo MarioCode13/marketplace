@@ -21,6 +21,11 @@ public class CityService {
                 .orElseThrow(() -> new IllegalArgumentException("City not found with id: " + id));
     }
 
+    public City getCityBySlug(String slug) {
+        return cityRepository.findBySlugIgnoreCase(slug)
+                .orElseThrow(() -> new IllegalArgumentException("City not found with slug: " + slug));
+    }
+
     public List<City> getCitiesByRegion(UUID regionId) {
         return cityRepository.findByRegionId(regionId);
     }

@@ -18,8 +18,10 @@ public interface BusinessUserRepository extends JpaRepository<BusinessUser, UUID
 
     Optional<BusinessUser> findByBusinessAndUser(Business business, User user);
     
-    List<BusinessUser> findByBusiness(Business business);
-    
+    // Eagerly fetch the associated User to avoid LazyInitialization issues when GraphQL resolves nested fields
+    @Query("SELECT bu FROM BusinessUser bu JOIN FETCH bu.user WHERE bu.business = :business")
+    List<BusinessUser> findByBusiness(@Param("business") Business business);
+
     List<BusinessUser> findByUser(User user);
     
     @Query("SELECT bu FROM BusinessUser bu WHERE bu.business = :business AND bu.role = :role")

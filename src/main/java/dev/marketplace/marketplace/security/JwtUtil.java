@@ -73,8 +73,31 @@ public class JwtUtil {
         return extractClaim(token, claims -> claims.get("role", String.class));
     }
 
+    // Robustly extract userId: handle String or UUID claim values and return UUID
     public UUID extractUserId(String token) {
-        return extractClaim(token, claims -> claims.get("userId", UUID.class));
+        return extractClaim(token, claims -> {
+            Object val = claims.get("userId");
+            if (val == null) return null;
+            if (val instanceof UUID) {
+                return (UUID) val;
+            }
+            // Most tokens store userId as String
+            if (val instanceof String) {
+                try {
+                    return UUID.fromString((String) val);
+                } catch (IllegalArgumentException e) {
+                    logger.warn("userId claim is a string but not a UUID: {}", val);
+                    return null;
+                }
+            }
+            // Fallback: use toString
+            try {
+                return UUID.fromString(val.toString());
+            } catch (Exception e) {
+                logger.warn("Unable to convert userId claim to UUID (value={}): {}", val, e.getMessage());
+                return null;
+            }
+        });
     }
 
     private SecretKey getSigningKey() {

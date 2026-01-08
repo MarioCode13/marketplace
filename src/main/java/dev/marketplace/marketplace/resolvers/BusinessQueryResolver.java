@@ -82,7 +82,9 @@ public class BusinessQueryResolver {
 
     @SchemaMapping
     public UserDTO user(BusinessUser businessUser) {
-        return UserMapper.toDto(businessUser.getUser());
+        User u = businessUser.getUser();
+        log.debug("Mapping BusinessUser id={} to UserDTO. user object={}; user.email={}", businessUser.getId(), u, u != null ? u.getEmail() : null);
+        return UserMapper.toDto(u);
     }
 
     @SchemaMapping(typeName = "Business", field = "owner")

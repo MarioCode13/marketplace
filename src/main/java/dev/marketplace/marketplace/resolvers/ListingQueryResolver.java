@@ -31,10 +31,12 @@ public class ListingQueryResolver {
             @Argument Integer limit,
             @Argument Integer offset,
             @Argument UUID categoryId,
+            @Argument String categorySlug,
             @Argument Double minPrice,
             @Argument Double maxPrice,
             @Argument String condition,
             @Argument UUID cityId,
+            @Argument String citySlug,
             @Argument String searchTerm,
             @Argument String minDate,
             @Argument String maxDate,
@@ -43,6 +45,25 @@ public class ListingQueryResolver {
             @Argument UUID userId,
             @Argument UUID businessId // Added businessId argument
     ) {
+        // Resolve slug inputs to IDs if provided
+        // Only resolve slug if categoryId is not already provided (to avoid conflicts)
+        if (categoryId == null && categorySlug != null && !categorySlug.isBlank()) {
+            try {
+                categoryId = listingService.getCategoryService().findBySlug(categorySlug).getId();
+            } catch (Exception e) {
+                // If slug lookup fails, categoryId remains null and query will return all categories
+                throw new RuntimeException("Category not found with slug: " + categorySlug, e);
+            }
+        }
+        // Only resolve city slug if cityId is not already provided
+        if (cityId == null && citySlug != null && !citySlug.isBlank()) {
+            try {
+                cityId = listingService.getCityService().getCityBySlug(citySlug).getId();
+            } catch (Exception e) {
+                // If slug lookup fails, cityId remains null
+                throw new RuntimeException("City not found with slug: " + citySlug, e);
+            }
+        }
         // Convert condition string to enum if provided
         dev.marketplace.marketplace.enums.Condition conditionEnum = null;
         if (condition != null && !condition.isEmpty()) {

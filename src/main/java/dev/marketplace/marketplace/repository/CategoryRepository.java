@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, java.util.UUID> {
+    java.util.Optional<Category> findBySlugIgnoreCase(String slug);
 }

@@ -43,6 +43,14 @@ public class ListingService {
         this.businessRepository = businessRepository;
     }
 
+    public CategoryService getCategoryService() {
+        return categoryService;
+    }
+
+    public CityService getCityService() {
+        return cityService;
+    }
+
     public ListingPageResponse getListings(Integer limit, Integer offset, UUID categoryId, Double minPrice, Double maxPrice) {
         Pageable pageable = PageRequest.of(offset / limit, limit);
         List<Listing> listings;

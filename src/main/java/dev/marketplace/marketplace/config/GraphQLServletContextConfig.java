@@ -27,3 +27,5 @@ public class GraphQLServletContextConfig implements WebGraphQlInterceptor {
         return chain.next(request);
     }
 }
+
+

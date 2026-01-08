@@ -249,7 +249,13 @@ public class BusinessService {
     public List<BusinessUser> getBusinessUsers(UUID businessId) {
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found: " + businessId));
-        return businessUserRepository.findByBusiness(business);
+        List<BusinessUser> users = businessUserRepository.findByBusiness(business);
+        // Log details to help debug null email issue during GraphQL resolution
+        for (BusinessUser bu : users) {
+            User u = bu.getUser();
+            log.debug("Fetched BusinessUser id={} user.id={} user.email={}", bu.getId(), u != null ? u.getId() : null, u != null ? u.getEmail() : null);
+        }
+        return users;
     }
     
     public boolean canUserCreateListingsForBusiness(User user, UUID businessId) {

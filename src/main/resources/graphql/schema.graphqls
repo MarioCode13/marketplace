@@ -8,7 +8,7 @@ type AuthResponse {
 type User {
     id: ID!
     username: String!
-    email: String!
+    email: String
     role: String!
     profileImageUrl: String
     createdAt: String!
@@ -87,7 +87,33 @@ type ListingPageResponse {
 type Category {
     id: ID!
     name: String!
+    slug: String!
     parentId: String
+}
+
+# Canonical GraphQL definitions for location types.
+# If any other .graphqls files define Country, Region or City, convert them to "extend type"
+# or remove the duplicate definitions to avoid "tried to redefine existing" errors.
+
+type Country {
+  id: ID!
+  name: String!
+  code: String!
+  regions: [Region!]!
+}
+
+type Region {
+  id: ID!
+  name: String!
+  country: Country!
+  cities: [City!]!
+}
+
+type City {
+  id: ID!
+  name: String!
+  slug: String!
+  region: Region
 }
 
 enum TransactionStatus {
@@ -256,24 +282,6 @@ type Notification {
     actionRequired: Boolean!
 }
 
-type Country {
-    id: ID!
-    name: String!
-    code: String!
-}
-
-type Region {
-    id: ID!
-    name: String!
-    country: Country!
-}
-
-type City {
-    id: ID!
-    name: String!
-    region: Region!
-}
-
 type Business {
     id: ID!
     name: String!
@@ -396,10 +404,12 @@ type Query {
         limit: Int!
         offset: Int!
         categoryId: ID
+        categorySlug: String
         minPrice: Float
         maxPrice: Float
         condition: Condition
         cityId: ID
+        citySlug: String
         searchTerm: String
         minDate: String
         maxDate: String
