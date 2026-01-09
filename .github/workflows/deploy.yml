@@ -3,29 +3,25 @@ name: Deploy Dealio
 on:
   push:
     branches:
-      - main  # deploy only on main
+      - main  # deploy only on main branch
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      # 2️⃣ Set up JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: 21
 
-      # 3️⃣ Build JAR
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
-      # 4️⃣ Copy JAR to droplet
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -36,10 +32,7 @@ jobs:
           source: target/marketplace-0.0.1-SNAPSHOT.jar
           target: /home/deploy/apps/dealio/
 
-
-      # 5️⃣ SSH to rename JAR and restart service
-      # 5️⃣ SSH to rename JAR, set env, restart, and verify
-      - name: Rename JAR, restart service, verify build
+      - name: Deploy JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -47,12 +40,17 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Move the JAR to the expected filename
+            # Remove old JAR if it exists
+            if [ -f /home/deploy/apps/dealio/DealioApp.jar ]; then
+              rm /home/deploy/apps/dealio/DealioApp.jar
+            fi
+
+            # Move new JAR into place
             mv /home/deploy/apps/dealio/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
 
-            # Verify timestamp of deployed JAR
+            # Show new JAR info
             echo "Deployed JAR info:"
-            ls -l /home/deploy/apps/dealio/DealioApp.jar
+            ls -lh /home/deploy/apps/dealio/DealioApp.jar
 
             # Set environment variables for systemd
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
