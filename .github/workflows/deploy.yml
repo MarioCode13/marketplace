@@ -44,7 +44,7 @@ jobs:
           target: /home/deploy/apps/dealio/
 
       # Rename JAR and restart service
-      - name: Deploy JAR and restart service
+      - name: Deploy new JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -52,7 +52,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Set environment variables for systemd
+            # Set environment variables for systemd (passwordless now)
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
             sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -65,9 +65,9 @@ jobs:
             sudo systemctl set-environment PORT=8080
             sudo systemctl set-environment SPRING_PROFILES_ACTIVE=prod
 
-            # Move JAR to final filename
+            # Move the JAR into place
             mv /home/deploy/apps/dealio/*.jar /home/deploy/apps/dealio/DealioApp.jar
 
-            # Restart systemd service
+            # Restart the service
             sudo systemctl restart dealio
             sudo systemctl status dealio --no-pager
