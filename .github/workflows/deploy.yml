@@ -3,7 +3,7 @@ name: Deploy Dealio
 on:
   push:
     branches:
-      - main  # run deploy only on main branch
+      - main  # deploy only on main branch
 
 jobs:
   build-and-deploy:
@@ -22,6 +22,17 @@ jobs:
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
+      # Ensure remote folder exists
+      - name: Ensure remote folder exists
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          script: mkdir -p /home/deploy/apps/dealio
+
+      # Copy JAR to remote folder
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -29,11 +40,11 @@ jobs:
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
-          # copy directly to the deployed JAR path
           source: target/*.jar
-          target: /home/deploy/apps/dealio/DealioApp.jar
+          target: /home/deploy/apps/dealio/
 
-      - name: Restart service with environment
+      # Rename JAR and restart service
+      - name: Deploy JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -41,7 +52,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Export environment variables for systemd
+            # Set environment variables for systemd
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
             sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -54,10 +65,9 @@ jobs:
             sudo systemctl set-environment PORT=8080
             sudo systemctl set-environment SPRING_PROFILES_ACTIVE=prod
 
-            # Ensure correct JAR permissions
-            sudo chown deploy:deploy /home/deploy/apps/dealio/DealioApp.jar
-            sudo chmod 755 /home/deploy/apps/dealio/DealioApp.jar
+            # Move JAR to final filename
+            mv /home/deploy/apps/dealio/*.jar /home/deploy/apps/dealio/DealioApp.jar
 
-            # Restart the service
+            # Restart systemd service
             sudo systemctl restart dealio
             sudo systemctl status dealio --no-pager
