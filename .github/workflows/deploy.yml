@@ -29,8 +29,9 @@ jobs:
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
+          # copy directly to the deployed JAR path
           source: target/*.jar
-          target: /home/deploy/apps/dealio/
+          target: /home/deploy/apps/dealio/DealioApp.jar
 
       - name: Restart service with environment
         uses: appleboy/ssh-action@v0.1.6
@@ -40,7 +41,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Set environment for systemd
+            # Export environment variables for systemd
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
             sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -53,8 +54,10 @@ jobs:
             sudo systemctl set-environment PORT=8080
             sudo systemctl set-environment SPRING_PROFILES_ACTIVE=prod
 
-            # Move the JAR into place
-            mv /home/deploy/apps/dealio/*.jar /home/deploy/apps/dealio/DealioApp.jar
+            # Ensure correct JAR permissions
+            sudo chown deploy:deploy /home/deploy/apps/dealio/DealioApp.jar
+            sudo chmod 755 /home/deploy/apps/dealio/DealioApp.jar
 
-            # Restart systemd service
+            # Restart the service
             sudo systemctl restart dealio
+            sudo systemctl status dealio --no-pager
