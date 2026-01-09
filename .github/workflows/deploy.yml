@@ -3,25 +3,29 @@ name: Deploy Dealio
 on:
   push:
     branches:
-      - main  # only deploy on main
+      - main  # deploy only on main
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      # 2️⃣ Set up JDK 21
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
           distribution: temurin
           java-version: 21
 
+      # 3️⃣ Build JAR
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
 
+      # 4️⃣ Copy JAR to droplet
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -30,9 +34,10 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           source: target/marketplace-0.0.1-SNAPSHOT.jar
-          target: /home/deploy/apps/dealio/
+          target: /home/deploy/apps/dealio/  # directory, not filename
 
-      - name: Restart service on droplet
+      # 5️⃣ SSH to rename JAR and restart service
+      - name: Rename JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -40,7 +45,10 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Optional: Set environment variables for systemd (passwordless sudo required)
+            # Move the JAR to the expected filename
+            mv /home/deploy/apps/dealio/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
+
+            # Set environment variables for systemd (NOPASSWD assumed)
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
             sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -54,7 +62,5 @@ jobs:
             sudo systemctl set-environment SPRING_PROFILES_ACTIVE=prod
 
             # Restart the service
-            mv /home/deploy/apps/dealio/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
             sudo systemctl restart dealio
             sudo systemctl status dealio --no-pager
-
