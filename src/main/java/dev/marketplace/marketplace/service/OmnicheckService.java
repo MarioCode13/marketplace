@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 public class OmnicheckService {
-    @Value("${OMNICHECK_API_KEY}")
+    @Value("${omnicheck.apiKey:}")
     private String apiKey;
 
     // Allow these to be replaced in tests in future (keeps current behaviour by default)

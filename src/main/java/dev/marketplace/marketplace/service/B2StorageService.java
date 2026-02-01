@@ -7,13 +7,11 @@ import com.backblaze.b2.client.contentSources.B2ContentSource;
 import com.backblaze.b2.client.contentSources.B2ContentTypes;
 import com.backblaze.b2.client.exceptions.B2Exception;
 import com.backblaze.b2.client.structures.*;
-import org.springframework.beans.factory.annotation.Value;
+import dev.marketplace.marketplace.config.B2Properties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.time.Duration;
 import java.util.UUID;
 
 @Service
@@ -23,20 +21,16 @@ public class B2StorageService {
     private final String bucketId;
     private final String bucketName;
 
-    public B2StorageService(@Value("${b2.application.key.id}") String applicationKeyId, 
-                           @Value("${b2.application.key.key}") String applicationKey,
-                           @Value("${b2.bucket.id}") String bucketId, 
-                           @Value("${b2.bucket.name}") String bucketName) {
-        this.bucketId = bucketId;
-        this.bucketName = bucketName;
+    public B2StorageService(B2Properties props) {
+        this.bucketId = props.getBucket().getId();
+        this.bucketName = props.getBucket().getName();
 
         this.client = B2StorageClientFactory.createDefaultFactory()
-                .create(applicationKeyId, applicationKey, "marketplace-app");
+                .create(props.getApplication().getKey().getId(),
+                        props.getApplication().getKey().getKey(),
+                        "marketplace-app");
     }
 
-    /**
-     * Sanitizes the filename to ensure it is safe for B2 and URLs.
-     */
     private String sanitizeFilename(String originalName) {
         if (originalName == null || originalName.isBlank()) {
             return "file";
@@ -47,7 +41,6 @@ public class B2StorageService {
                 .replaceAll("[^a-zA-Z0-9._-]", "");
     }
 
-//    To be deprecated shortly
     public String uploadImage(String fileName, byte[] imageData) throws B2Exception {
         String safeFileName = sanitizeFilename(fileName);
 
@@ -73,17 +66,15 @@ public class B2StorageService {
 
         return "https://f003.backblazeb2.com/file/" + bucketName + "/" + fileName + "?Authorization=" + auth.getAuthorizationToken();
     }
-    
+
     public void deleteImage(String fileName) throws B2Exception {
         B2DeleteFileVersionRequest request = B2DeleteFileVersionRequest
-                .builder(fileName, null) // We'll need the fileId for deletion, but fileName should work for most cases
+                .builder(fileName, null)
                 .build();
-        
+
         try {
             client.deleteFileVersion(request);
         } catch (B2Exception e) {
-            // Log the error but don't throw it to avoid breaking the application
-            // if the file doesn't exist or can't be deleted
             System.err.println("Failed to delete file from B2: " + fileName + ", error: " + e.getMessage());
         }
     }
@@ -91,8 +82,6 @@ public class B2StorageService {
     public String uploadPublicImage(String folder, MultipartFile file) throws B2Exception, IOException {
         String safeFileName = sanitizeFilename(file.getOriginalFilename());
         String filePath = folder + "/" + UUID.randomUUID() + "_" + safeFileName;
-        return uploadImage(filePath, file.getBytes()); // returns permanent path
+        return uploadImage(filePath, file.getBytes());
     }
-
-
 }
