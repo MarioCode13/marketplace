@@ -31,7 +31,7 @@ public class CsrfSameSiteCookieFilter implements Filter {
             String envProfile = System.getenv("SPRING_PROFILES_ACTIVE");
             String sysProfile = System.getProperty("spring.profiles.active");
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            URL devProps = cl.getResource("application-dev.properties");
+            URL devProps = cl.getResource("asdfgh.properties");
             URL devYaml = cl.getResource("application-dev.yml");
 
             // Check filesystem locations (project root and src/main/resources)
@@ -39,7 +39,7 @@ public class CsrfSameSiteCookieFilter implements Filter {
             File resourcesYaml = new File("src/main/resources/application-dev.yml");
 
             log.info("Config diagnostic (startup): SPRING_PROFILES_ACTIVE(env)='{}', spring.profiles.active(sys)='{}'", envProfile, sysProfile);
-            log.info("Config diagnostic (startup): application-dev.properties on classpath: {}", devProps != null ? devProps.toString() : "NOT FOUND");
+            log.info("Config diagnostic (startup): asdfgh.properties on classpath: {}", devProps != null ? devProps.toString() : "NOT FOUND");
             log.info("Config diagnostic (startup): application-dev.yml on classpath: {}", devYaml != null ? devYaml.toString() : "NOT FOUND");
             log.info("Config diagnostic (startup): application-dev.yml on filesystem (project root): {}", fsRootYaml.exists() ? fsRootYaml.getAbsolutePath() : "NOT FOUND");
             log.info("Config diagnostic (startup): application-dev.yml on filesystem (src/main/resources): {}", resourcesYaml.exists() ? resourcesYaml.getAbsolutePath() : "NOT FOUND");
@@ -61,12 +61,12 @@ public class CsrfSameSiteCookieFilter implements Filter {
                         String envProfile = System.getenv("SPRING_PROFILES_ACTIVE");
                         String sysProfile = System.getProperty("spring.profiles.active");
                         ClassLoader cl = Thread.currentThread().getContextClassLoader();
-                        URL devProps = cl.getResource("application-dev.properties");
+                        URL devProps = cl.getResource("asdfgh.properties");
                         URL devYaml = cl.getResource("application-dev.yml");
                         File fsRootYaml = new File("./application-dev.yml");
                         File resourcesYaml = new File("src/main/resources/application-dev.yml");
                         log.info("Config diagnostic: SPRING_PROFILES_ACTIVE(env)='{}', spring.profiles.active(sys)='{}'", envProfile, sysProfile);
-                        log.info("Config diagnostic: application-dev.properties on classpath: {}", devProps != null ? devProps.toString() : "NOT FOUND");
+                        log.info("Config diagnostic: asdfgh.properties on classpath: {}", devProps != null ? devProps.toString() : "NOT FOUND");
                         log.info("Config diagnostic: application-dev.yml on classpath: {}", devYaml != null ? devYaml.toString() : "NOT FOUND");
                         log.info("Config diagnostic: application-dev.yml on filesystem (project root): {}", fsRootYaml.exists() ? fsRootYaml.getAbsolutePath() : "NOT FOUND");
                         log.info("Config diagnostic: application-dev.yml on filesystem (src/main/resources): {}", resourcesYaml.exists() ? resourcesYaml.getAbsolutePath() : "NOT FOUND");

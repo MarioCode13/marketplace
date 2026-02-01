@@ -22,9 +22,10 @@ public class OmnicheckService {
     private String apiKey;
 
     // Allow these to be replaced in tests in future (keeps current behaviour by default)
-    private final RestTemplate restTemplate = new RestTemplate();
+    private RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private static final String BASE_URL = "https://www.omnicheck.co.za/webservice";
+    @Value("${OMNICHECK_BASE_URL:https://www.omnicheck.co.za/webservice}")
+    private String baseUrl;
 
     // --- Testing / billing helpers ---
     // If true, network calls will be skipped and a successful dummy response returned.
@@ -120,7 +121,7 @@ public class OmnicheckService {
             return new VerificationResult(true, "DRY_RUN", fake);
         }
 
-        String url = BASE_URL + "/said_verification";
+        String url = baseUrl + "/said_verification";
 
         HttpHeaders headers = createHeaders();
         
@@ -173,7 +174,7 @@ public class OmnicheckService {
             return new CipcMatchResult(true, "DRY_RUN_ENQUIRY", "DRY_RUN_RESULT", "DRY_RUN", fake);
         }
 
-        String url = BASE_URL + "/cipc_company_match";
+        String url = baseUrl + "/cipc_company_match";
 
         HttpHeaders headers = createHeaders();
         
@@ -229,7 +230,7 @@ public class OmnicheckService {
             return new VerificationResult(true, "DRY_RUN", fake);
         }
 
-        String url = BASE_URL + "/cipc_company_search";
+        String url = baseUrl + "/cipc_company_search";
 
         HttpHeaders headers = createHeaders();
         

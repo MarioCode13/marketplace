@@ -81,10 +81,8 @@ public class SecurityConfig {
                             "/api/payments/payfast/itn"
                     ).permitAll();
                     auth.requestMatchers("/graphql/**").permitAll();
-                    // Allow REST auth endpoints in non-prod to simplify dev/test runs
-                    if (!isProd) {
-                        auth.requestMatchers("/api/auth/**").permitAll();
-                    }
+                    // Allow REST auth endpoints (login/register) so clients can authenticate
+                    auth.requestMatchers("/api/auth/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

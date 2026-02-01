@@ -24,7 +24,7 @@ public class B2StorageService {
     private final String bucketName;
 
     public B2StorageService(@Value("${b2.application.key.id}") String applicationKeyId, 
-                           @Value("${b2.application.key}") String applicationKey, 
+                           @Value("${b2.application.key.key}") String applicationKey,
                            @Value("${b2.bucket.id}") String bucketId, 
                            @Value("${b2.bucket.name}") String bucketName) {
         this.bucketId = bucketId;

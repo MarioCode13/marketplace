@@ -1,3 +1,0 @@
-{
-  "query": "mutation { register(username: \"testuser2\", email: \"test2@example.com\", password: \"123\") { token email role userId } }"
-} 

@@ -3,7 +3,7 @@ name: Deploy Dealio
 on:
   push:
     branches:
-      - main  # deploy only on main branch
+      - main  # only deploy from main branch
 
 jobs:
   build-and-deploy:
@@ -30,9 +30,9 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           source: target/marketplace-0.0.1-SNAPSHOT.jar
-          target: /home/deploy/apps/dealio/
+          target: /home/deploy/apps/dealio/target/
 
-      - name: Deploy JAR and restart service
+      - name: Move JAR, set env, restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
@@ -40,19 +40,14 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           script: |
-            # Remove old JAR if it exists
-            if [ -f /home/deploy/apps/dealio/DealioApp.jar ]; then
-              rm /home/deploy/apps/dealio/DealioApp.jar
-            fi
+            # Move the new JAR to the expected filename
+            mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
 
-            # Move new JAR into place
-            mv /home/deploy/apps/dealio/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
-
-            # Show new JAR info
+            # Verify
             echo "Deployed JAR info:"
             ls -lh /home/deploy/apps/dealio/DealioApp.jar
 
-            # Set environment variables for systemd
+            # Set environment variables for systemd (passwordless sudo)
             sudo systemctl set-environment DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             sudo systemctl set-environment DB_URL=${{ secrets.DB_URL }}
             sudo systemctl set-environment DB_USERNAME=${{ secrets.DB_USERNAME }}
