@@ -1,3 +1,9 @@
+# Deploy Dealio backend to Digital Ocean droplet.
+# Repo layout: repo root contains marketplace/ (this app) and optionally marketplace-fe/.
+# Droplet: dealio.service must load env from EnvironmentFile=/etc/default/marketplace
+# (this workflow writes that file from GitHub secrets).
+# Required secrets: DROPLET_HOST, DEPLOY_KEY, APP_BASE_URL, DB_*, JWT_SECRET, OMNICHECK_*,
+# PAYFAST_*, B2_*, MAIL_*, ALLOWED_ORIGINS. Optional: MAIL_SMTP_* (defaults used if unset).
 name: Deploy Dealio
 
 on:
@@ -20,26 +26,23 @@ jobs:
           java-version: 21
 
       - name: Build JAR
+        working-directory: marketplace
         run: ./mvnw clean package -DskipTests
 
       - name: Create env file
         run: |
           set -euo pipefail
-          # Helper to escape single quotes safely for single-quoted shell literals
+          # Escape single quotes for use inside single-quoted values in .env
           esc() { printf "%s" "$1" | sed "s/'/'\\''/g"; }
 
-          # Assign secrets to shell variables
+          # Assign from GitHub secrets (values are masked in logs)
           APP_BASE_URL='${{ secrets.APP_BASE_URL }}'
-
           DB_URL='${{ secrets.DB_URL }}'
           DB_USERNAME='${{ secrets.DB_USERNAME }}'
           DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
-
           JWT_SECRET='${{ secrets.JWT_SECRET }}'
-
           OMNICHECK_API_KEY='${{ secrets.OMNICHECK_API_KEY }}'
           OMNICHECK_BASE_URL='${{ secrets.OMNICHECK_BASE_URL }}'
-
           PAYFAST_ENABLED='${{ secrets.PAYFAST_ENABLED }}'
           PAYFAST_MERCHANT_ID='${{ secrets.PAYFAST_MERCHANT_ID }}'
           PAYFAST_MERCHANT_KEY='${{ secrets.PAYFAST_MERCHANT_KEY }}'
@@ -48,59 +51,55 @@ jobs:
           PAYFAST_RETURN_URL='${{ secrets.PAYFAST_RETURN_URL }}'
           PAYFAST_CANCEL_URL='${{ secrets.PAYFAST_CANCEL_URL }}'
           PAYFAST_NOTIFY_URL='${{ secrets.PAYFAST_NOTIFY_URL }}'
-
           B2_APPLICATION_KEY_ID='${{ secrets.B2_APPLICATION_KEY_ID }}'
           B2_APPLICATION_KEY_NAME='${{ secrets.B2_APPLICATION_KEY_NAME }}'
           B2_APPLICATION_KEY='${{ secrets.B2_APPLICATION_KEY }}'
           B2_BUCKET_ID='${{ secrets.B2_BUCKET_ID }}'
           B2_BUCKET_NAME='${{ secrets.B2_BUCKET_NAME }}'
-
           MAIL_HOST='${{ secrets.MAIL_HOST }}'
           MAIL_PORT='${{ secrets.MAIL_PORT }}'
           MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}'
           MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}'
-
+          MAIL_SMTP_AUTH='${{ secrets.MAIL_SMTP_AUTH || 'true' }}'
+          MAIL_SMTP_STARTTLS_ENABLE='${{ secrets.MAIL_SMTP_STARTTLS_ENABLE || 'true' }}'
+          MAIL_SMTP_SSL_TRUST='${{ secrets.MAIL_SMTP_SSL_TRUST || 'smtp.hmailplus.com' }}'
           ALLOWED_ORIGINS='${{ secrets.ALLOWED_ORIGINS }}'
 
-          # Write file with safely quoted values
-          cat > deploy.env <<EOF
-# App & profiles
-EOF
-          printf "PORT='%s'\n" "$(esc 8080)" >> deploy.env
-          printf "SPRING_PROFILES_ACTIVE='%s'\n" "$(esc prod)" >> deploy.env
-          printf "APP_BASE_URL='%s'\n\n" "$(esc \"$APP_BASE_URL\")" >> deploy.env
-
-          printf "DB_URL='%s'\n" "$(esc \"$DB_URL\")" >> deploy.env
-          printf "DB_USERNAME='%s'\n" "$(esc \"$DB_USERNAME\")" >> deploy.env
-          printf "DB_PASSWORD='%s'\n\n" "$(esc \"$DB_PASSWORD\")" >> deploy.env
-
-          printf "JWT_SECRET='%s'\n\n" "$(esc \"$JWT_SECRET\")" >> deploy.env
-
-          printf "OMNICHECK_API_KEY='%s'\n" "$(esc \"$OMNICHECK_API_KEY\")" >> deploy.env
-          printf "OMNICHECK_BASE_URL='%s'\n" "$(esc \"$OMNICHECK_BASE_URL\")" >> deploy.env
-          printf "OMNICHECK_DRY_RUN='false'\n\n" >> deploy.env
-
-          printf "PAYFAST_ENABLED='%s'\n" "$(esc \"$PAYFAST_ENABLED\")" >> deploy.env
-          printf "PAYFAST_MERCHANT_ID='%s'\n" "$(esc \"$PAYFAST_MERCHANT_ID\")" >> deploy.env
-          printf "PAYFAST_MERCHANT_KEY='%s'\n" "$(esc \"$PAYFAST_MERCHANT_KEY\")" >> deploy.env
-          printf "PAYFAST_PASSPHRASE='%s'\n" "$(esc \"$PAYFAST_PASSPHRASE\")" >> deploy.env
-          printf "PAYFAST_URL='%s'\n" "$(esc \"$PAYFAST_URL\")" >> deploy.env
-          printf "PAYFAST_RETURN_URL='%s'\n" "$(esc \"$PAYFAST_RETURN_URL\")" >> deploy.env
-          printf "PAYFAST_CANCEL_URL='%s'\n" "$(esc \"$PAYFAST_CANCEL_URL\")" >> deploy.env
-          printf "PAYFAST_NOTIFY_URL='%s'\n\n" "$(esc \"$PAYFAST_NOTIFY_URL\")" >> deploy.env
-
-          printf "B2_APPLICATION_KEY_ID='%s'\n" "$(esc \"$B2_APPLICATION_KEY_ID\")" >> deploy.env
-          printf "B2_APPLICATION_KEY_NAME='%s'\n" "$(esc \"$B2_APPLICATION_KEY_NAME\")" >> deploy.env
-          printf "B2_APPLICATION_KEY='%s'\n" "$(esc \"$B2_APPLICATION_KEY\")" >> deploy.env
-          printf "B2_BUCKET_ID='%s'\n" "$(esc \"$B2_BUCKET_ID\")" >> deploy.env
-          printf "B2_BUCKET_NAME='%s'\n\n" "$(esc \"$B2_BUCKET_NAME\")" >> deploy.env
-
-          printf "MAIL_HOST='%s'\n" "$(esc \"$MAIL_HOST\")" >> deploy.env
-          printf "MAIL_PORT='%s'\n" "$(esc \"$MAIL_PORT\")" >> deploy.env
-          printf "MAIL_USERNAME='%s'\n" "$(esc \"$MAIL_USERNAME\")" >> deploy.env
-          printf "MAIL_PASSWORD='%s'\n\n" "$(esc \"$MAIL_PASSWORD\")" >> deploy.env
-
-          printf "ALLOWED_ORIGINS='%s'\n" "$(esc \"$ALLOWED_ORIGINS\")" >> deploy.env
+          # Write .env-style file (systemd EnvironmentFile or source before java -jar)
+          {
+            printf "PORT=8080\n"
+            printf "SPRING_PROFILES_ACTIVE=prod\n"
+            printf "APP_BASE_URL=%s\n\n" "$(esc "$APP_BASE_URL")"
+            printf "DB_URL=%s\n" "$(esc "$DB_URL")"
+            printf "DB_USERNAME=%s\n" "$(esc "$DB_USERNAME")"
+            printf "DB_PASSWORD=%s\n\n" "$(esc "$DB_PASSWORD")"
+            printf "JWT_SECRET=%s\n\n" "$(esc "$JWT_SECRET")"
+            printf "OMNICHECK_API_KEY=%s\n" "$(esc "$OMNICHECK_API_KEY")"
+            printf "OMNICHECK_BASE_URL=%s\n" "$(esc "$OMNICHECK_BASE_URL")"
+            printf "OMNICHECK_DRY_RUN=false\n\n"
+            printf "PAYFAST_ENABLED=%s\n" "$(esc "$PAYFAST_ENABLED")"
+            printf "PAYFAST_MERCHANT_ID=%s\n" "$(esc "$PAYFAST_MERCHANT_ID")"
+            printf "PAYFAST_MERCHANT_KEY=%s\n" "$(esc "$PAYFAST_MERCHANT_KEY")"
+            printf "PAYFAST_PASSPHRASE=%s\n" "$(esc "$PAYFAST_PASSPHRASE")"
+            printf "PAYFAST_URL=%s\n" "$(esc "$PAYFAST_URL")"
+            printf "PAYFAST_RETURN_URL=%s\n" "$(esc "$PAYFAST_RETURN_URL")"
+            printf "PAYFAST_CANCEL_URL=%s\n" "$(esc "$PAYFAST_CANCEL_URL")"
+            printf "PAYFAST_NOTIFY_URL=%s\n\n" "$(esc "$PAYFAST_NOTIFY_URL")"
+            printf "B2_APPLICATION_KEY_ID=%s\n" "$(esc "$B2_APPLICATION_KEY_ID")"
+            printf "B2_APPLICATION_KEY_NAME=%s\n" "$(esc "$B2_APPLICATION_KEY_NAME")"
+            printf "B2_APPLICATION_KEY=%s\n" "$(esc "$B2_APPLICATION_KEY")"
+            printf "B2_BUCKET_ID=%s\n" "$(esc "$B2_BUCKET_ID")"
+            printf "B2_BUCKET_NAME=%s\n\n" "$(esc "$B2_BUCKET_NAME")"
+            printf "MAIL_HOST=%s\n" "$(esc "$MAIL_HOST")"
+            printf "MAIL_PORT=%s\n" "$(esc "$MAIL_PORT")"
+            printf "MAIL_USERNAME=%s\n" "$(esc "$MAIL_USERNAME")"
+            printf "MAIL_PASSWORD=%s\n" "$(esc "$MAIL_PASSWORD")"
+            printf "MAIL_SMTP_AUTH=%s\n" "$(esc "$MAIL_SMTP_AUTH")"
+            printf "MAIL_SMTP_STARTTLS_ENABLE=%s\n" "$(esc "$MAIL_SMTP_STARTTLS_ENABLE")"
+            printf "MAIL_SMTP_SSL_TRUST=%s\n\n" "$(esc "$MAIL_SMTP_SSL_TRUST")"
+            # ALLOWED_ORIGINS often has spaces; quote so systemd/java parses as one value
+            printf 'ALLOWED_ORIGINS="%s"\n' "$(printf '%s' "$ALLOWED_ORIGINS" | sed 's/\\/\\\\/g; s/"/\\"/g')"
+          } > deploy.env
 
       - name: Inspect deploy.env (masked)
         run: |
@@ -115,7 +114,7 @@ EOF
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
-          source: target/marketplace-0.0.1-SNAPSHOT.jar
+          source: marketplace/target/marketplace-0.0.1-SNAPSHOT.jar
           target: /home/deploy/apps/dealio/target/
 
       - name: Copy env file to droplet
