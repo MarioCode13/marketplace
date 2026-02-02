@@ -21,7 +21,6 @@ jobs:
 
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
-
       - name: Create env file
         run: |
           set -euo pipefail
