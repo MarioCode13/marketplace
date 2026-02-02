@@ -65,41 +65,48 @@ jobs:
           # Write file with safely quoted values
           cat > deploy.env <<EOF
 # App & profiles
+EOF
           printf "PORT='%s'\n" "$(esc 8080)" >> deploy.env
           printf "SPRING_PROFILES_ACTIVE='%s'\n" "$(esc prod)" >> deploy.env
-          printf "APP_BASE_URL='%s'\n\n" "$(esc "$APP_BASE_URL")" >> deploy.env
+          printf "APP_BASE_URL='%s'\n\n" "$(esc \"$APP_BASE_URL\")" >> deploy.env
 
-          printf "DB_URL='%s'\n" "$(esc "$DB_URL")" >> deploy.env
-          printf "DB_USERNAME='%s'\n" "$(esc "$DB_USERNAME")" >> deploy.env
-          printf "DB_PASSWORD='%s'\n\n" "$(esc "$DB_PASSWORD")" >> deploy.env
+          printf "DB_URL='%s'\n" "$(esc \"$DB_URL\")" >> deploy.env
+          printf "DB_USERNAME='%s'\n" "$(esc \"$DB_USERNAME\")" >> deploy.env
+          printf "DB_PASSWORD='%s'\n\n" "$(esc \"$DB_PASSWORD\")" >> deploy.env
 
-          printf "JWT_SECRET='%s'\n\n" "$(esc "$JWT_SECRET")" >> deploy.env
+          printf "JWT_SECRET='%s'\n\n" "$(esc \"$JWT_SECRET\")" >> deploy.env
 
-          printf "OMNICHECK_API_KEY='%s'\n" "$(esc "$OMNICHECK_API_KEY")" >> deploy.env
-          printf "OMNICHECK_BASE_URL='%s'\n" "$(esc "$OMNICHECK_BASE_URL")" >> deploy.env
+          printf "OMNICHECK_API_KEY='%s'\n" "$(esc \"$OMNICHECK_API_KEY\")" >> deploy.env
+          printf "OMNICHECK_BASE_URL='%s'\n" "$(esc \"$OMNICHECK_BASE_URL\")" >> deploy.env
           printf "OMNICHECK_DRY_RUN='false'\n\n" >> deploy.env
 
-          printf "PAYFAST_ENABLED='%s'\n" "$(esc "$PAYFAST_ENABLED")" >> deploy.env
-          printf "PAYFAST_MERCHANT_ID='%s'\n" "$(esc "$PAYFAST_MERCHANT_ID")" >> deploy.env
-          printf "PAYFAST_MERCHANT_KEY='%s'\n" "$(esc "$PAYFAST_MERCHANT_KEY")" >> deploy.env
-          printf "PAYFAST_PASSPHRASE='%s'\n" "$(esc "$PAYFAST_PASSPHRASE")" >> deploy.env
-          printf "PAYFAST_URL='%s'\n" "$(esc "$PAYFAST_URL")" >> deploy.env
-          printf "PAYFAST_RETURN_URL='%s'\n" "$(esc "$PAYFAST_RETURN_URL")" >> deploy.env
-          printf "PAYFAST_CANCEL_URL='%s'\n" "$(esc "$PAYFAST_CANCEL_URL")" >> deploy.env
-          printf "PAYFAST_NOTIFY_URL='%s'\n\n" "$(esc "$PAYFAST_NOTIFY_URL")" >> deploy.env
+          printf "PAYFAST_ENABLED='%s'\n" "$(esc \"$PAYFAST_ENABLED\")" >> deploy.env
+          printf "PAYFAST_MERCHANT_ID='%s'\n" "$(esc \"$PAYFAST_MERCHANT_ID\")" >> deploy.env
+          printf "PAYFAST_MERCHANT_KEY='%s'\n" "$(esc \"$PAYFAST_MERCHANT_KEY\")" >> deploy.env
+          printf "PAYFAST_PASSPHRASE='%s'\n" "$(esc \"$PAYFAST_PASSPHRASE\")" >> deploy.env
+          printf "PAYFAST_URL='%s'\n" "$(esc \"$PAYFAST_URL\")" >> deploy.env
+          printf "PAYFAST_RETURN_URL='%s'\n" "$(esc \"$PAYFAST_RETURN_URL\")" >> deploy.env
+          printf "PAYFAST_CANCEL_URL='%s'\n" "$(esc \"$PAYFAST_CANCEL_URL\")" >> deploy.env
+          printf "PAYFAST_NOTIFY_URL='%s'\n\n" "$(esc \"$PAYFAST_NOTIFY_URL\")" >> deploy.env
 
-          printf "B2_APPLICATION_KEY_ID='%s'\n" "$(esc "$B2_APPLICATION_KEY_ID")" >> deploy.env
-          printf "B2_APPLICATION_KEY_NAME='%s'\n" "$(esc "$B2_APPLICATION_KEY_NAME")" >> deploy.env
-          printf "B2_APPLICATION_KEY='%s'\n" "$(esc "$B2_APPLICATION_KEY")" >> deploy.env
-          printf "B2_BUCKET_ID='%s'\n" "$(esc "$B2_BUCKET_ID")" >> deploy.env
-          printf "B2_BUCKET_NAME='%s'\n\n" "$(esc "$B2_BUCKET_NAME")" >> deploy.env
+          printf "B2_APPLICATION_KEY_ID='%s'\n" "$(esc \"$B2_APPLICATION_KEY_ID\")" >> deploy.env
+          printf "B2_APPLICATION_KEY_NAME='%s'\n" "$(esc \"$B2_APPLICATION_KEY_NAME\")" >> deploy.env
+          printf "B2_APPLICATION_KEY='%s'\n" "$(esc \"$B2_APPLICATION_KEY\")" >> deploy.env
+          printf "B2_BUCKET_ID='%s'\n" "$(esc \"$B2_BUCKET_ID\")" >> deploy.env
+          printf "B2_BUCKET_NAME='%s'\n\n" "$(esc \"$B2_BUCKET_NAME\")" >> deploy.env
 
-          printf "MAIL_HOST='%s'\n" "$(esc "$MAIL_HOST")" >> deploy.env
-          printf "MAIL_PORT='%s'\n" "$(esc "$MAIL_PORT")" >> deploy.env
-          printf "MAIL_USERNAME='%s'\n" "$(esc "$MAIL_USERNAME")" >> deploy.env
-          printf "MAIL_PASSWORD='%s'\n\n" "$(esc "$MAIL_PASSWORD")" >> deploy.env
+          printf "MAIL_HOST='%s'\n" "$(esc \"$MAIL_HOST\")" >> deploy.env
+          printf "MAIL_PORT='%s'\n" "$(esc \"$MAIL_PORT\")" >> deploy.env
+          printf "MAIL_USERNAME='%s'\n" "$(esc \"$MAIL_USERNAME\")" >> deploy.env
+          printf "MAIL_PASSWORD='%s'\n\n" "$(esc \"$MAIL_PASSWORD\")" >> deploy.env
 
-          printf "ALLOWED_ORIGINS='%s'\n" "$(esc "$ALLOWED_ORIGINS")" >> deploy.env
+          printf "ALLOWED_ORIGINS='%s'\n" "$(esc \"$ALLOWED_ORIGINS\")" >> deploy.env
+
+      - name: Inspect deploy.env (masked)
+        run: |
+          echo "deploy.env line count: $(wc -l deploy.env)"
+          # show keys only with values redacted
+          sed -n '1,200p' deploy.env | sed -E "s/=.*$/=REDACTED/" | sed -n '1,80p'
 
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
@@ -120,6 +127,9 @@ jobs:
           port: 22
           source: deploy.env
           target: /home/deploy/apps/dealio/target/
+
+      - name: Remove local deploy.env
+        run: rm -f deploy.env
 
       - name: Move JAR, install env file, restart service
         uses: appleboy/ssh-action@v0.1.6
