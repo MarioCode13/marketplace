@@ -1,5 +1,6 @@
-# Droplet dealio.service must have: EnvironmentFile=/etc/default/marketplace
-# All secrets are written into that file by this workflow (never injected into SSH script).
+# Deploy Dealio — JAR only. Env on droplet: /etc/dealio.env (nano /etc/dealio.env).
+# Required secrets: DROPLET_HOST, DEPLOY_KEY
+# Debug: first step proves the runner started; job times out after 15 min if something hangs.
 name: Deploy Dealio
 
 on:
@@ -7,11 +8,23 @@ on:
     branches:
       - main
 
+concurrency:
+  group: deploy-dealio
+  cancel-in-progress: true
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
+      # --- DEBUG: If you never see this in the log, the runner never came online (GitHub queue) ---
+      - name: Debug — runner started
+        run: |
+          echo "::notice:: Runner started at $(date -Iseconds)"
+          uname -a
+          echo "Runner ID: $RUNNER_NAME"
+
       - name: Checkout repo
         uses: actions/checkout@v3
 
@@ -22,75 +35,10 @@ jobs:
           java-version: 21
 
       - name: Build JAR
-        run: ./mvnw clean package -DskipTests
-
-      - name: Create env file from secrets
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          OMNICHECK_API_KEY: ${{ secrets.OMNICHECK_API_KEY }}
-          OMNICHECK_BASE_URL: ${{ secrets.OMNICHECK_BASE_URL }}
-          PAYFAST_ENABLED: ${{ secrets.PAYFAST_ENABLED }}
-          PAYFAST_MERCHANT_ID: ${{ secrets.PAYFAST_MERCHANT_ID }}
-          PAYFAST_MERCHANT_KEY: ${{ secrets.PAYFAST_MERCHANT_KEY }}
-          PAYFAST_PASSPHRASE: ${{ secrets.PAYFAST_PASSPHRASE }}
-          PAYFAST_URL: ${{ secrets.PAYFAST_URL }}
-          PAYFAST_RETURN_URL: ${{ secrets.PAYFAST_RETURN_URL }}
-          PAYFAST_CANCEL_URL: ${{ secrets.PAYFAST_CANCEL_URL }}
-          PAYFAST_NOTIFY_URL: ${{ secrets.PAYFAST_NOTIFY_URL }}
-          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-          B2_APPLICATION_KEY_NAME: ${{ secrets.B2_APPLICATION_KEY_NAME }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          B2_BUCKET_ID: ${{ secrets.B2_BUCKET_ID }}
-          B2_BUCKET_NAME: ${{ secrets.B2_BUCKET_NAME }}
-          MAIL_HOST: ${{ secrets.MAIL_HOST }}
-          MAIL_PORT: ${{ secrets.MAIL_PORT }}
-          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
-          MAIL_SMTP_AUTH: ${{ secrets.MAIL_SMTP_AUTH }}
-          MAIL_SMTP_STARTTLS_ENABLE: ${{ secrets.MAIL_SMTP_STARTTLS_ENABLE }}
-          MAIL_SMTP_SSL_TRUST: ${{ secrets.MAIL_SMTP_SSL_TRUST }}
-          ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
         run: |
-          set -e
-          esc() { printf '%s' "$1" | sed "s/'/'\\\\''/g"; }
-          {
-            echo 'PORT=8080'
-            echo 'SPRING_PROFILES_ACTIVE=prod'
-            printf 'APP_BASE_URL=%s\n' "$(esc "$APP_BASE_URL")"
-            printf 'DB_URL=%s\n' "$(esc "$DB_URL")"
-            printf 'DB_USERNAME=%s\n' "$(esc "$DB_USERNAME")"
-            printf 'DB_PASSWORD=%s\n' "$(esc "$DB_PASSWORD")"
-            printf 'JWT_SECRET=%s\n' "$(esc "$JWT_SECRET")"
-            printf 'OMNICHECK_API_KEY=%s\n' "$(esc "$OMNICHECK_API_KEY")"
-            printf 'OMNICHECK_BASE_URL=%s\n' "$(esc "$OMNICHECK_BASE_URL")"
-            echo 'OMNICHECK_DRY_RUN=false'
-            printf 'PAYFAST_ENABLED=%s\n' "$(esc "$PAYFAST_ENABLED")"
-            printf 'PAYFAST_MERCHANT_ID=%s\n' "$(esc "$PAYFAST_MERCHANT_ID")"
-            printf 'PAYFAST_MERCHANT_KEY=%s\n' "$(esc "$PAYFAST_MERCHANT_KEY")"
-            printf 'PAYFAST_PASSPHRASE=%s\n' "$(esc "$PAYFAST_PASSPHRASE")"
-            printf 'PAYFAST_URL=%s\n' "$(esc "$PAYFAST_URL")"
-            printf 'PAYFAST_RETURN_URL=%s\n' "$(esc "$PAYFAST_RETURN_URL")"
-            printf 'PAYFAST_CANCEL_URL=%s\n' "$(esc "$PAYFAST_CANCEL_URL")"
-            printf 'PAYFAST_NOTIFY_URL=%s\n' "$(esc "$PAYFAST_NOTIFY_URL")"
-            printf 'B2_APPLICATION_KEY_ID=%s\n' "$(esc "$B2_APPLICATION_KEY_ID")"
-            printf 'B2_APPLICATION_KEY_NAME=%s\n' "$(esc "$B2_APPLICATION_KEY_NAME")"
-            printf 'B2_APPLICATION_KEY=%s\n' "$(esc "$B2_APPLICATION_KEY")"
-            printf 'B2_BUCKET_ID=%s\n' "$(esc "$B2_BUCKET_ID")"
-            printf 'B2_BUCKET_NAME=%s\n' "$(esc "$B2_BUCKET_NAME")"
-            printf 'MAIL_HOST=%s\n' "$(esc "$MAIL_HOST")"
-            printf 'MAIL_PORT=%s\n' "$(esc "$MAIL_PORT")"
-            printf 'MAIL_USERNAME=%s\n' "$(esc "$MAIL_USERNAME")"
-            printf 'MAIL_PASSWORD=%s\n' "$(esc "$MAIL_PASSWORD")"
-            printf 'MAIL_SMTP_AUTH=%s\n' "$(esc "$MAIL_SMTP_AUTH")"
-            printf 'MAIL_SMTP_STARTTLS_ENABLE=%s\n' "$(esc "$MAIL_SMTP_STARTTLS_ENABLE")"
-            printf 'MAIL_SMTP_SSL_TRUST=%s\n' "$(esc "$MAIL_SMTP_SSL_TRUST")"
-            # ALLOWED_ORIGINS often has spaces; quote so it's one value
-            printf 'ALLOWED_ORIGINS="%s"\n' "$(printf '%s' "$ALLOWED_ORIGINS" | sed 's/\\/\\\\/g; s/"/\\"/g')"
-          } > deploy.env
+          echo "::notice:: Step: Build JAR"
+          ./mvnw clean package -DskipTests
+          ls -la target/*.jar || true
 
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
@@ -102,31 +50,21 @@ jobs:
           source: target/marketplace-0.0.1-SNAPSHOT.jar
           target: /home/deploy/apps/dealio/target/
 
-      - name: Copy env file to droplet
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: deploy
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
-          source: deploy.env
-          target: /home/deploy/apps/dealio/target/
-
-      - name: Install env and JAR, restart service
+      - name: Move JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
+          command_timeout: 2m
           script: |
+            set -e
+            echo "SSH step started"
             mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
-            sudo mv /home/deploy/apps/dealio/target/deploy.env /etc/default/marketplace
-            sudo chown root:root /etc/default/marketplace
-            sudo chmod 640 /etc/default/marketplace
-            echo "JAR:"
             ls -lh /home/deploy/apps/dealio/DealioApp.jar
-            echo "Env file:"
-            sudo ls -l /etc/default/marketplace
             sudo systemctl restart dealio
             sudo systemctl status dealio --no-pager
+            sleep 5
+            sudo systemctl is-active dealio || exit 1
+            echo "Deploy finished OK"
