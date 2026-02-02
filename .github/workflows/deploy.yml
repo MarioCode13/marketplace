@@ -1,5 +1,5 @@
 # Deploy Dealio backend to Digital Ocean droplet.
-# Repo layout: repo root contains marketplace/ (this app) and optionally marketplace-fe/.
+# Repo root is the Java app (mvnw, src/, target/ at root).
 # Droplet: dealio.service must load env from EnvironmentFile=/etc/default/marketplace
 # (this workflow writes that file from GitHub secrets).
 # Required secrets: DROPLET_HOST, DEPLOY_KEY, APP_BASE_URL, DB_*, JWT_SECRET, OMNICHECK_*,
@@ -26,7 +26,6 @@ jobs:
           java-version: 21
 
       - name: Build JAR
-        working-directory: marketplace
         run: ./mvnw clean package -DskipTests
 
       - name: Create env file
@@ -114,7 +113,7 @@ jobs:
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
-          source: marketplace/target/marketplace-0.0.1-SNAPSHOT.jar
+          source: target/marketplace-0.0.1-SNAPSHOT.jar
           target: /home/deploy/apps/dealio/target/
 
       - name: Copy env file to droplet
