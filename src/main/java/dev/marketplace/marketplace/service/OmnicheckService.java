@@ -18,18 +18,18 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 public class OmnicheckService {
-    @Value("${omnicheck.apiKey:}")
+    @Value("${omnicheck.api-key:}")
     private String apiKey;
 
     // Allow these to be replaced in tests in future (keeps current behaviour by default)
     private RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
-    @Value("${OMNICHECK_BASE_URL:https://www.omnicheck.co.za/webservice}")
+    @Value("${omnicheck.base-url:https://www.omnicheck.co.za/webservice}")
     private String baseUrl;
 
     // --- Testing / billing helpers ---
     // If true, network calls will be skipped and a successful dummy response returned.
-    @Value("${OMNICHECK_DRY_RUN:true}")
+    @Value("${omnicheck.dry-run:true}")
 //    @Value("${OMNICHECK_DRY_RUN:false}")
     private boolean dryRun;
 

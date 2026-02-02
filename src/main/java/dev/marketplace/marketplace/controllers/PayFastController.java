@@ -35,17 +35,17 @@ import org.slf4j.LoggerFactory;
 public class PayFastController {
     private static final Logger log = LoggerFactory.getLogger(PayFastController.class);
 
-    @Value("${payfast.merchantId}")
+    @Value("${payfast.merchant-id}")
     private String merchantId;
-    @Value("${payfast.merchantKey}")
+    @Value("${payfast.merchant-key}")
     private String merchantKey;
     @Value("${payfast.url}")
     private String payfastUrl;
-    @Value("${payfast.returnUrl}")
+    @Value("${payfast.return-url}")
     private String returnUrl;
-    @Value("${payfast.cancelUrl}")
+    @Value("${payfast.cancel-url}")
     private String cancelUrl;
-    @Value("${payfast.notifyUrl}")
+    @Value("${payfast.notify-url}")
     private String notifyUrl;
 
     @Autowired
