@@ -25,9 +25,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.SubscriptionService;
 import dev.marketplace.marketplace.model.Subscription;
+import dev.marketplace.marketplace.config.PayFastProperties;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.annotation.PostConstruct;
 
 @ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true", matchIfMissing = false)
 @RestController
@@ -35,24 +37,33 @@ import org.slf4j.LoggerFactory;
 public class PayFastController {
     private static final Logger log = LoggerFactory.getLogger(PayFastController.class);
 
-    @Value("${payfast.merchantId}")
-    private String merchantId;
-    @Value("${payfast.merchantKey}")
-    private String merchantKey;
-    @Value("${payfast.url}")
-    private String payfastUrl;
-    @Value("${payfast.returnUrl}")
-    private String returnUrl;
-    @Value("${payfast.cancelUrl}")
-    private String cancelUrl;
-    @Value("${payfast.notifyUrl}")
-    private String notifyUrl;
+    private final PayFastProperties payFastProperties;
+    private boolean payfastConfigured = true;
 
     @Autowired
     private UserService userService;
 
     @Autowired
     private SubscriptionService subscriptionService;
+
+    public PayFastController(PayFastProperties payFastProperties) {
+        this.payFastProperties = payFastProperties;
+    }
+
+    @PostConstruct
+    public void validatePayFastConfig() {
+        StringBuilder missing = new StringBuilder();
+        if (payFastProperties.getMerchantId() == null || payFastProperties.getMerchantId().isBlank()) missing.append("merchantId ");
+        if (payFastProperties.getMerchantKey() == null || payFastProperties.getMerchantKey().isBlank()) missing.append("merchantKey ");
+        if (payFastProperties.getUrl() == null || payFastProperties.getUrl().isBlank()) missing.append("payfastUrl ");
+
+        if (missing.length() > 0) {
+            log.error("[PayFast] Missing required configuration: {}. Disabling PayFast endpoints.", missing.toString().trim());
+            payfastConfigured = false;
+        } else {
+            log.info("[PayFast] Configuration present; PayFast endpoints enabled (merchantId={})", payFastProperties.getMerchantId());
+        }
+    }
 
     @GetMapping("/subscription-url")
     public ResponseEntity<String> getPayFastSubscriptionUrl(
@@ -64,9 +75,13 @@ public class PayFastController {
             @RequestParam(defaultValue = "pro_store") String planType, // plan type
             @RequestParam String userEmail // new required param
     ) {
+        if (!payfastConfigured) {
+            return ResponseEntity.status(503).body("PayFast not configured on this instance");
+        }
+
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("merchant_id", merchantId);
-        params.put("merchant_key", merchantKey);
+        params.put("merchant_id", payFastProperties.getMerchantId());
+        params.put("merchant_key", payFastProperties.getMerchantKey());
         params.put("amount", amount);
         params.put("item_name", itemName);
         params.put("subscription_type", "1");
@@ -78,7 +93,7 @@ public class PayFastController {
 
         String signature = generateSignature(params);
 
-        StringBuilder url = new StringBuilder(payfastUrl + "?");
+        StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         for (Map.Entry<String, String> entry : params.entrySet()) {
             url.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
                .append("=")
@@ -97,6 +112,11 @@ public class PayFastController {
 
     @PostMapping("/itn")
     public ResponseEntity<String> handlePayFastITN(@RequestParam Map<String, String> payload) {
+        if (!payfastConfigured) {
+            log.warn("[PayFast ITN] Received ITN but PayFast not configured; ignoring.");
+            return ResponseEntity.ok("OK");
+        }
+
         log.info("[PayFast ITN] Received ITN: {}", payload);
         String email = payload.get("custom_str2");
         String paymentStatus = payload.get("payment_status");

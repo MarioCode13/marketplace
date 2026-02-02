@@ -5,6 +5,7 @@ import dev.marketplace.marketplace.model.Subscription;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.service.SubscriptionService;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.config.PayFastProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -28,7 +29,13 @@ public class PayFastControllerUnitTest {
 
     @BeforeEach
     void setup() {
-        controller = new PayFastController();
+        // Build PayFastProperties and pass into controller
+        PayFastProperties props = new PayFastProperties();
+        props.setMerchantId("10000100");
+        props.setMerchantKey("46f0cd694581a");
+        props.setUrl("http://localhost:9090/payfast");
+
+        controller = new PayFastController(props);
         mockUserService = mock(UserService.class);
         mockSubscriptionService = mock(SubscriptionService.class);
 
@@ -36,10 +43,7 @@ public class PayFastControllerUnitTest {
         ReflectionTestUtils.setField(controller, "userService", mockUserService);
         ReflectionTestUtils.setField(controller, "subscriptionService", mockSubscriptionService);
 
-        // Set payfast config values used in url/signature generation
-        ReflectionTestUtils.setField(controller, "merchantId", "10000100");
-        ReflectionTestUtils.setField(controller, "merchantKey", "46f0cd694581a");
-        ReflectionTestUtils.setField(controller, "payfastUrl", "http://localhost:9090/payfast");
+        // No need to set merchantId etc on controller directly anymore
     }
 
     @Test
@@ -85,4 +89,3 @@ public class PayFastControllerUnitTest {
         assertEquals(Subscription.PlanType.PRO_STORE, planCaptor.getValue());
     }
 }
-
