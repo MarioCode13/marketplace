@@ -3,7 +3,7 @@ name: Deploy Dealio
 on:
   push:
     branches:
-      - main  # only deploy from main branch
+      - main
 
 jobs:
   build-and-deploy:
@@ -21,129 +21,87 @@ jobs:
 
       - name: Build JAR
         run: ./mvnw clean package -DskipTests
+
       - name: Create env file
         run: |
           set -euo pipefail
-          # Helper to escape single quotes safely for single-quoted shell literals
           esc() { printf "%s" "$1" | sed "s/'/'\\''/g"; }
 
-          # Assign secrets to shell variables
-          APP_BASE_URL='${{ secrets.APP_BASE_URL }}'
+          cat > deploy.env <<EOL
+  PORT='8080'
+  SPRING_PROFILES_ACTIVE='prod'
+  APP_BASE_URL='$(esc "${{ secrets.APP_BASE_URL }}")'
+  
+  DB_URL='$(esc "${{ secrets.DB_URL }}")'
+  DB_USERNAME='$(esc "${{ secrets.DB_USERNAME }}")'
+  DB_PASSWORD='$(esc "${{ secrets.DB_PASSWORD }}")'
+  
+  JWT_SECRET='$(esc "${{ secrets.JWT_SECRET }}")'
+  
+  OMNICHECK_API_KEY='$(esc "${{ secrets.OMNICHECK_API_KEY }}")'
+  OMNICHECK_BASE_URL='$(esc "${{ secrets.OMNICHECK_BASE_URL }}")'
+  OMNICHECK_DRY_RUN='false'
+  
+  PAYFAST_ENABLED='$(esc "${{ secrets.PAYFAST_ENABLED }}")'
+  PAYFAST_MERCHANT_ID='$(esc "${{ secrets.PAYFAST_MERCHANT_ID }}")'
+  PAYFAST_MERCHANT_KEY='$(esc "${{ secrets.PAYFAST_MERCHANT_KEY }}")'
+  PAYFAST_PASSPHRASE='$(esc "${{ secrets.PAYFAST_PASSPHRASE }}")'
+  PAYFAST_URL='$(esc "${{ secrets.PAYFAST_URL }}")'
+  PAYFAST_RETURN_URL='$(esc "${{ secrets.PAYFAST_RETURN_URL }}")'
+  PAYFAST_CANCEL_URL='$(esc "${{ secrets.PAYFAST_CANCEL_URL }}")'
+  PAYFAST_NOTIFY_URL='$(esc "${{ secrets.PAYFAST_NOTIFY_URL }}")'
+  
+  B2_APPLICATION_KEY_ID='$(esc "${{ secrets.B2_APPLICATION_KEY_ID }}")'
+  B2_APPLICATION_KEY_NAME='$(esc "${{ secrets.B2_APPLICATION_KEY_NAME }}")'
+  B2_APPLICATION_KEY='$(esc "${{ secrets.B2_APPLICATION_KEY }}")'
+  B2_BUCKET_ID='$(esc "${{ secrets.B2_BUCKET_ID }}")'
+  B2_BUCKET_NAME='$(esc "${{ secrets.B2_BUCKET_NAME }}")'
+  
+  MAIL_HOST='$(esc "${{ secrets.MAIL_HOST }}")'
+  MAIL_PORT='$(esc "${{ secrets.MAIL_PORT }}")'
+  MAIL_USERNAME='$(esc "${{ secrets.MAIL_USERNAME }}")'
+  MAIL_PASSWORD='$(esc "${{ secrets.MAIL_PASSWORD }}")'
+  
+  ALLOWED_ORIGINS='$(esc "${{ secrets.ALLOWED_ORIGINS }}")'
+  EOL
 
-          DB_URL='${{ secrets.DB_URL }}'
-          DB_USERNAME='${{ secrets.DB_USERNAME }}'
-          DB_PASSWORD='${{ secrets.DB_PASSWORD }}'
+- name: Copy JAR to droplet
+  uses: appleboy/scp-action@v0.1.5
+  with:
+    host: ${{ secrets.DROPLET_HOST }}
+    username: deploy
+    key: ${{ secrets.DEPLOY_KEY }}
+    port: 22
+    source: target/marketplace-0.0.1-SNAPSHOT.jar
+    target: /home/deploy/apps/dealio/target/
 
-          JWT_SECRET='${{ secrets.JWT_SECRET }}'
+- name: Copy env file to droplet
+  uses: appleboy/scp-action@v0.1.5
+  with:
+    host: ${{ secrets.DROPLET_HOST }}
+    username: deploy
+    key: ${{ secrets.DEPLOY_KEY }}
+    port: 22
+    source: deploy.env
+    target: /home/deploy/apps/dealio/target/
 
-          OMNICHECK_API_KEY='${{ secrets.OMNICHECK_API_KEY }}'
-          OMNICHECK_BASE_URL='${{ secrets.OMNICHECK_BASE_URL }}'
-
-          PAYFAST_ENABLED='${{ secrets.PAYFAST_ENABLED }}'
-          PAYFAST_MERCHANT_ID='${{ secrets.PAYFAST_MERCHANT_ID }}'
-          PAYFAST_MERCHANT_KEY='${{ secrets.PAYFAST_MERCHANT_KEY }}'
-          PAYFAST_PASSPHRASE='${{ secrets.PAYFAST_PASSPHRASE }}'
-          PAYFAST_URL='${{ secrets.PAYFAST_URL }}'
-          PAYFAST_RETURN_URL='${{ secrets.PAYFAST_RETURN_URL }}'
-          PAYFAST_CANCEL_URL='${{ secrets.PAYFAST_CANCEL_URL }}'
-          PAYFAST_NOTIFY_URL='${{ secrets.PAYFAST_NOTIFY_URL }}'
-
-          B2_APPLICATION_KEY_ID='${{ secrets.B2_APPLICATION_KEY_ID }}'
-          B2_APPLICATION_KEY_NAME='${{ secrets.B2_APPLICATION_KEY_NAME }}'
-          B2_APPLICATION_KEY='${{ secrets.B2_APPLICATION_KEY }}'
-          B2_BUCKET_ID='${{ secrets.B2_BUCKET_ID }}'
-          B2_BUCKET_NAME='${{ secrets.B2_BUCKET_NAME }}'
-
-          MAIL_HOST='${{ secrets.MAIL_HOST }}'
-          MAIL_PORT='${{ secrets.MAIL_PORT }}'
-          MAIL_USERNAME='${{ secrets.MAIL_USERNAME }}'
-          MAIL_PASSWORD='${{ secrets.MAIL_PASSWORD }}'
-
-          ALLOWED_ORIGINS='${{ secrets.ALLOWED_ORIGINS }}'
-
-          # Write file with safely quoted values
-          cat > deploy.env <<EOF
-# App & profiles
-          printf "PORT='%s'\n" "$(esc 8080)" >> deploy.env
-          printf "SPRING_PROFILES_ACTIVE='%s'\n" "$(esc prod)" >> deploy.env
-          printf "APP_BASE_URL='%s'\n\n" "$(esc "$APP_BASE_URL")" >> deploy.env
-
-          printf "DB_URL='%s'\n" "$(esc "$DB_URL")" >> deploy.env
-          printf "DB_USERNAME='%s'\n" "$(esc "$DB_USERNAME")" >> deploy.env
-          printf "DB_PASSWORD='%s'\n\n" "$(esc "$DB_PASSWORD")" >> deploy.env
-
-          printf "JWT_SECRET='%s'\n\n" "$(esc "$JWT_SECRET")" >> deploy.env
-
-          printf "OMNICHECK_API_KEY='%s'\n" "$(esc "$OMNICHECK_API_KEY")" >> deploy.env
-          printf "OMNICHECK_BASE_URL='%s'\n" "$(esc "$OMNICHECK_BASE_URL")" >> deploy.env
-          printf "OMNICHECK_DRY_RUN='false'\n\n" >> deploy.env
-
-          printf "PAYFAST_ENABLED='%s'\n" "$(esc "$PAYFAST_ENABLED")" >> deploy.env
-          printf "PAYFAST_MERCHANT_ID='%s'\n" "$(esc "$PAYFAST_MERCHANT_ID")" >> deploy.env
-          printf "PAYFAST_MERCHANT_KEY='%s'\n" "$(esc "$PAYFAST_MERCHANT_KEY")" >> deploy.env
-          printf "PAYFAST_PASSPHRASE='%s'\n" "$(esc "$PAYFAST_PASSPHRASE")" >> deploy.env
-          printf "PAYFAST_URL='%s'\n" "$(esc "$PAYFAST_URL")" >> deploy.env
-          printf "PAYFAST_RETURN_URL='%s'\n" "$(esc "$PAYFAST_RETURN_URL")" >> deploy.env
-          printf "PAYFAST_CANCEL_URL='%s'\n" "$(esc "$PAYFAST_CANCEL_URL")" >> deploy.env
-          printf "PAYFAST_NOTIFY_URL='%s'\n\n" "$(esc "$PAYFAST_NOTIFY_URL")" >> deploy.env
-
-          printf "B2_APPLICATION_KEY_ID='%s'\n" "$(esc "$B2_APPLICATION_KEY_ID")" >> deploy.env
-          printf "B2_APPLICATION_KEY_NAME='%s'\n" "$(esc "$B2_APPLICATION_KEY_NAME")" >> deploy.env
-          printf "B2_APPLICATION_KEY='%s'\n" "$(esc "$B2_APPLICATION_KEY")" >> deploy.env
-          printf "B2_BUCKET_ID='%s'\n" "$(esc "$B2_BUCKET_ID")" >> deploy.env
-          printf "B2_BUCKET_NAME='%s'\n\n" "$(esc "$B2_BUCKET_NAME")" >> deploy.env
-
-          printf "MAIL_HOST='%s'\n" "$(esc "$MAIL_HOST")" >> deploy.env
-          printf "MAIL_PORT='%s'\n" "$(esc "$MAIL_PORT")" >> deploy.env
-          printf "MAIL_USERNAME='%s'\n" "$(esc "$MAIL_USERNAME")" >> deploy.env
-          printf "MAIL_PASSWORD='%s'\n\n" "$(esc "$MAIL_PASSWORD")" >> deploy.env
-
-          printf "ALLOWED_ORIGINS='%s'\n" "$(esc "$ALLOWED_ORIGINS")" >> deploy.env
-
-      - name: Copy JAR to droplet
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: deploy
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
-          source: target/marketplace-0.0.1-SNAPSHOT.jar
-          target: /home/deploy/apps/dealio/target/
-
-      - name: Copy env file to droplet
-        uses: appleboy/scp-action@v0.1.5
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: deploy
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
-          source: deploy.env
-          target: /home/deploy/apps/dealio/target/
-
-      - name: Move JAR, install env file, restart service
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.DROPLET_HOST }}
-          username: deploy
-          key: ${{ secrets.DEPLOY_KEY }}
-          port: 22
-          script: |
-            set -euo pipefail
-            # Move the new JAR to the expected filename
-            mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
-
-            # Move env file into place and secure it
-            sudo mv /home/deploy/apps/dealio/target/deploy.env /etc/default/marketplace
-            sudo chown root:root /etc/default/marketplace
-            sudo chmod 640 /etc/default/marketplace
-
-            # Verify
-            echo "Deployed JAR info:"
-            ls -lh /home/deploy/apps/dealio/DealioApp.jar
-            echo "Deployed env file:"
-            sudo ls -l /etc/default/marketplace
-
-            # Restart the service
-            sudo systemctl daemon-reload || true
-            sudo systemctl restart dealio
-            sudo systemctl status dealio --no-pager
+- name: Move JAR, install env file, restart service
+  uses: appleboy/ssh-action@v0.1.6
+  with:
+    host: ${{ secrets.DROPLET_HOST }}
+    username: deploy
+    key: ${{ secrets.DEPLOY_KEY }}
+    port: 22
+    script: |
+      set -euo pipefail
+      mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
+      sudo mv /home/deploy/apps/dealio/target/deploy.env /etc/default/marketplace
+      sudo chown root:root /etc/default/marketplace
+      sudo chmod 640 /etc/default/marketplace
+      echo "Deployed JAR:"
+      ls -lh /home/deploy/apps/dealio/DealioApp.jar
+      echo "Deployed env:"
+      sudo ls -l /etc/default/marketplace
+      sudo systemctl daemon-reload || true
+      sudo systemctl restart dealio
+      sudo systemctl status dealio --no-pager
