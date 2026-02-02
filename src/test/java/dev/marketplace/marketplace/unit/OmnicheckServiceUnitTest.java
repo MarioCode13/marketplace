@@ -22,7 +22,9 @@ public class OmnicheckServiceUnitTest {
     void setup() {
         restTemplate = new RestTemplate();
         mockServer = MockRestServiceServer.createServer(restTemplate);
-        omnicheckService = new OmnicheckService(restTemplate);
+        // OmnicheckService now has no public constructor taking RestTemplate; create and inject
+        omnicheckService = new OmnicheckService();
+        ReflectionTestUtils.setField(omnicheckService, "restTemplate", restTemplate);
 
         // Configure internal fields for test
         ReflectionTestUtils.setField(omnicheckService, "apiKey", "test-api-key");
@@ -48,4 +50,3 @@ public class OmnicheckServiceUnitTest {
         assertTrue(result.getResponseJson().get("verified").asBoolean());
     }
 }
-
