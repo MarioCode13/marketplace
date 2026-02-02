@@ -58,8 +58,8 @@ jobs:
           username: deploy
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
-          source: target/marketplace-0.0.1-SNAPSHOT.jar
-          target: /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar
+          source: "target/*.jar"
+          target: /home/deploy/apps/dealio/target/
 
       - name: Move JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
@@ -72,8 +72,16 @@ jobs:
           script: |
             set -e
             echo "SSH step started"
+            # Remove wrongly-created dir from a previous run (SCP once created a dir instead of file)
+            [ -d /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar ] && rm -rf /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar
             ls -la /home/deploy/apps/dealio/target/
-            mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
+            # JAR may be a file or inside a dir; find and move it
+            JAR=$(find /home/deploy/apps/dealio/target -maxdepth 2 -name "marketplace-0.0.1-SNAPSHOT.jar" -type f | head -1)
+            if [ -z "$JAR" ]; then
+              echo "No JAR found in target/"
+              exit 1
+            fi
+            mv "$JAR" /home/deploy/apps/dealio/DealioApp.jar
             ls -lh /home/deploy/apps/dealio/DealioApp.jar
             sudo systemctl restart dealio
             sudo systemctl status dealio --no-pager
