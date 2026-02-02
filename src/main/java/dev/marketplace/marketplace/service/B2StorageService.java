@@ -22,13 +22,54 @@ public class B2StorageService {
     private final String bucketName;
 
     public B2StorageService(B2Properties props) {
-        this.bucketId = props.getBucket().getId();
-        this.bucketName = props.getBucket().getName();
+        // Prefer values from configuration properties
+        String resolvedBucketId = null;
+        String resolvedBucketName = null;
+        String appKeyId = null;
+        String appKeyName = null;
+        String appKeySecret = null;
+
+        if (props != null) {
+            if (props.getBucket() != null) {
+                resolvedBucketId = props.getBucket().getId();
+                resolvedBucketName = props.getBucket().getName();
+            }
+            if (props.getApplication() != null && props.getApplication().getKey() != null) {
+                B2Properties.Application.Key k = props.getApplication().getKey();
+                appKeyId = k.getId();
+                appKeyName = k.getName();
+                appKeySecret = k.getKey();
+            }
+        }
+
+        // Fallback to environment variables if any of the above are missing
+        if (appKeyId == null || appKeyId.isBlank()) {
+            appKeyId = System.getenv("B2_APPLICATION_KEY_ID");
+        }
+        if (appKeyName == null || appKeyName.isBlank()) {
+            appKeyName = System.getenv("B2_APPLICATION_KEY_NAME");
+        }
+        if (appKeySecret == null || appKeySecret.isBlank()) {
+            // Support two environment naming styles: B2_APPLICATION_KEY_KEY (nested 'key.key')
+            // and the historical B2_APPLICATION_KEY which many deployments set.
+            appKeySecret = System.getenv("B2_APPLICATION_KEY_KEY");
+            if (appKeySecret == null || appKeySecret.isBlank()) {
+                appKeySecret = System.getenv("B2_APPLICATION_KEY");
+            }
+        }
+
+        if (resolvedBucketId == null || resolvedBucketId.isBlank()) {
+            resolvedBucketId = System.getenv("B2_BUCKET_ID");
+        }
+        if (resolvedBucketName == null || resolvedBucketName.isBlank()) {
+            resolvedBucketName = System.getenv("B2_BUCKET_NAME");
+        }
+
+        this.bucketId = resolvedBucketId;
+        this.bucketName = resolvedBucketName;
 
         this.client = B2StorageClientFactory.createDefaultFactory()
-                .create(props.getApplication().getKey().getId(),
-                        props.getApplication().getKey().getKey(),
-                        "marketplace-app");
+                .create(appKeyId, appKeySecret, "marketplace-app");
     }
 
     private String sanitizeFilename(String originalName) {

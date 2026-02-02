@@ -18,19 +18,19 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 public class OmnicheckService {
-    @Value("${omnicheck.api-key:}")
+    // Use camelCase property names to match application.yml (omnicheck.apiKey)
+    @Value("${omnicheck.apiKey:}")
     private String apiKey;
 
     // Allow these to be replaced in tests in future (keeps current behaviour by default)
-    private RestTemplate restTemplate;
+    private RestTemplate restTemplate; // may be injected in tests; lazily created at runtime
     private final ObjectMapper objectMapper = new ObjectMapper();
-    @Value("${omnicheck.base-url:https://www.omnicheck.co.za/webservice}")
+    @Value("${omnicheck.baseUrl:https://www.omnicheck.co.za/webservice}")
     private String baseUrl;
 
     // --- Testing / billing helpers ---
     // If true, network calls will be skipped and a successful dummy response returned.
-    @Value("${omnicheck.dry-run:true}")
-//    @Value("${OMNICHECK_DRY_RUN:false}")
+    @Value("${omnicheck.dryRun:true}")
     private boolean dryRun;
 
     // In-memory token balances keyed by account id (for local testing only)
@@ -135,8 +135,8 @@ public class OmnicheckService {
             HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
             
             log.info("Calling Omnicheck SAID verification for ID: {} (account={})", idNumber, accountId);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            
+            ResponseEntity<String> response = rest().postForEntity(url, request, String.class);
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode responseJson = objectMapper.readTree(response.getBody());
                 boolean success = isSuccessResponse(responseJson);
@@ -186,8 +186,8 @@ public class OmnicheckService {
             HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
             
             log.info("Calling Omnicheck CIPC company match for: {} (account={})", companyName, accountId);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            
+            ResponseEntity<String> response = rest().postForEntity(url, request, String.class);
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode responseJson = objectMapper.readTree(response.getBody());
                 
@@ -243,8 +243,8 @@ public class OmnicheckService {
             HttpEntity<String> request = new HttpEntity<>(jsonBody, headers);
             
             log.info("Calling Omnicheck CIPC company search with enquiryId: {} (account={})", enquiryId, accountId);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
-            
+            ResponseEntity<String> response = rest().postForEntity(url, request, String.class);
+
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode responseJson = objectMapper.readTree(response.getBody());
                 boolean success = isSuccessResponse(responseJson);
@@ -320,6 +320,14 @@ public class OmnicheckService {
         
         // Default: if we got a response with data, consider it potentially successful
         return !responseJson.isEmpty();
+    }
+
+    // Helper to ensure RestTemplate is available (allows tests to inject via reflection)
+    private RestTemplate rest() {
+        if (this.restTemplate == null) {
+            this.restTemplate = new RestTemplate();
+        }
+        return this.restTemplate;
     }
 
     @Data
