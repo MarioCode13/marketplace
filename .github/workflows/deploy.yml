@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:  # Run manually from Actions tab → Deploy Dealio → Run workflow
 
 concurrency:
   group: deploy-dealio
@@ -40,6 +41,16 @@ jobs:
           ./mvnw clean package -DskipTests
           ls -la target/*.jar || true
 
+      - name: Ensure remote target dir exists
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          command_timeout: 30
+          script: mkdir -p /home/deploy/apps/dealio/target
+
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -48,7 +59,7 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           port: 22
           source: target/marketplace-0.0.1-SNAPSHOT.jar
-          target: /home/deploy/apps/dealio/target/
+          target: /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar
 
       - name: Move JAR and restart service
         uses: appleboy/ssh-action@v0.1.6
@@ -61,6 +72,7 @@ jobs:
           script: |
             set -e
             echo "SSH step started"
+            ls -la /home/deploy/apps/dealio/target/
             mv /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar /home/deploy/apps/dealio/DealioApp.jar
             ls -lh /home/deploy/apps/dealio/DealioApp.jar
             sudo systemctl restart dealio
