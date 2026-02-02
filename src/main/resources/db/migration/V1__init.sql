@@ -1,19 +1,19 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
+-- PostgreSQL 13+ built-in; no uuid-ossp extension needed.
+-- Ensure droplet uses SPRING_PROFILES_ACTIVE=prod and DB_* so this runs against PostgreSQL, not H2.
 -- NOTE: GraphQL duplicate-type errors (Country/Region/City) arise from multiple .graphqls files
 -- defining the same types. Keep a single definition in src/main/resources/graphql/schema.graphqls
 -- and use "extend type" in other files if you need to add fields.
 
 -- Country Table
 CREATE TABLE IF NOT EXISTS country (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     code VARCHAR(10) NOT NULL UNIQUE
 );
 
 -- Region Table
 CREATE TABLE IF NOT EXISTS region (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     country_id UUID REFERENCES country(id),
     CONSTRAINT unique_region_per_country UNIQUE (name, country_id)
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS region (
 
 -- City Table
 CREATE TABLE IF NOT EXISTS city (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(120) NOT NULL UNIQUE,
     region_id UUID REFERENCES region(id),
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS city (
 
 -- User Table
 CREATE TABLE IF NOT EXISTS "users" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(255) UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 -- Business Table
 CREATE TABLE IF NOT EXISTS business (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     contact_number VARCHAR(255),
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS business (
 
 -- BusinessUser Table
 CREATE TABLE IF NOT EXISTS business_user (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_id UUID NOT NULL REFERENCES business(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL DEFAULT 'CONTRIBUTOR',
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS business_user (
 
 -- Invitation Table
 CREATE TABLE IF NOT EXISTS invitation (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     sender_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     recipient_id UUID REFERENCES users(id) ON DELETE SET NULL,
     recipient_email VARCHAR(255),
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS invitation (
 
 -- Category Table
 CREATE TABLE IF NOT EXISTS category (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) NOT NULL UNIQUE,
     parent_id UUID REFERENCES category(id) ON DELETE SET NULL,
@@ -702,7 +702,7 @@ ON CONFLICT (id) DO NOTHING;
 
 -- Listing Table
 CREATE TABLE IF NOT EXISTS listing (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     business_id UUID REFERENCES business(id),
     created_by UUID REFERENCES users(id),
@@ -727,14 +727,14 @@ CREATE TABLE IF NOT EXISTS listing (
 
 -- Listing Image Table
 CREATE TABLE IF NOT EXISTS listing_image (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     listing_id UUID NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
     image TEXT NOT NULL
 );
 
 -- Trust Rating System
 CREATE TABLE trust_rating (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     overall_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     verified_id BOOLEAN NOT NULL DEFAULT FALSE,
@@ -752,7 +752,7 @@ CREATE TABLE trust_rating (
 
 -- Business Trust Rating System
 CREATE TABLE IF NOT EXISTS business_trust_rating (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     business_id UUID NOT NULL UNIQUE REFERENCES business(id) ON DELETE CASCADE,
     overall_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     verified_with_third_party BOOLEAN NOT NULL DEFAULT FALSE,
@@ -771,7 +771,7 @@ CREATE TABLE IF NOT EXISTS business_trust_rating (
 
 -- Verification Documents table
 CREATE TABLE verification_document (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES users(id),
     business_id UUID REFERENCES business(id),
     document_type VARCHAR(50) NOT NULL,
@@ -786,7 +786,7 @@ CREATE TABLE verification_document (
 
 -- Transaction System table
 CREATE TABLE "transaction" (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     listing_id UUID NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
     seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     buyer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -803,7 +803,7 @@ CREATE TABLE "transaction" (
 
 -- Review System table
 CREATE TABLE review (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     reviewer_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     reviewed_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     transaction_id UUID NOT NULL REFERENCES "transaction"(id) ON DELETE CASCADE,
@@ -818,7 +818,7 @@ CREATE TABLE review (
 
 -- Profile Completion tracking
 CREATE TABLE profile_completion (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     has_profile_photo BOOLEAN NOT NULL DEFAULT FALSE,
     has_bio BOOLEAN NOT NULL DEFAULT FALSE,
@@ -835,7 +835,7 @@ CREATE TABLE profile_completion (
 
 -- Subscription System table
 CREATE TABLE subscription (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     business_id UUID REFERENCES business(id) ON DELETE CASCADE,
     stripe_subscription_id VARCHAR(255) UNIQUE,
@@ -873,7 +873,7 @@ CREATE TABLE IF NOT EXISTS store_branding (
 
 -- Notification Table
 CREATE TABLE IF NOT EXISTS notification (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
     message TEXT NOT NULL,
