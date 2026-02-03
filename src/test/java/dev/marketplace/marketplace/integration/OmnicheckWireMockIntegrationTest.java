@@ -31,7 +31,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
 public class OmnicheckWireMockIntegrationTest {
 
     private static final WireMockServer wireMockServer;

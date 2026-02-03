@@ -5,10 +5,12 @@ import dev.marketplace.marketplace.config.B2Properties;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+@ActiveProfiles("test")
 @TestConfiguration
 public class TestConfig {
 
