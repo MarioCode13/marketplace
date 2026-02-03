@@ -29,7 +29,16 @@ jobs:
         run: |
           ./mvnw clean package -DskipTests
           ls -la target/*.jar
-
+      - name: Ensure remote target dir exists and is clean
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_KEY }}
+          port: 22
+          script: |
+            rm -rf /home/deploy/apps/dealio/target/*
+            mkdir -p /home/deploy/apps/dealio/target
       - name: Copy JAR to droplet
         uses: appleboy/scp-action@v0.1.5
         with:
