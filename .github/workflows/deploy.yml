@@ -65,7 +65,7 @@ jobs:
             [ -d /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar ] && rm -rf /home/deploy/apps/dealio/target/marketplace-0.0.1-SNAPSHOT.jar
 
             # Move JAR to correct name
-            JAR=$(find /home/deploy/apps/dealio/target -maxdepth 1 -name "*.jar" -type f | head -1)
+            JAR=$(find /home/deploy/apps/dealio/target -maxdepth 2 -name "*.jar" -type f | head -1)
             if [ -z "$JAR" ]; then
               echo "No JAR found in target/"
               exit 1
