@@ -1,0 +1,99 @@
+spring:
+  application:
+    name: marketplace
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:0000}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 20MB
+      max-request-size: 20MB
+  graphql:
+    schema:
+      locations: classpath:/graphql
+      generation:
+        enabled: true
+    enabled: true
+    graphiql:
+      enabled: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    user: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:0000}
+    driver-class-name: org.postgresql.Driver
+    out-of-order: true
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS_ENABLE:true}
+          starttls:
+            required: false
+          ssl:
+            trust: ${MAIL_SSL_TRUST:*}
+
+# Logging
+logging:
+  level:
+    org.springframework.graphql: DEBUG
+    dev.marketplace.marketplace: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+    org.flywaydb: DEBUG
+
+# Stripe defaults (env overrides recommended)
+stripe:
+  secret:
+    key: ${STRIPE_SECRET_KEY:sk_test_your_test_key_here}
+  webhook:
+    secret: ${STRIPE_WEBHOOK_SECRET:whsec_your_webhook_secret_here}
+  publishable:
+    key: ${STRIPE_PUBLISHABLE_KEY:pk_test_your_publishable_key_here}
+
+# App/base URL
+app:
+  base:
+    url: ${APP_BASE_URL:http://localhost:8080}
+  dev:
+    email:
+      override: ${APP_DEV_EMAIL_OVERRIDE:}
+
+# JWT secret placeholder (set via env or profile-specific files)
+jwt:
+  secret: ${JWT_SECRET:}
+
+# Omnicheck default (can be environment supplied or profile-specific)
+omnicheck:
+  apiKey: ${OMNICHECK_API_KEY:}
+
+# PayFast base defaults (override via profile / env)
+payfast:
+  merchantId: ${PAYFAST_MERCHANT_ID:}
+  merchantKey: ${PAYFAST_MERCHANT_KEY:}
+  passphrase: ${PAYFAST_PASSPHRASE:}
+  url: ${PAYFAST_URL:}
+  returnUrl: ${PAYFAST_RETURN_URL:}
+  cancelUrl: ${PAYFAST_CANCEL_URL:}
+  notifyUrl: ${PAYFAST_NOTIFY_URL:}
