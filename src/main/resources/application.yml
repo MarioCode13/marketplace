@@ -2,10 +2,24 @@ spring:
   application:
     name: marketplace
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    # Use 127.0.0.1 to avoid localhost IPv6 resolution issues on some systems
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/marketplace}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:0000}
     driver-class-name: org.postgresql.Driver
+    # Make DataSource implementation explicit so Spring does not fall back to embedded DB
+    type: com.zaxxer.hikari.HikariDataSource
+    # HikariCP diagnostics and validation to surface connectivity issues
+    hikari:
+      pool-name: MarketplaceHikariCP
+      maximum-pool-size: 10
+      minimum-idle: 1
+      connection-timeout: 30000
+      validation-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 15000
+      connection-test-query: SELECT 1
   jpa:
     hibernate:
       ddl-auto: none
@@ -33,7 +47,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/marketplace}
+    # Use same DB_URL fallback as datasource to avoid accidental mismatch
+    url: ${DB_URL:jdbc:postgresql://127.0.0.1:5432/marketplace}
     user: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:0000}
     driver-class-name: org.postgresql.Driver
@@ -52,6 +67,10 @@ spring:
             required: ${MAIL_SMTP_STARTTLS_REQUIRED:false}
           ssl:
             trust: ${MAIL_SSL_TRUST:*}
+  # Prevent accidental H2 console exposure (safe even if H2 dependency is present)
+  h2:
+    console:
+      enabled: false
 
 # Logging
 logging:
@@ -61,6 +80,9 @@ logging:
     org.springframework.web: DEBUG
     org.springframework.security: DEBUG
     org.flywaydb: DEBUG
+    # Add datasource / Hikari debug to help diagnose DB visibility
+    com.zaxxer.hikari: DEBUG
+    org.springframework.jdbc: DEBUG
 
 # Stripe defaults (env overrides recommended)
 stripe:

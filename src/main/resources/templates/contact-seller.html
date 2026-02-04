@@ -1,0 +1,48 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background:#f6f9fc; color:#333; padding: 16px }
+        .container { max-width:600px; margin: 24px auto; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden }
+        .header { background:#0b6cff; color:white; padding:16px 20px }
+        .brand { font-size:20px; font-weight:700 }
+        .content { padding:20px }
+        .greeting { margin-bottom:12px }
+        .message { background:#f3f6fb; border-radius:6px; padding:12px; margin:12px 0; white-space:pre-wrap }
+        .meta { font-size:13px; color:#666 }
+        .cta { display:block; margin:18px 0; text-align:center }
+        .btn { display:inline-block; background:#0b6cff; color:white; padding:12px 20px; border-radius:6px; text-decoration:none }
+        .footer { font-size:12px; color:#999; padding:12px 20px; background:#fafafa }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">Dealio</div>
+    </div>
+    <div class="content">
+        <div class="greeting">Hi <span th:text="${sellerName}">Seller</span>,</div>
+
+        <div class="meta">You have a new inquiry about your listing titled "<span th:text="${listingTitle}">Listing</span>".</div>
+
+        <div class="message">
+            <strong>Message from buyer:</strong>
+            <div th:utext="${message}">Buyer message goes here</div>
+        </div>
+
+        <div class="meta">Buyer: <span th:text="${buyerName}">Buyer Name</span></div>
+        <div class="meta">Contact: <span th:text="${buyerEmail}">buyer@example.com</span></div>
+
+        <div class="cta">
+            <!-- Reply button uses mailto to open user's email client; email is provided by buyerEmail -->
+            <a th:href="${replyMailto}" class="btn">Reply to buyer</a>
+        </div>
+
+    </div>
+    <div class="footer">This message was sent by Dealio — <a href="https://www.dealio.org.za">Visit your Dealio dashboard</a></div>
+</div>
+</body>
+</html>
+
