@@ -6,6 +6,7 @@ import dev.marketplace.marketplace.repository.UserRepository;
 import dev.marketplace.marketplace.security.JwtAuthenticationFilter;
 import dev.marketplace.marketplace.security.JwtUtil;
 import dev.marketplace.marketplace.service.B2StorageService;
+import dev.marketplace.marketplace.service.PasswordValidationService;
 import dev.marketplace.marketplace.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -47,8 +48,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
-        return new UserService(userRepository, passwordEncoder, b2StorageService, cityRepository, subscriptionRepository);
+    public UserDetailsService userDetailsService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository, PasswordValidationService passwordValidationService) {
+        return new UserService(userRepository, passwordEncoder, b2StorageService, cityRepository, subscriptionRepository, passwordValidationService);
     }
 
     @Bean

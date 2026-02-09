@@ -37,16 +37,18 @@ public class UserService implements UserDetailsService {
     private final B2StorageService b2StorageService;
     private final CityRepository cityRepository;
     private final SubscriptionRepository subscriptionRepository;
+    private final PasswordValidationService passwordValidationService;
 
     @Autowired
     private TrustRatingService trustRatingService;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository, PasswordValidationService passwordValidationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.b2StorageService = b2StorageService;
         this.cityRepository = cityRepository;
         this.subscriptionRepository = subscriptionRepository;
+        this.passwordValidationService = passwordValidationService;
     }
 
     @Override
@@ -71,36 +73,22 @@ public class UserService implements UserDetailsService {
     public User registerUser(String username, String email, String password) {
         logger.info("Registering new user - Username: {}, Email: {}", username, email);
 
-        if (username == null || username.trim().isEmpty()) {
-            logger.warn("Registration failed: Username is empty");
-            throw new ValidationException("Username is required");
-        }
-        if (email == null || email.trim().isEmpty()) {
-            logger.warn("Registration failed: Email is empty");
-            throw new ValidationException("Email is required");
-        }
-        if (password == null || password.trim().isEmpty()) {
-            logger.warn("Registration failed: Password is empty");
-            throw new ValidationException("Password is required");
-        }
-        if (password.length() < 3) {
-            logger.warn("Registration failed: Password too short for user: {}", username);
-            throw new ValidationException("Password must be at least 3 characters long");
-        }
-        if (username.length() < 3) {
-            logger.warn("Registration failed: Username too short: {}", username);
-            throw new ValidationException("Username must be at least 3 characters long");
-        }
-        if (!email.contains("@")) {
-            logger.warn("Registration failed: Invalid email format: {}", email);
-            throw new ValidationException("Please enter a valid email address");
-        }
+        // Validate username
+        validateUsername(username);
 
+        // Validate email
+        validateEmail(email);
+
+        // Validate password strength
+        passwordValidationService.validatePasswordStrength(password);
+
+        // Check for existing email
         if (userRepository.findByEmail(email).isPresent()) {
             logger.warn("Registration failed: Email already exists: {}", email);
             throw new UserAlreadyExistsException("An account with this email already exists");
         }
 
+        // Check for existing username
         if (userRepository.findByUsername(username).isPresent()) {
             logger.warn("Registration failed: Username already exists: {}", username);
             throw new UserAlreadyExistsException("This username is already taken");
@@ -116,6 +104,62 @@ public class UserService implements UserDetailsService {
         logger.info("User registered successfully - ID: {}, Email: {}", savedUser.getId(), savedUser.getEmail());
         trustRatingService.calculateAndUpdateTrustRating(savedUser.getId());
         return savedUser;
+    }
+
+    /**
+     * Validates username format and length
+     * @param username the username to validate
+     * @throws ValidationException if username is invalid
+     */
+    private void validateUsername(String username) {
+        if (username == null || username.trim().isEmpty()) {
+            logger.warn("Username validation failed: Username is empty");
+            throw new ValidationException("Username is required");
+        }
+
+        String trimmedUsername = username.trim();
+
+        if (trimmedUsername.length() < 3) {
+            logger.warn("Username validation failed: Username too short: {}", username);
+            throw new ValidationException("Username must be at least 3 characters long");
+        }
+
+        if (trimmedUsername.length() > 50) {
+            logger.warn("Username validation failed: Username too long: {}", username);
+            throw new ValidationException("Username must not exceed 50 characters");
+        }
+
+        // Username can only contain alphanumeric characters, underscores, and hyphens
+        if (!trimmedUsername.matches("^[a-zA-Z0-9_-]+$")) {
+            logger.warn("Username validation failed: Invalid characters in username: {}", username);
+            throw new ValidationException("Username can only contain letters, numbers, underscores, and hyphens");
+        }
+    }
+
+    /**
+     * Validates email format
+     * @param email the email to validate
+     * @throws ValidationException if email is invalid
+     */
+    private void validateEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            logger.warn("Email validation failed: Email is empty");
+            throw new ValidationException("Email is required");
+        }
+
+        String trimmedEmail = email.trim();
+
+        // Basic email validation regex
+        String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
+        if (!trimmedEmail.matches(emailRegex)) {
+            logger.warn("Email validation failed: Invalid email format: {}", email);
+            throw new ValidationException("Please enter a valid email address");
+        }
+
+        if (trimmedEmail.length() > 100) {
+            logger.warn("Email validation failed: Email too long: {}", email);
+            throw new ValidationException("Email address is too long");
+        }
     }
 
     public User updateUser(UUID userId, String username, String email, String firstName, String lastName, String bio, UUID cityId, String customCity, String contactNumber, String idNumber) {
