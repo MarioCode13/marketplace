@@ -6,8 +6,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.net.URLEncoder;
@@ -19,7 +17,6 @@ import java.util.UUID;
 
 import dev.marketplace.marketplace.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import dev.marketplace.marketplace.model.User;
@@ -31,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import jakarta.annotation.PostConstruct;
 
-@ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true", matchIfMissing = false)
+@ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/payments/payfast")
 public class PayFastController {
@@ -57,7 +54,7 @@ public class PayFastController {
         if (payFastProperties.getMerchantKey() == null || payFastProperties.getMerchantKey().isBlank()) missing.append("merchantKey ");
         if (payFastProperties.getUrl() == null || payFastProperties.getUrl().isBlank()) missing.append("payfastUrl ");
 
-        if (missing.length() > 0) {
+        if (!missing.isEmpty()) {
             log.error("[PayFast] Missing required configuration: {}. Disabling PayFast endpoints.", missing.toString().trim());
             payfastConfigured = false;
         } else {
@@ -79,6 +76,10 @@ public class PayFastController {
             return ResponseEntity.status(503).body("PayFast not configured on this instance");
         }
 
+        log.info("[PayFast] ========== GENERATING SUBSCRIPTION URL ==========");
+        log.info("[PayFast] Input parameters: itemName={}, amount={}, recurringAmount={}, frequency={}, cycles={}, planType={}, userEmail={}",
+            itemName, amount, recurringAmount, frequency, cycles, planType, userEmail);
+
         Map<String, String> params = new LinkedHashMap<>();
         params.put("merchant_id", payFastProperties.getMerchantId());
         params.put("merchant_key", payFastProperties.getMerchantKey());
@@ -91,6 +92,8 @@ public class PayFastController {
         params.put("custom_str1", planType); // pass plan type
         params.put("custom_str2", userEmail); // pass user email
 
+        log.info("[PayFast] Parameters map before signature: {}", params);
+
         String signature = generateSignature(params);
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
@@ -101,6 +104,8 @@ public class PayFastController {
                .append("&");
         }
         url.append("signature=").append(signature);
+        log.info("[PayFast] Final URL generated: {}", url);
+        log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
     }
 
@@ -117,7 +122,30 @@ public class PayFastController {
             return ResponseEntity.ok("OK");
         }
 
-        log.info("[PayFast ITN] Received ITN: {}", payload);
+        log.info("[PayFast ITN] ========== RECEIVED ITN CALLBACK ==========");
+        log.info("[PayFast ITN] Full payload received: {}", payload);
+
+        // Log all parameters
+        payload.forEach((key, value) -> log.info("[PayFast ITN] PARAM: {} = {}", key, value));
+
+        String receivedSignature = payload.get("signature");
+        log.info("[PayFast ITN] Received signature: {}", receivedSignature);
+
+        // Validate signature by regenerating it
+        Map<String, String> paramsForValidation = new LinkedHashMap<>(payload);
+        paramsForValidation.remove("signature");
+
+        String generatedSignature = generateSignature(paramsForValidation);
+        log.info("[PayFast ITN] Generated signature for validation: {}", generatedSignature);
+
+        if (!generatedSignature.equals(receivedSignature)) {
+            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated: {}", receivedSignature, generatedSignature);
+            log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
+            return ResponseEntity.status(400).body("Signature mismatch");
+        }
+
+        log.info("[PayFast ITN] Signature validation passed!");
+
         String email = payload.get("custom_str2");
         String paymentStatus = payload.get("payment_status");
         String planTypeStr = payload.get("custom_str1");
@@ -143,6 +171,7 @@ public class PayFastController {
         } else {
             log.error("[PayFast ITN] Missing email, payment not complete, or plan type. email={}, status={}, planTypeStr={}", email, paymentStatus, planTypeStr);
         }
+        log.info("[PayFast ITN] ========== END ITN CALLBACK ==========");
         return ResponseEntity.ok("OK");
     }
 
@@ -161,7 +190,11 @@ public class PayFastController {
     }
 
     private String generateSignature(Map<String, String> params) {
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START ==========");
+
         // 1. Exclude empty values and the 'signature' field
+        log.info("[PayFast Signature] Input params: {}", params);
+
         Map<String, String> filtered = params.entrySet().stream()
             .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
             .sorted(Map.Entry.comparingByKey())
@@ -172,28 +205,35 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
+        log.info("[PayFast Signature] Filtered params (sorted): {}", filtered);
+
         // 2. Build the base string (DO NOT URL encode for signature generation)
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
             sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), entry.getValue());
         }
+
         // Trim trailing '&' if present
-        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '&') {
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') {
             sb.setLength(sb.length() - 1);
         }
 
-        // 3. Append passphrase at the end if configured
-        String passphrase = payFastProperties.getPassphrase();
-        if (passphrase != null && !passphrase.isBlank()) {
-            sb.append("&passphrase=").append(passphrase);
-        }
+        // 3. TEMPORARILY DISABLED: Append passphrase at the end if configured
+        // String passphrase = payFastProperties.getPassphrase();
+        // if (passphrase != null && !passphrase.isBlank()) {
+        //     sb.append("&passphrase=").append(passphrase);
+        //     log.info("[PayFast Signature] Passphrase appended");
+        // }
 
         String signatureString = sb.toString();
-        log.debug("[PayFast] Signature generation string: {}", signatureString);
+        log.info("[PayFast Signature] Signature base string: {}", signatureString);
 
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
-        log.debug("[PayFast] Generated signature: {}", signature);
+        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
+
         return signature;
     }
 }
