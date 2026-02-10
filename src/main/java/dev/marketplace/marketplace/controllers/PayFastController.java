@@ -350,14 +350,15 @@ public class PayFastController {
         out.put("exclude_plain", v4);
 
         // Provide a ready-to-open URL example for each variant (signature only differs)
+        // IMPORTANT: Parameters MUST be in alphabetical order to match signature computation
         String baseUrl = payFastProperties.getUrl() + "?";
         StringBuilder commonQs = new StringBuilder();
-        for (Map.Entry<String, String> e : params.entrySet()) {
-            commonQs.append(rfc3986Encode(e.getKey()))
+        params.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(e -> commonQs.append(rfc3986Encode(e.getKey()))
                     .append("=")
                     .append(rfc3986Encode(e.getValue()))
-                    .append("&");
-        }
+                    .append("&"));
         String common = commonQs.toString();
         if (common.endsWith("&")) common = common.substring(0, common.length() - 1);
 
