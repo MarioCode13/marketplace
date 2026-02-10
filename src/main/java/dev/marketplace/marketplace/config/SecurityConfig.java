@@ -74,7 +74,9 @@ public class SecurityConfig {
                             "/graphiql",
                             "/playground",
                             "/error",
-                            "/api/payments/payfast/itn"
+                            "/api/payments/payfast/itn",
+                            "/api/payments/payfast/subscription-url",
+                            "/api/payments/payfast/debug/signatures"
                     ).permitAll();
                     auth.requestMatchers("/graphql/**").permitAll();
                     auth.requestMatchers("/api/auth/**").permitAll();

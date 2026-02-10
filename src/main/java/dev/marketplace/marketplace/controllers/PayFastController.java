@@ -121,9 +121,9 @@ public class PayFastController {
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         urlParams.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
-            .forEach(entry -> url.append(rfc3986Encode(entry.getKey()))
+            .forEach(entry -> url.append(entry.getKey())
                    .append("=")
-                   .append(rfc3986Encode(entry.getValue()))
+                   .append(entry.getValue())
                    .append("&"));
         // use the exclude+plain signature (merchant_key excluded from signature, plain values used for signature computation)
         url.append("signature=").append(sig_exclude_plain);
