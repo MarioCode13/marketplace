@@ -437,10 +437,20 @@ public class PayFastController {
         String excludeEncodedBase = buildExampleUrl.apply(paramsWithoutKey, true);
         String excludePlainBase = buildExampleUrl.apply(paramsWithoutKey, false);
 
+        // For exclude_both variants: remove both merchant_id and merchant_key but INCLUDE merchant_key in URL
+        // (PayFast requires merchant_key in URL but not in signature computation)
+        Map<String, String> paramsForExcludeBothUrl = new LinkedHashMap<>(params);
+        paramsForExcludeBothUrl.remove("merchant_id");
+        // Keep merchant_key in the URL even though it's excluded from signature
+        String excludeBothEncodedBase = buildExampleUrl.apply(paramsForExcludeBothUrl, true);
+        String excludeBothPlainBase = buildExampleUrl.apply(paramsForExcludeBothUrl, false);
+
         out.put("example_url_include_encoded", includeEncodedBase + "signature=" + v1.get("signature"));
         out.put("example_url_include_plain", includePlainBase + "signature=" + v2.get("signature"));
         out.put("example_url_exclude_encoded", excludeEncodedBase + "signature=" + v3.get("signature"));
         out.put("example_url_exclude_plain", excludePlainBase + "signature=" + v4.get("signature"));
+        out.put("example_url_exclude_both_encoded", excludeBothEncodedBase + "signature=" + v5.get("signature"));
+        out.put("example_url_exclude_both_plain", excludeBothPlainBase + "signature=" + v6.get("signature"));
 
         return ResponseEntity.ok(out);
     }
