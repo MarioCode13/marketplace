@@ -38,6 +38,10 @@ public class TrustRating {
     @Builder.Default
     private BigDecimal reviewScore = BigDecimal.ZERO;
     
+    @Column(name = "verification_score", nullable = false, precision = 5, scale = 2)
+    @Builder.Default
+    private BigDecimal verificationScore = BigDecimal.ZERO;
+
     @Column(name = "transaction_score", nullable = false, precision = 5, scale = 2)
     @Builder.Default
     private BigDecimal transactionScore = BigDecimal.ZERO;

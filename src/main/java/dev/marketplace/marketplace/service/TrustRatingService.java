@@ -12,6 +12,37 @@ import java.math.RoundingMode;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Trust rating for users: single verification attribute (Omnicheck ID verification only)
+ * and composite scores for profile, reviews, transactions, subscription.
+ *
+ * <h3>Current behaviour (simplified)</h3>
+ * <ul>
+ *   <li><b>verifiedId</b> (boolean): The only verification attribute. Set to true when the user
+ *       completes Omnicheck ID verification successfully. No document upload/approval verification.</li>
+ *   <li><b>verificationScore</b> (0–100): Derived from verifiedId only: 100 if verifiedId is true, 0 otherwise.</li>
+ *   <li><b>profileScore</b>: See "Profile score" below.</li>
+ *   <li><b>reviewScore</b>: 70% positive-review percentage + 30% average star rating (as % of 5).</li>
+ *   <li><b>transactionScore</b>: Percentage of completed transactions (as buyer + seller).</li>
+ *   <li><b>subscriptionScore</b>: 100 if user has SUBSCRIBED role, else 0.</li>
+ *   <li><b>overallScore</b>: Simple average of profile, verification, review, transaction, subscription (each 0–100).</li>
+ * </ul>
+ *
+ * <h3>Profile score (what it consists of)</h3>
+ * Profile score is the percentage of these four profile fields that are filled:
+ * <ol>
+ *   <li>Profile photo (profileImageUrl set)</li>
+ *   <li>Bio (bio non-empty)</li>
+ *   <li>Contact number (contactNumber non-empty)</li>
+ *   <li>Location (city or customCity set)</li>
+ * </ol>
+ * Document uploads (ID, driver's license, proof of address, etc.) are not part of profile score or verification.
+ *
+ * <h3>Improved calculation (implemented)</h3>
+ * Verification is binary (Omnicheck only): verificationScore = verifiedId ? 100 : 0.
+ * Profile score uses only the four profile fields above (no document counts).
+ * Overall remains the average of the five 0–100 components for a stable 0–100 scale.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -22,27 +53,10 @@ public class TrustRatingService {
     private final ProfileCompletionRepository profileCompletionRepository;
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
-    private final TransactionRepository transactionRepository; // Added transactionRepository
+    private final TransactionRepository transactionRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
     private final BusinessRepository businessRepository;
 
-    private static final BigDecimal DOCUMENT_WEIGHT = BigDecimal.valueOf(30); // 30%
-    private static final BigDecimal PROFILE_WEIGHT = BigDecimal.valueOf(20); // 20%
-    private static final BigDecimal REVIEW_WEIGHT = BigDecimal.valueOf(30); // 30%
-    private static final BigDecimal TRANSACTION_WEIGHT = BigDecimal.valueOf(20); // 20%
-
-    private static final BigDecimal ID_UPLOAD_SCORE = BigDecimal.valueOf(5);
-    private static final BigDecimal ADDRESS_UPLOAD_SCORE = BigDecimal.valueOf(3);
-    private static final BigDecimal PROFILE_PHOTO_UPLOAD_SCORE = BigDecimal.valueOf(2);
-    
-    // Document verification bonus scores (verified gets additional points)
-    private static final BigDecimal ID_VERIFICATION_BONUS = BigDecimal.valueOf(10);
-    private static final BigDecimal ADDRESS_VERIFICATION_BONUS = BigDecimal.valueOf(7);
-    private static final BigDecimal PROFILE_PHOTO_VERIFICATION_BONUS = BigDecimal.valueOf(3);
-    
-    // Subscription bonus score
-    private static final BigDecimal SUBSCRIPTION_BONUS = BigDecimal.valueOf(15);
-    
     @Transactional
     public TrustRating calculateAndUpdateTrustRating(UUID userId) {
         log.info("Calculating trust rating for user: {}", userId);
@@ -52,15 +66,23 @@ public class TrustRatingService {
         // Get or create trust rating
         TrustRating trustRating = trustRatingRepository.findByUserId(userId)
                 .orElse(TrustRating.builder().user(user).build());
-        
-        // Calculate individual scores
-        BigDecimal profileCompletionScore = calculateProfileCompletionScore(userId); // user info + uploaded docs
-        BigDecimal verificationScore = calculateVerificationScore(userId); // only admin-verified docs
+
+        // Verification: only Omnicheck ID verification (verifiedId). No document verification.
+        BigDecimal verificationScore = trustRating.getVerifiedId()
+                ? BigDecimal.valueOf(100)
+                : BigDecimal.ZERO;
+        log.debug("User {}: verifiedID={}, verificationScore={}", userId, trustRating.getVerifiedId(), verificationScore);
+
+        // Calculate other scores
+        BigDecimal profileCompletionScore = calculateProfileCompletionScore(userId);
         BigDecimal reviewScore = calculateReviewScore(userId);
         BigDecimal transactionScore = calculateTransactionScore(userId);
         BigDecimal subscriptionScore = calculateSubscriptionScore(userId);
 
-        // All components are 0-100, so average them for overall score
+        log.debug("User {}: profileScore={}, reviewScore={}, transactionScore={}, subscriptionScore={}",
+            userId, profileCompletionScore, reviewScore, transactionScore, subscriptionScore);
+
+        // Overall = average of five 0-100 components
         BigDecimal overallScore = profileCompletionScore
                 .add(verificationScore)
                 .add(reviewScore)
@@ -70,6 +92,7 @@ public class TrustRatingService {
 
         // Update trust rating
         trustRating.setProfileScore(profileCompletionScore);
+        trustRating.setVerificationScore(verificationScore);
         trustRating.setReviewScore(reviewScore);
         trustRating.setTransactionScore(transactionScore);
         trustRating.setOverallScore(overallScore);
@@ -86,60 +109,42 @@ public class TrustRatingService {
 
         TrustRating saved = trustRatingRepository.save(trustRating);
         log.info("Updated trust rating for user {}: overall score = {}", userId, overallScore);
-        
+
         return saved;
     }
     
-    // Profile completion = user info + uploaded docs (not verified)
+    /**
+     * Profile score: percentage of four profile fields that are filled (photo, bio, contact, location).
+     * Document uploads are not part of profile score.
+     *
+     * NOTE: Always check User entity directly for authoritative profile data.
+     * ProfileCompletion is a cache that should be updated via updateProfileCompletion(),
+     * but we don't rely on it for calculations to avoid stale data issues.
+     */
     private BigDecimal calculateProfileCompletionScore(UUID userId) {
-        int totalFields = 4; // user info fields: photo, bio, contact, location
+        int totalFields = 4;
         int completedFields = 0;
-        Optional<ProfileCompletion> profileCompletionOpt = profileCompletionRepository.findByUserId(userId);
-        if (profileCompletionOpt.isPresent()) {
-            ProfileCompletion pc = profileCompletionOpt.get();
-            if (Boolean.TRUE.equals(pc.getHasProfilePhoto())) completedFields++;
-            if (Boolean.TRUE.equals(pc.getHasBio())) completedFields++;
-            if (Boolean.TRUE.equals(pc.getHasContactNumber())) completedFields++;
-            if (Boolean.TRUE.equals(pc.getHasLocation())) completedFields++;
-        }
-        // Uploaded docs (ID, driver's license, proof of address, profile photo)
-        int totalDocs = 4;
-        int uploadedDocs = 0;
-        if (verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.ID_CARD).isPresent()) uploadedDocs++;
-        if (verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.DRIVERS_LICENSE).isPresent()) uploadedDocs++;
-        if (verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.PROOF_OF_ADDRESS).isPresent()) uploadedDocs++;
-        if (verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.PROFILE_PHOTO).isPresent()) uploadedDocs++;
-        int total = totalFields + totalDocs;
-        int complete = completedFields + uploadedDocs;
-        return BigDecimal.valueOf(complete).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
-    }
 
-    // Verification score = % of uploaded docs that are admin-verified
-    private BigDecimal calculateVerificationScore(UUID userId) {
-        int totalDocs = 0;
-        int verifiedDocs = 0;
-        Optional<VerificationDocument> idDoc = verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.ID_CARD);
-        if (idDoc.isPresent()) {
-            totalDocs++;
-            if (idDoc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED) verifiedDocs++;
+        User user = userRepository.findById(userId).orElse(null);
+        if (user != null) {
+            boolean hasPhoto = user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty();
+            boolean hasBio = user.getBio() != null && !user.getBio().isEmpty();
+            boolean hasContact = user.getContactNumber() != null && !user.getContactNumber().isEmpty();
+            boolean hasLocation = user.getCity() != null || (user.getCustomCity() != null && !user.getCustomCity().isEmpty());
+
+            if (hasPhoto) completedFields++;
+            if (hasBio) completedFields++;
+            if (hasContact) completedFields++;
+            if (hasLocation) completedFields++;
+
+            log.debug("User {}: profile fields - photo={}, bio={}, contact={}, location={}, completed={}/{}",
+                userId, hasPhoto, hasBio, hasContact, hasLocation, completedFields, totalFields);
         }
-        Optional<VerificationDocument> dlDoc = verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.DRIVERS_LICENSE);
-        if (dlDoc.isPresent()) {
-            totalDocs++;
-            if (dlDoc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED) verifiedDocs++;
-        }
-        Optional<VerificationDocument> addressDoc = verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.PROOF_OF_ADDRESS);
-        if (addressDoc.isPresent()) {
-            totalDocs++;
-            if (addressDoc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED) verifiedDocs++;
-        }
-        Optional<VerificationDocument> photoDoc = verificationDocumentRepository.findByUserIdAndDocumentType(userId, VerificationDocument.DocumentType.PROFILE_PHOTO);
-        if (photoDoc.isPresent()) {
-            totalDocs++;
-            if (photoDoc.get().getStatus() == VerificationDocument.VerificationStatus.APPROVED) verifiedDocs++;
-        }
-        if (totalDocs == 0) return BigDecimal.ZERO;
-        return BigDecimal.valueOf(verifiedDocs).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalDocs), 2, RoundingMode.HALF_UP);
+
+        if (totalFields == 0) return BigDecimal.ZERO;
+        BigDecimal score = BigDecimal.valueOf(completedFields).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalFields), 2, RoundingMode.HALF_UP);
+        log.debug("User {}: calculated profileScore={}", userId, score);
+        return score;
     }
 
     // Review score (same as before)
@@ -187,7 +192,7 @@ public class TrustRatingService {
         }
         return BigDecimal.ZERO;
     }
-    
+
     /**
      * Add subscription bonus to user's trust rating
      */
@@ -196,7 +201,7 @@ public class TrustRatingService {
         log.info("Adding subscription bonus to user: {}", userId);
         calculateAndUpdateTrustRating(userId);
     }
-    
+
     /**
      * Remove subscription bonus from user's trust rating
      */
@@ -211,7 +216,7 @@ public class TrustRatingService {
         return trustRatingRepository.findByUserId(userId)
                 .orElseGet(() -> calculateAndUpdateTrustRating(userId));
     }
-    
+
     /**
      * Mark a user's ID as verified. Creates a TrustRating if missing, marks verifiedID=true
      * and recalculates the trust rating.
@@ -243,12 +248,15 @@ public class TrustRatingService {
         profileCompletion.setHasProfilePhoto(user.getProfileImageUrl() != null && !user.getProfileImageUrl().isEmpty());
         profileCompletion.setHasBio(user.getBio() != null && !user.getBio().isEmpty());
         profileCompletion.setHasContactNumber(user.getContactNumber() != null && !user.getContactNumber().isEmpty());
-        boolean hasLocation = (user.getCity() != null) || (user.getCustomCity() != null && !user.getCustomCity().isEmpty());
+        // City is an entity; consider location present if city is set or customCity string is non-empty
+        boolean hasLocation = user.getCity() != null || (user.getCustomCity() != null && !user.getCustomCity().isEmpty());
         profileCompletion.setHasLocation(hasLocation);
+        // Ensure relation is set in case this is a newly-created ProfileCompletion
+        profileCompletion.setUser(user);
         // No more verified/verification fields
         // Calculate completion percentage
         profileCompletion.calculateCompletionPercentage();
-        
+
         profileCompletionRepository.save(profileCompletion);
         
         // Recalculate trust rating

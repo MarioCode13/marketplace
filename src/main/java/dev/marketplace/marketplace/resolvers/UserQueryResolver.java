@@ -15,7 +15,9 @@ import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.repository.ProfileCompletionRepository;
 import dev.marketplace.marketplace.repository.StoreBrandingRepository;
 import dev.marketplace.marketplace.repository.BusinessRepository;
+import dev.marketplace.marketplace.repository.CityRepository;
 import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.model.City;
 import dev.marketplace.marketplace.model.Subscription;
 import dev.marketplace.marketplace.service.SubscriptionService;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -46,6 +48,7 @@ public class UserQueryResolver {
     private final ListingService listingService;
     private final BusinessRepository businessRepository;
     private final SubscriptionService subscriptionService;
+    private final CityRepository cityRepository;
 
     @SchemaMapping(typeName = "User", field = "profileImageUrl")
     public String resolveProfileImageUrl(Object userObj) {
@@ -270,7 +273,7 @@ public class UserQueryResolver {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new IllegalArgumentException("User not authenticated");
         }
-        
+
         String email = authentication.getName();
         return userService.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + email));
@@ -284,7 +287,8 @@ public class UserQueryResolver {
         StoreBrandingRepository storeBrandingRepository,
         ListingService listingService,
         BusinessRepository businessRepository,
-        SubscriptionService subscriptionService
+        SubscriptionService subscriptionService,
+        CityRepository cityRepository
     ) {
         this.userService = userService;
         this.trustRatingService = trustRatingService;
@@ -294,6 +298,17 @@ public class UserQueryResolver {
         this.listingService = listingService;
         this.businessRepository = businessRepository;
         this.subscriptionService = subscriptionService;
+        this.cityRepository = cityRepository;
+    }
+
+    /**
+     * Resolves User.city so that clients get the full City (id, name, region) when User is returned as UserDTO.
+     */
+    @SchemaMapping(typeName = "User", field = "city")
+    public City resolveCity(Object userObj) {
+        UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
+        if (user.getCityId() == null) return null;
+        return cityRepository.findById(user.getCityId()).orElse(null);
     }
 
     @QueryMapping
@@ -323,32 +338,26 @@ public class UserQueryResolver {
 
     @QueryMapping
     public String getProfileImage(@Argument UUID userId) {
-        return userService.getProfileImageUrl(userId);
+        return userService.getUserProfileImageUrl(userId).orElse(null);
     }
 
     @QueryMapping
     public String getUserProfileImage(@Argument UUID userId) {
-        return userService.getProfileImageUrl(userId);
+        return userService.getUserProfileImageUrl(userId).orElse(null);
     }
 
     @QueryMapping
     @PreAuthorize("isAuthenticated()")
     public UserDTO me() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        System.out.println("Authentication: " + authentication);
-
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new RuntimeException("User is not authenticated");
         }
-
         Object principal = authentication.getPrincipal();
-
-        System.out.println("Principal: " + principal);
-
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
-            return userService.getUserByEmail(email)
+            // Load user with city so cityId/city is populated in the DTO and resolvers
+            return userService.getUserByEmailWithCity(email)
                     .map(UserMapper::toDto)
                     .orElseThrow(() -> new RuntimeException("User not found"));
         } else {
@@ -363,3 +372,4 @@ public class UserQueryResolver {
 
 
 }
+

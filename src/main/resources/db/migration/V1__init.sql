@@ -739,6 +739,7 @@ CREATE TABLE trust_rating (
     overall_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     verified_id BOOLEAN NOT NULL DEFAULT FALSE,
     profile_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    verification_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     review_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     transaction_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
     total_reviews INTEGER NOT NULL DEFAULT 0,

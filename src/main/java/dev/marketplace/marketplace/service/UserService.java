@@ -204,7 +204,14 @@ public class UserService implements UserDetailsService {
             user.setIdNumber(idNumber);
         }
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        // Recalculate profile completion and trust rating after profile fields are changed
+        try {
+            trustRatingService.updateProfileCompletion(saved.getId());
+        } catch (Exception e) {
+            logger.warn("Failed to update profile completion/trust rating for user {}: {}", saved.getId(), e.getMessage());
+        }
+        return saved;
     }
 
     public UUID getUserIdByUsername(String username) {
@@ -272,6 +279,13 @@ public class UserService implements UserDetailsService {
         return userRepository.findByEmail(email);
     }
 
+    /**
+     * Returns user with city relation loaded (for me query and profile).
+     */
+    public Optional<User> getUserByEmailWithCity(String email) {
+        return userRepository.findByEmailWithCity(email);
+    }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -305,30 +319,19 @@ public class UserService implements UserDetailsService {
 
         user.setProfileImageUrl(imageUrl);
 
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        // Recalculate profile completion/trust rating after profile image change
+        try {
+            trustRatingService.updateProfileCompletion(saved.getId());
+        } catch (Exception e) {
+            logger.warn("Failed to update profile completion/trust rating for user {}: {}", saved.getId(), e.getMessage());
+        }
+        return saved;
     }
 
     @Transactional
     public User updateProfileImage(UUID userId, String imageUrl) {
         return saveUserProfileImage(userId, imageUrl);
-    }
-
-    public String getProfileImageUrl(UUID userId) {
-        return userRepository.findById(userId)
-                .map(User::getProfileImageUrl)
-                .orElse(null);
-    }
-
-    public String uploadImageAndGetUrl(String base64Image) {
-        String fileName = "profiles/" + UUID.randomUUID() + ".jpg";
-        byte[] imageBytes = Base64.getDecoder().decode(base64Image);
-
-        try {
-            String uploadedFileName = b2StorageService.uploadImage(fileName, imageBytes);
-            return b2StorageService.generatePreSignedUrl(uploadedFileName);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to upload image", e);
-        }
     }
 
     @Transactional
@@ -340,9 +343,51 @@ public class UserService implements UserDetailsService {
             String uploadedFileName = b2StorageService.uploadImage(fileName, file.getBytes());
             String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
             user.setProfileImageUrl(url);
-            return userRepository.save(user);
+            User saved = userRepository.save(user);
+            // Recalculate profile completion/trust rating after profile image change
+            try {
+                trustRatingService.updateProfileCompletion(saved.getId());
+            } catch (Exception e) {
+                logger.warn("Failed to update profile completion/trust rating for user {}: {}", saved.getId(), e.getMessage());
+            }
+            return saved;
         } catch (Exception e) {
             throw new RuntimeException("Failed to upload profile image", e);
+        }
+    }
+
+    // New helper: return nullable profile image URL (used by GraphQL resolvers)
+    public String getProfileImageUrl(UUID userId) {
+        return getUserProfileImageUrl(userId).orElse(null);
+    }
+
+    // New helper: accept base64 image data, upload to B2 and return a pre-signed URL
+    public String uploadImageAndGetUrl(String base64Image) {
+        if (base64Image == null || base64Image.isBlank()) {
+            throw new IllegalArgumentException("Image data is required");
+        }
+
+        // Remove data URL prefix if present
+        String payload = base64Image;
+        int comma = payload.indexOf(',');
+        if (comma >= 0) {
+            payload = payload.substring(comma + 1);
+        }
+
+        byte[] bytes;
+        try {
+            bytes = Base64.getDecoder().decode(payload);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid base64 image data", e);
+        }
+
+        try {
+            String fileName = "profiles/" + UUID.randomUUID() + ".jpg";
+            String uploadedFileName = b2StorageService.uploadImage(fileName, bytes);
+            String url = b2StorageService.generatePreSignedUrl(uploadedFileName);
+            return url;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to upload image to storage", e);
         }
     }
 

@@ -79,6 +79,10 @@ public class ProfileCompletion {
         updatedAt = LocalDateTime.now();
     }
 
+    /**
+     * Completion percentage based only on the four profile fields (photo, bio, contact, location).
+     * verification is Omnicheck ID only.
+     */
     public void calculateCompletionPercentage() {
         int totalFields = 4;
         int completedFields = 0;
@@ -86,16 +90,13 @@ public class ProfileCompletion {
         if (Boolean.TRUE.equals(hasBio)) completedFields++;
         if (Boolean.TRUE.equals(hasContactNumber)) completedFields++;
         if (Boolean.TRUE.equals(hasLocation)) completedFields++;
-        int totalDocs = 3;
-        int uploadedDocs = 0;
-        if (Boolean.TRUE.equals(hasIdDocument)) uploadedDocs++;
-        if (Boolean.TRUE.equals(hasDriversLicense)) uploadedDocs++;
-        if (Boolean.TRUE.equals(hasProofOfAddress)) uploadedDocs++;
-        int total = totalFields + totalDocs;
-        int complete = completedFields + uploadedDocs;
-        this.completionPercentage = BigDecimal.valueOf(complete)
-                .multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(total), 2, java.math.RoundingMode.HALF_UP);
+        if (totalFields == 0) {
+            this.completionPercentage = BigDecimal.ZERO;
+        } else {
+            this.completionPercentage = BigDecimal.valueOf(completedFields)
+                    .multiply(BigDecimal.valueOf(100))
+                    .divide(BigDecimal.valueOf(totalFields), 2, java.math.RoundingMode.HALF_UP);
+        }
         this.lastCalculated = LocalDateTime.now();
     }
 

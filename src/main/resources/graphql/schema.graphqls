@@ -19,9 +19,6 @@ type User {
     customCity: String
     contactNumber: String
     idNumber: String
-    idPhotoUrl: String
-    driversLicenseUrl: String
-    proofOfAddressUrl: String
     trustRating: TrustRating
     profileCompletion: ProfileCompletion
     verificationDocuments: [VerificationDocument!]
@@ -235,6 +232,7 @@ type VerificationDocument {
     notes: String
 }
 
+# Trust rating: verification is Omnicheck ID only (verifiedId). verificationScore = 100 when verifiedId true, else 0.
 type TrustRating {
     id: ID!
     userId: ID!
