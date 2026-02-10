@@ -116,8 +116,8 @@ public class PayFastController {
         log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}, exclude_both+encoded={}, exclude_both+plain={})",
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain, sig_exclude_both_encoded, sig_exclude_both_plain);
 
-        // Primary choice: EXCLUDE both merchant_id and merchant_key from SIGNATURE but INCLUDE merchant_key in URL
-        // PayFast requires merchant_key in the URL, but signature only uses transaction data
+        // Primary choice: EXCLUDE both merchant_id and merchant_key from SIGNATURE but INCLUDE both in URL
+        // PayFast requires both merchant_id and merchant_key in the URL, but signature only uses transaction data
         // Use RFC-3986 ENCODED values in the URL string
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         params.entrySet().stream()
@@ -455,11 +455,10 @@ public class PayFastController {
         String excludeEncodedBase = buildExampleUrl.apply(paramsWithoutKey, true);
         String excludePlainBase = buildExampleUrl.apply(paramsWithoutKey, false);
 
-        // For exclude_both variants: remove both merchant_id and merchant_key but INCLUDE merchant_key in URL
-        // (PayFast requires merchant_key in URL but not in signature computation)
+        // For exclude_both variants: INCLUDE merchant_id and merchant_key in URL but EXCLUDE from signature
+        // (PayFast requires both merchant_id and merchant_key in URL but only transaction data in signature)
         Map<String, String> paramsForExcludeBothUrl = new LinkedHashMap<>(params);
-        paramsForExcludeBothUrl.remove("merchant_id");
-        // Keep merchant_key in the URL even though it's excluded from signature
+        // Keep both merchant_id and merchant_key in the URL even though they're excluded from signature
         String excludeBothEncodedBase = buildExampleUrl.apply(paramsForExcludeBothUrl, true);
         String excludeBothPlainBase = buildExampleUrl.apply(paramsForExcludeBothUrl, false);
 
