@@ -172,27 +172,27 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
-        // 2. Build the string (DO NOT URL encode for signature generation)
+        // 2. Build the base string (DO NOT URL encode for signature generation)
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
             sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
         }
-
-        // 3. Append passphrase at the end (required by PayFast)
-        String passphrase = payFastProperties.getPassphrase();
-        if (passphrase != null && !passphrase.isBlank()) {
-//            sb.append("passphrase=").append(passphrase);
-//        } else {
-//            // Remove trailing & if no passphrase
-//            if (sb.length() > 0) {
-                sb.setLength(sb.length() - 1);
-//            }
+        // Trim trailing '&' if present
+        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '&') {
+            sb.setLength(sb.length() - 1);
         }
 
-        log.debug("[PayFast] Signature generation string: {}", sb.toString());
+        // 3. Append passphrase at the end if configured
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+
+        String signatureString = sb.toString();
+        log.debug("[PayFast] Signature generation string: {}", signatureString);
 
         // 4. MD5 hash
-        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(sb.toString());
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
         log.debug("[PayFast] Generated signature: {}", signature);
         return signature;
     }
