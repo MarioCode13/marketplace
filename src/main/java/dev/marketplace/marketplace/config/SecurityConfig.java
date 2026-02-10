@@ -71,7 +71,7 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/payments/payfast/itn"))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/",
