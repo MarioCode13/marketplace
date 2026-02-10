@@ -94,8 +94,17 @@ public class PayFastController {
 
         log.info("[PayFast] Parameters map before signature: {}", params);
 
-        // Generate signature excluding merchant_key (some PayFast setups expect merchant_key excluded)
-        String signature = generateSignature(params, false);
+        // Generate multiple signature variants for debugging and compatibility
+        String sig_include_encoded = generateSignature(params, true, true);
+        String sig_include_plain = generateSignature(params, true, false);
+        String sig_exclude_encoded = generateSignature(params, false, true);
+        String sig_exclude_plain = generateSignature(params, false, false);
+
+        log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={})",
+                sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain);
+
+        // Primary choice: include merchant_key and URL-encode values (matches many PayFast examples)
+        String signature = sig_include_encoded;
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -139,20 +148,25 @@ public class PayFastController {
 
         log.info("[PayFast ITN] Params before signature generation: {}", paramsForValidation);
 
-        String generatedSignature = generateSignature(paramsForValidation);
-        String generatedSignatureAlt = generateSignature(paramsForValidation, false);
-        log.info("[PayFast ITN] Generated signature for validation (default): {}", generatedSignature);
-        log.info("[PayFast ITN] Generated signature for validation (no merchant_key): {}", generatedSignatureAlt);
+        // Generate all variants to compare with received signature
+        String gen_inc_enc = generateSignature(paramsForValidation, true, true);
+        String gen_inc_plain = generateSignature(paramsForValidation, true, false);
+        String gen_exc_enc = generateSignature(paramsForValidation, false, true);
+        String gen_exc_plain = generateSignature(paramsForValidation, false, false);
 
-        log.info("[PayFast ITN] Comparing signatures:");
-        log.info("[PayFast ITN]   Received:  {}", receivedSignature);
-        log.info("[PayFast ITN]   Generated (default): {}", generatedSignature);
-        log.info("[PayFast ITN]   Generated (no merchant_key): {}", generatedSignatureAlt);
-        log.info("[PayFast ITN]   Match default: {}", generatedSignature.equals(receivedSignature));
-        log.info("[PayFast ITN]   Match no-merchant-key: {}", generatedSignatureAlt.equals(receivedSignature));
+        log.info("[PayFast ITN] Generated signatures: include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}", gen_inc_enc, gen_inc_plain, gen_exc_enc, gen_exc_plain);
 
-        if (!generatedSignature.equals(receivedSignature) && !generatedSignatureAlt.equals(receivedSignature)) {
-            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated(default): {}, Generated(noMerchantKey): {}", receivedSignature, generatedSignature, generatedSignatureAlt);
+        boolean match = receivedSignature != null && (
+            receivedSignature.equals(gen_inc_enc) ||
+            receivedSignature.equals(gen_inc_plain) ||
+            receivedSignature.equals(gen_exc_enc) ||
+            receivedSignature.equals(gen_exc_plain)
+        );
+
+        log.info("[PayFast ITN] Comparing signatures: Received={}, Match={}", receivedSignature, match);
+
+        if (!match) {
+            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated variants: {} | {} | {} | {}", receivedSignature, gen_inc_enc, gen_inc_plain, gen_exc_enc, gen_exc_plain);
             log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
             return ResponseEntity.status(400).body("Signature mismatch");
         }
@@ -203,11 +217,15 @@ public class PayFastController {
     }
 
     private String generateSignature(Map<String, String> params) {
-        return generateSignature(params, true);
+        return generateSignature(params, true, false);
     }
 
     private String generateSignature(Map<String, String> params, boolean includeMerchantKey) {
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (includeMerchantKey={}) ==========", includeMerchantKey);
+        return generateSignature(params, includeMerchantKey, false);
+    }
+
+    private String generateSignature(Map<String, String> params, boolean includeMerchantKey, boolean urlEncodeValues) {
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (includeMerchantKey={}, urlEncodeValues={}) ==========", includeMerchantKey, urlEncodeValues);
 
         // 1. Exclude empty values and the 'signature' field
         log.info("[PayFast Signature] Input params count: {}", params.size());
@@ -247,11 +265,13 @@ public class PayFastController {
         log.info("[PayFast Signature] Filtered params count: {}", filtered.size());
         log.info("[PayFast Signature] Filtered params (sorted alphabetically): {}", filtered);
 
-        // 2. Build the base string (DO NOT URL encode for signature generation)
+        // 2. Build the base string
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
-            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
-            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), entry.getValue());
+            String value = entry.getValue();
+            String toAppend = urlEncodeValues ? URLEncoder.encode(value, StandardCharsets.UTF_8) : value;
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), toAppend);
         }
 
         // Trim trailing '&' if present
@@ -284,7 +304,7 @@ public class PayFastController {
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
         log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========", includeMerchantKey);
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
 
         return signature;
     }
