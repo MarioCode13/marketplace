@@ -308,4 +308,111 @@ public class PayFastController {
 
         return signature;
     }
+
+    @GetMapping("/debug/signatures")
+    public ResponseEntity<Map<String, Object>> debugSignatureVariants(
+            @RequestParam(defaultValue = "Pro Store Subscription") String itemName,
+            @RequestParam(defaultValue = "100.00") String amount,
+            @RequestParam(defaultValue = "100.00") String recurringAmount,
+            @RequestParam(defaultValue = "3") String frequency,
+            @RequestParam(defaultValue = "0") String cycles,
+            @RequestParam(defaultValue = "pro_store") String planType,
+            @RequestParam String userEmail
+    ) {
+        if (!payfastConfigured) {
+            return ResponseEntity.status(503).body(Map.of("error", "PayFast not configured on this instance"));
+        }
+
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("merchant_id", payFastProperties.getMerchantId());
+        params.put("merchant_key", payFastProperties.getMerchantKey());
+        params.put("amount", amount);
+        params.put("item_name", itemName);
+        params.put("subscription_type", "1");
+        params.put("recurring_amount", recurringAmount);
+        params.put("frequency", frequency);
+        params.put("cycles", cycles);
+        params.put("custom_str1", planType);
+        params.put("custom_str2", userEmail);
+
+        Map<String, Object> out = new java.util.HashMap<>();
+
+        // Build variants and base strings
+        Map<String, Object> v1 = buildVariant(params, true, true);
+        Map<String, Object> v2 = buildVariant(params, true, false);
+        Map<String, Object> v3 = buildVariant(params, false, true);
+        Map<String, Object> v4 = buildVariant(params, false, false);
+
+        out.put("include_encoded", v1);
+        out.put("include_plain", v2);
+        out.put("exclude_encoded", v3);
+        out.put("exclude_plain", v4);
+
+        // Provide a ready-to-open URL example for each variant (signature only differs)
+        String baseUrl = payFastProperties.getUrl() + "?";
+        StringBuilder commonQs = new StringBuilder();
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            commonQs.append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+                    .append("=")
+                    .append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                    .append("&");
+        }
+        String common = commonQs.toString();
+        if (common.endsWith("&")) common = common.substring(0, common.length() - 1);
+
+        out.put("example_url_include_encoded", baseUrl + common + "&signature=" + v1.get("signature"));
+        out.put("example_url_include_plain", baseUrl + common + "&signature=" + v2.get("signature"));
+        out.put("example_url_exclude_encoded", baseUrl + common + "&signature=" + v3.get("signature"));
+        out.put("example_url_exclude_plain", baseUrl + common + "&signature=" + v4.get("signature"));
+
+        return ResponseEntity.ok(out);
+    }
+
+    // Helper to build base string and signature for a variant
+    private Map<String, Object> buildVariant(Map<String, String> params, boolean includeMerchantKey, boolean urlEncodeValues) {
+        Map<String, Object> result = new java.util.HashMap<>();
+
+        // Filter & sort like generateSignature
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        if (!includeMerchantKey) filtered.remove("merchant_key");
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String toAppend = urlEncodeValues ? URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8) : entry.getValue();
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+        }
+        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+
+        String baseString = sb.toString();
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        result.put("baseString", baseString);
+        result.put("signature", md5);
+
+        // Masked passphrase info
+        if (passphrase != null) {
+            String masked = passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(Math.max(2, passphrase.length() - 2));
+            result.put("passphrase_masked", masked);
+            result.put("passphrase_sha256", org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase));
+            result.put("passphrase_length", passphrase.length());
+        }
+
+        return result;
+    }
+
+
 }
