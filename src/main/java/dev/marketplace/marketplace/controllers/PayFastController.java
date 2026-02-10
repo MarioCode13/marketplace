@@ -109,14 +109,16 @@ public class PayFastController {
         String sig_include_plain = generateSignature(params, true, false);
         String sig_exclude_encoded = generateSignature(params, false, true);
         String sig_exclude_plain = generateSignature(params, false, false);
+        // Additional variant: exclude both merchant_id and merchant_key (PayFast might only use transaction data)
+        String sig_exclude_both_encoded = generateSignatureExcludingMerchantData(params, true);
+        String sig_exclude_both_plain = generateSignatureExcludingMerchantData(params, false);
 
-        log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={})",
-                sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain);
+        log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}, exclude_both+encoded={}, exclude_both+plain={})",
+                sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain, sig_exclude_both_encoded, sig_exclude_both_plain);
 
-        // Primary choice: EXCLUDE merchant_key from SIGNATURE but INCLUDE it in the URL
-        // PayFast requires merchant_key in the URL, but it's not part of the signature computation
-        // Use RFC-3986 ENCODED values in the URL string to match exclude_encoded signature
-        // (HTTP will show %20, %40, etc. in the actual URL sent to PayFast)
+        // Primary choice: EXCLUDE both merchant_id and merchant_key from SIGNATURE but INCLUDE merchant_key in URL
+        // PayFast requires merchant_key in the URL, but signature only uses transaction data
+        // Use RFC-3986 ENCODED values in the URL string
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
@@ -124,8 +126,8 @@ public class PayFastController {
                    .append("=")
                    .append(rfc3986Encode(entry.getValue()))
                    .append("&"));
-        // use the exclude+encoded signature (merchant_key in URL but excluded from signature computation, values encoded)
-        url.append("signature=").append(sig_exclude_encoded);
+        // use the exclude_both+encoded signature (merchant_id and merchant_key excluded from signature computation)
+        url.append("signature=").append(sig_exclude_both_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
@@ -306,6 +308,59 @@ public class PayFastController {
         log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
 
         // 4. MD5 hash
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
+        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
+
+        return signature;
+    }
+
+    // Generate signature excluding BOTH merchant_id and merchant_key (only transaction data)
+    private String generateSignatureExcludingMerchantData(Map<String, String> params, boolean urlEncodeValues) {
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (exclude_both, urlEncodeValues={}) ==========", urlEncodeValues);
+
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        // Exclude both merchant_id and merchant_key
+        filtered.remove("merchant_id");
+        filtered.remove("merchant_key");
+        log.debug("[PayFast Signature] Removed merchant_id and merchant_key from signature");
+
+        log.info("[PayFast Signature] Filtered params (sorted, no merchant data): {}", filtered);
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String value = entry.getValue();
+            String toAppend = urlEncodeValues ? rfc3986Encode(value) : value;
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), toAppend);
+        }
+
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') {
+            sb.setLength(sb.length() - 1);
+        }
+
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+            String masked = passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
+            String passphraseHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase);
+            log.info("[PayFast Signature] Passphrase appended (masked={}, sha256={}, length={})", masked, passphraseHash, passphrase.length());
+        } else {
+            log.warn("[PayFast Signature] No passphrase configured!");
+        }
+
+        String signatureString = sb.toString();
+        log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
+
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
         log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
