@@ -81,13 +81,14 @@ public class PayFastController {
             itemName, amount, recurringAmount, frequency, cycles, planType, userEmail);
 
         // Sanitize inputs to avoid stray quote characters or whitespace affecting signature
-        String safeItemName = sanitizeParam(itemName);
-        String safeAmount = sanitizeParam(amount);
-        String safeRecurringAmount = sanitizeParam(recurringAmount);
-        String safeFrequency = sanitizeParam(frequency);
-        String safeCycles = sanitizeParam(cycles);
-        String safePlanType = sanitizeParam(planType);
-        String safeUserEmail = sanitizeParam(userEmail);
+        // IMPORTANT: Also decode URL-encoded values (e.g., %20 -> space, %40 -> @)
+        String safeItemName = sanitizeAndDecode(itemName);
+        String safeAmount = sanitizeAndDecode(amount);
+        String safeRecurringAmount = sanitizeAndDecode(recurringAmount);
+        String safeFrequency = sanitizeAndDecode(frequency);
+        String safeCycles = sanitizeAndDecode(cycles);
+        String safePlanType = sanitizeAndDecode(planType);
+        String safeUserEmail = sanitizeAndDecode(userEmail);
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("merchant_id", payFastProperties.getMerchantId());
@@ -432,6 +433,20 @@ public class PayFastController {
         return result;
     }
 
+
+    // Helper to sanitize incoming request params (trim, remove quotes, and decode URL encoding)
+    private String sanitizeAndDecode(String s) {
+        if (s == null) return null;
+        try {
+            // First decode URL encoding (%20 -> space, %40 -> @, etc.)
+            String decoded = java.net.URLDecoder.decode(s, java.nio.charset.StandardCharsets.UTF_8);
+            // Then sanitize (trim and remove quotes)
+            return sanitizeParam(decoded);
+        } catch (Exception e) {
+            log.warn("[PayFast] Error decoding parameter: {}", s, e);
+            return sanitizeParam(s);
+        }
+    }
 
     // Helper to sanitize incoming request params (trim and remove surrounding quotes)
     private String sanitizeParam(String s) {
