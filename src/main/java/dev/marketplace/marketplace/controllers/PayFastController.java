@@ -132,11 +132,19 @@ public class PayFastController {
         log.info("[PayFast ITN] Received signature: {}", receivedSignature);
 
         // Validate signature by regenerating it
+        // NOTE: PayFast ITN includes transaction details but excludes merchant_key and other setup params
         Map<String, String> paramsForValidation = new LinkedHashMap<>(payload);
         paramsForValidation.remove("signature");
 
+        log.info("[PayFast ITN] Params before signature generation: {}", paramsForValidation);
+
         String generatedSignature = generateSignature(paramsForValidation);
         log.info("[PayFast ITN] Generated signature for validation: {}", generatedSignature);
+
+        log.info("[PayFast ITN] Comparing signatures:");
+        log.info("[PayFast ITN]   Received:  {}", receivedSignature);
+        log.info("[PayFast ITN]   Generated: {}", generatedSignature);
+        log.info("[PayFast ITN]   Match: {}", generatedSignature.equals(receivedSignature));
 
         if (!generatedSignature.equals(receivedSignature)) {
             log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated: {}", receivedSignature, generatedSignature);
@@ -193,10 +201,24 @@ public class PayFastController {
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION START ==========");
 
         // 1. Exclude empty values and the 'signature' field
+        log.info("[PayFast Signature] Input params count: {}", params.size());
         log.info("[PayFast Signature] Input params: {}", params);
 
         Map<String, String> filtered = params.entrySet().stream()
-            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .filter(e -> {
+                boolean hasValue = e.getValue() != null && !e.getValue().isEmpty();
+                boolean isNotSignature = !"signature".equals(e.getKey());
+                boolean keep = hasValue && isNotSignature;
+
+                if (!keep) {
+                    if (!hasValue) {
+                        log.debug("[PayFast Signature] Filtering out {} (empty/null value)", e.getKey());
+                    } else {
+                        log.debug("[PayFast Signature] Filtering out {} (signature field)", e.getKey());
+                    }
+                }
+                return keep;
+            })
             .sorted(Map.Entry.comparingByKey())
             .collect(java.util.stream.Collectors.toMap(
                 Map.Entry::getKey,
@@ -205,7 +227,8 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
-        log.info("[PayFast Signature] Filtered params (sorted): {}", filtered);
+        log.info("[PayFast Signature] Filtered params count: {}", filtered.size());
+        log.info("[PayFast Signature] Filtered params (sorted alphabetically): {}", filtered);
 
         // 2. Build the base string (DO NOT URL encode for signature generation)
         StringBuilder sb = new StringBuilder();
@@ -227,7 +250,7 @@ public class PayFastController {
         // }
 
         String signatureString = sb.toString();
-        log.info("[PayFast Signature] Signature base string: {}", signatureString);
+        log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
 
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
