@@ -353,23 +353,35 @@ public class PayFastController {
         out.put("exclude_encoded", v3);
         out.put("exclude_plain", v4);
 
-        // Provide a ready-to-open URL example for each variant (signature only differs)
-        // IMPORTANT: Parameters MUST be in alphabetical order to match signature computation
+        // Build example URLs for each variant with appropriate encoding and parameters
         String baseUrl = payFastProperties.getUrl() + "?";
-        StringBuilder commonQs = new StringBuilder();
-        params.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .forEach(e -> commonQs.append(rfc3986Encode(e.getKey()))
-                    .append("=")
-                    .append(rfc3986Encode(e.getValue()))
-                    .append("&"));
-        String common = commonQs.toString();
-        if (common.endsWith("&")) common = common.substring(0, common.length() - 1);
 
-        out.put("example_url_include_encoded", baseUrl + common + "&signature=" + v1.get("signature"));
-        out.put("example_url_include_plain", baseUrl + common + "&signature=" + v2.get("signature"));
-        out.put("example_url_exclude_encoded", baseUrl + common + "&signature=" + v3.get("signature"));
-        out.put("example_url_exclude_plain", baseUrl + common + "&signature=" + v4.get("signature"));
+        // Helper to build URL with specific encoding
+        java.util.function.BiFunction<Map<String, String>, Boolean, String> buildExampleUrl = (p, encoded) -> {
+            StringBuilder sb = new StringBuilder(baseUrl);
+            p.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
+                .forEach(e -> sb.append(e.getKey())
+                        .append("=")
+                        .append(encoded ? rfc3986Encode(e.getValue()) : e.getValue())
+                        .append("&"));
+            return sb.toString();
+        };
+
+        // For include variants: use all params (with merchant_key)
+        String includeEncodedBase = buildExampleUrl.apply(params, true);
+        String includePlainBase = buildExampleUrl.apply(params, false);
+
+        // For exclude variants: remove merchant_key first
+        Map<String, String> paramsWithoutKey = new LinkedHashMap<>(params);
+        paramsWithoutKey.remove("merchant_key");
+        String excludeEncodedBase = buildExampleUrl.apply(paramsWithoutKey, true);
+        String excludePlainBase = buildExampleUrl.apply(paramsWithoutKey, false);
+
+        out.put("example_url_include_encoded", includeEncodedBase + "signature=" + v1.get("signature"));
+        out.put("example_url_include_plain", includePlainBase + "signature=" + v2.get("signature"));
+        out.put("example_url_exclude_encoded", excludeEncodedBase + "signature=" + v3.get("signature"));
+        out.put("example_url_exclude_plain", excludePlainBase + "signature=" + v4.get("signature"));
 
         return ResponseEntity.ok(out);
     }
