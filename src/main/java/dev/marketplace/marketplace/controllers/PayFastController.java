@@ -181,10 +181,10 @@ public class PayFastController {
         // 3. Append passphrase at the end (required by PayFast)
         String passphrase = payFastProperties.getPassphrase();
         if (passphrase != null && !passphrase.isBlank()) {
-            sb.append("passphrase=").append(passphrase);
-        } else {
-            // Remove trailing & if no passphrase
-            if (sb.length() > 0) {
+//            sb.append("passphrase=").append(passphrase);
+//        } else {
+//            // Remove trailing & if no passphrase
+//            if (sb.length() > 0) {
                 sb.setLength(sb.length() - 1);
             }
         }
