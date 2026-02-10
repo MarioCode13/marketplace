@@ -113,16 +113,15 @@ public class PayFastController {
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain);
 
         // Primary choice: include merchant_key and URL-encode values (matches many PayFast examples)
-        String signature = sig_include_encoded;
-
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         for (Map.Entry<String, String> entry : params.entrySet()) {
-            url.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
+            url.append(rfc3986Encode(entry.getKey()))
                .append("=")
-               .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8))
+               .append(rfc3986Encode(entry.getValue()))
                .append("&");
         }
-        url.append("signature=").append(signature);
+        // use the include+encoded signature (merchant_key included, values URL-encoded)
+        url.append("signature=").append(sig_include_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
@@ -225,14 +224,6 @@ public class PayFastController {
         return ResponseEntity.ok(response);
     }
 
-    private String generateSignature(Map<String, String> params) {
-        return generateSignature(params, true, false);
-    }
-
-    private String generateSignature(Map<String, String> params, boolean includeMerchantKey) {
-        return generateSignature(params, includeMerchantKey, false);
-    }
-
     private String generateSignature(Map<String, String> params, boolean includeMerchantKey, boolean urlEncodeValues) {
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (includeMerchantKey={}, urlEncodeValues={}) ==========", includeMerchantKey, urlEncodeValues);
 
@@ -278,7 +269,7 @@ public class PayFastController {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
             String value = entry.getValue();
-            String toAppend = urlEncodeValues ? URLEncoder.encode(value, StandardCharsets.UTF_8) : value;
+            String toAppend = urlEncodeValues ? rfc3986Encode(value) : value;
             sb.append(entry.getKey()).append("=").append(toAppend).append("&");
             log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), toAppend);
         }
@@ -297,7 +288,7 @@ public class PayFastController {
             if (passphrase.length() <= 4) {
                 masked = "****";
             } else if (passphrase.length() <= 8) {
-                masked = passphrase.substring(0, 1) + "****" + passphrase.substring(passphrase.length() - 1);
+                masked = passphrase.charAt(0) + "****" + passphrase.charAt(passphrase.length() - 1);
             } else {
                 masked = passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
             }
@@ -361,9 +352,9 @@ public class PayFastController {
         String baseUrl = payFastProperties.getUrl() + "?";
         StringBuilder commonQs = new StringBuilder();
         for (Map.Entry<String, String> e : params.entrySet()) {
-            commonQs.append(URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8))
+            commonQs.append(rfc3986Encode(e.getKey()))
                     .append("=")
-                    .append(URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                    .append(rfc3986Encode(e.getValue()))
                     .append("&");
         }
         String common = commonQs.toString();
@@ -396,10 +387,10 @@ public class PayFastController {
 
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
-            String toAppend = urlEncodeValues ? URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8) : entry.getValue();
+            String toAppend = urlEncodeValues ? rfc3986Encode(entry.getValue()) : entry.getValue();
             sb.append(entry.getKey()).append("=").append(toAppend).append("&");
         }
-        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
 
         String passphrase = payFastProperties.getPassphrase();
         if (passphrase != null && !passphrase.isBlank()) {
@@ -435,5 +426,14 @@ public class PayFastController {
         if (t.endsWith("\"")) t = t.substring(0, t.length() - 1);
         if (t.startsWith("\"")) t = t.substring(1);
         return t;
+    }
+
+    // RFC-3986 compatible percent-encoding helper (spaces -> %20, preserves ~)
+    private String rfc3986Encode(String s) {
+        if (s == null) return "";
+        String encoded = URLEncoder.encode(s, StandardCharsets.UTF_8);
+        // URLEncoder produces + for spaces; RFC-3986 requires %20. Also keep ~ unescaped like rawurlencode in PHP
+        encoded = encoded.replace("+", "%20").replace("%7E", "~");
+        return encoded;
     }
 }
