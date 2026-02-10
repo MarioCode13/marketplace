@@ -186,7 +186,7 @@ public class PayFastController {
 //            // Remove trailing & if no passphrase
 //            if (sb.length() > 0) {
                 sb.setLength(sb.length() - 1);
-            }
+//            }
         }
 
         log.debug("[PayFast] Signature generation string: {}", sb.toString());
