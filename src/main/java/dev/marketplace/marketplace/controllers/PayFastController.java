@@ -115,16 +115,17 @@ public class PayFastController {
 
         // Primary choice: EXCLUDE merchant_key from SIGNATURE but INCLUDE it in the URL
         // PayFast requires merchant_key in the URL, but it's not part of the signature computation
-        // Use PLAIN (non-encoded) values because HTTP decoding converts %20 back to spaces, %40 back to @, etc.
+        // Use RFC-3986 ENCODED values in the URL string to match exclude_encoded signature
+        // (HTTP will show %20, %40, etc. in the actual URL sent to PayFast)
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
-            .forEach(entry -> url.append(entry.getKey())
+            .forEach(entry -> url.append(rfc3986Encode(entry.getKey()))
                    .append("=")
-                   .append(entry.getValue())
+                   .append(rfc3986Encode(entry.getValue()))
                    .append("&"));
-        // use the exclude+plain signature (merchant_key in URL but excluded from signature computation)
-        url.append("signature=").append(sig_exclude_plain);
+        // use the exclude+encoded signature (merchant_key in URL but excluded from signature computation, values encoded)
+        url.append("signature=").append(sig_exclude_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
