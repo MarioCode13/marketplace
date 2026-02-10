@@ -8,10 +8,9 @@ import dev.marketplace.marketplace.security.JwtUtil;
 import dev.marketplace.marketplace.service.B2StorageService;
 import dev.marketplace.marketplace.service.PasswordValidationService;
 import dev.marketplace.marketplace.service.UserService;
-import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -27,7 +26,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
@@ -35,11 +33,9 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
-    private final Environment env;
 
-    public SecurityConfig(JwtUtil jwtUtil, Environment env) {
+    public SecurityConfig(JwtUtil jwtUtil) {
         this.jwtUtil = jwtUtil;
-        this.env = env;
     }
 
     @Bean
@@ -67,11 +63,14 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
-        boolean isProd = Arrays.stream(env.getActiveProfiles()).anyMatch(p -> "prod".equalsIgnoreCase(p));
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/payments/payfast/itn"))
+                // Ensure endpoints that need to accept unauthenticated POST callbacks are excluded from CSRF
+                .csrf(csrf -> csrf.ignoringRequestMatchers(
+                        "/api/payments/payfast/itn",
+                        "/api/auth/**" // allow login/register POSTs without CSRF token
+                ))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/",
