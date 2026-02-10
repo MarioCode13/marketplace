@@ -80,17 +80,26 @@ public class PayFastController {
         log.info("[PayFast] Input parameters: itemName={}, amount={}, recurringAmount={}, frequency={}, cycles={}, planType={}, userEmail={}",
             itemName, amount, recurringAmount, frequency, cycles, planType, userEmail);
 
+        // Sanitize inputs to avoid stray quote characters or whitespace affecting signature
+        String safeItemName = sanitizeParam(itemName);
+        String safeAmount = sanitizeParam(amount);
+        String safeRecurringAmount = sanitizeParam(recurringAmount);
+        String safeFrequency = sanitizeParam(frequency);
+        String safeCycles = sanitizeParam(cycles);
+        String safePlanType = sanitizeParam(planType);
+        String safeUserEmail = sanitizeParam(userEmail);
+
         Map<String, String> params = new LinkedHashMap<>();
         params.put("merchant_id", payFastProperties.getMerchantId());
         params.put("merchant_key", payFastProperties.getMerchantKey());
-        params.put("amount", amount);
-        params.put("item_name", itemName);
+        params.put("amount", safeAmount);
+        params.put("item_name", safeItemName);
         params.put("subscription_type", "1");
-        params.put("recurring_amount", recurringAmount);
-        params.put("frequency", frequency);
-        params.put("cycles", cycles);
-        params.put("custom_str1", planType); // pass plan type
-        params.put("custom_str2", userEmail); // pass user email
+        params.put("recurring_amount", safeRecurringAmount);
+        params.put("frequency", safeFrequency);
+        params.put("cycles", safeCycles);
+        params.put("custom_str1", safePlanType); // pass plan type
+        params.put("custom_str2", safeUserEmail); // pass user email
 
         log.info("[PayFast] Parameters map before signature: {}", params);
 
@@ -415,4 +424,16 @@ public class PayFastController {
     }
 
 
+    // Helper to sanitize incoming request params (trim and remove surrounding quotes)
+    private String sanitizeParam(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        if (t.length() >= 2 && ((t.startsWith("\"") && t.endsWith("\"")) || (t.startsWith("'") && t.endsWith("'")))) {
+            t = t.substring(1, t.length() - 1).trim();
+        }
+        // Remove any stray double-quote characters embedded at the end/start
+        if (t.endsWith("\"")) t = t.substring(0, t.length() - 1);
+        if (t.startsWith("\"")) t = t.substring(1);
+        return t;
+    }
 }
