@@ -94,7 +94,8 @@ public class PayFastController {
 
         log.info("[PayFast] Parameters map before signature: {}", params);
 
-        String signature = generateSignature(params);
+        // Generate signature excluding merchant_key (some PayFast setups expect merchant_key excluded)
+        String signature = generateSignature(params, false);
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -139,15 +140,19 @@ public class PayFastController {
         log.info("[PayFast ITN] Params before signature generation: {}", paramsForValidation);
 
         String generatedSignature = generateSignature(paramsForValidation);
-        log.info("[PayFast ITN] Generated signature for validation: {}", generatedSignature);
+        String generatedSignatureAlt = generateSignature(paramsForValidation, false);
+        log.info("[PayFast ITN] Generated signature for validation (default): {}", generatedSignature);
+        log.info("[PayFast ITN] Generated signature for validation (no merchant_key): {}", generatedSignatureAlt);
 
         log.info("[PayFast ITN] Comparing signatures:");
         log.info("[PayFast ITN]   Received:  {}", receivedSignature);
-        log.info("[PayFast ITN]   Generated: {}", generatedSignature);
-        log.info("[PayFast ITN]   Match: {}", generatedSignature.equals(receivedSignature));
+        log.info("[PayFast ITN]   Generated (default): {}", generatedSignature);
+        log.info("[PayFast ITN]   Generated (no merchant_key): {}", generatedSignatureAlt);
+        log.info("[PayFast ITN]   Match default: {}", generatedSignature.equals(receivedSignature));
+        log.info("[PayFast ITN]   Match no-merchant-key: {}", generatedSignatureAlt.equals(receivedSignature));
 
-        if (!generatedSignature.equals(receivedSignature)) {
-            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated: {}", receivedSignature, generatedSignature);
+        if (!generatedSignature.equals(receivedSignature) && !generatedSignatureAlt.equals(receivedSignature)) {
+            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated(default): {}, Generated(noMerchantKey): {}", receivedSignature, generatedSignature, generatedSignatureAlt);
             log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
             return ResponseEntity.status(400).body("Signature mismatch");
         }
@@ -198,7 +203,11 @@ public class PayFastController {
     }
 
     private String generateSignature(Map<String, String> params) {
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START ==========");
+        return generateSignature(params, true);
+    }
+
+    private String generateSignature(Map<String, String> params, boolean includeMerchantKey) {
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (includeMerchantKey={}) ==========", includeMerchantKey);
 
         // 1. Exclude empty values and the 'signature' field
         log.info("[PayFast Signature] Input params count: {}", params.size());
@@ -227,6 +236,14 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
+        // If configured to exclude merchant_key, remove it now (if present)
+        if (!includeMerchantKey) {
+            if (filtered.containsKey("merchant_key")) {
+                filtered.remove("merchant_key");
+                log.debug("[PayFast Signature] merchant_key excluded from signature generation");
+            }
+        }
+
         log.info("[PayFast Signature] Filtered params count: {}", filtered.size());
         log.info("[PayFast Signature] Filtered params (sorted alphabetically): {}", filtered);
 
@@ -242,11 +259,21 @@ public class PayFastController {
             sb.setLength(sb.length() - 1);
         }
 
-        // 3. Append passphrase at the end if configured
+        // 3. Append passphrase at the end if configured (do not URL-encode passphrase)
         String passphrase = payFastProperties.getPassphrase();
         if (passphrase != null && !passphrase.isBlank()) {
             sb.append("&passphrase=").append(passphrase);
-            log.info("[PayFast Signature] Passphrase appended: {}", passphrase);
+            // Mask passphrase for logs and provide a hash so we can verify correctness without exposing the secret
+            String masked;
+            if (passphrase.length() <= 4) {
+                masked = "****";
+            } else if (passphrase.length() <= 8) {
+                masked = passphrase.substring(0, 1) + "****" + passphrase.substring(passphrase.length() - 1);
+            } else {
+                masked = passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
+            }
+            String passphraseHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase);
+            log.info("[PayFast Signature] Passphrase appended (masked={}, sha256={}, length={})", masked, passphraseHash, passphrase.length());
         } else {
             log.warn("[PayFast Signature] No passphrase configured!");
         }
@@ -257,7 +284,7 @@ public class PayFastController {
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
         log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========", includeMerchantKey);
 
         return signature;
     }
