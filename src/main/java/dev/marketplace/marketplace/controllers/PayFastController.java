@@ -112,8 +112,8 @@ public class PayFastController {
         log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={})",
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain);
 
-        // Primary choice: include merchant_key and URL-encode values (matches many PayFast examples)
-        // IMPORTANT: Parameters MUST be in alphabetical order to match the signature computation
+        // Primary choice: EXCLUDE merchant_key and URL-encode values
+        // PayFast signature validation does NOT include merchant_key in the base string
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
@@ -121,8 +121,8 @@ public class PayFastController {
                    .append("=")
                    .append(rfc3986Encode(entry.getValue()))
                    .append("&"));
-        // use the include+encoded signature (merchant_key included, values URL-encoded)
-        url.append("signature=").append(sig_include_encoded);
+        // use the exclude+encoded signature (merchant_key excluded from signature, but included in URL)
+        url.append("signature=").append(sig_exclude_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
