@@ -66,11 +66,7 @@ public class SecurityConfig {
 
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // Ensure endpoints that need to accept unauthenticated POST callbacks are excluded from CSRF
-                .csrf(csrf -> csrf.ignoringRequestMatchers(
-                        "/api/payments/payfast/itn",
-                        "/api/auth/**" // allow login/register POSTs without CSRF token
-                ))
+                .csrf(csrf -> csrf.disable())  // CSRF not needed for stateless JWT API
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/",
@@ -81,7 +77,6 @@ public class SecurityConfig {
                             "/api/payments/payfast/itn"
                     ).permitAll();
                     auth.requestMatchers("/graphql/**").permitAll();
-                    // Allow REST auth endpoints (login/register) so clients can authenticate
                     auth.requestMatchers("/api/auth/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
