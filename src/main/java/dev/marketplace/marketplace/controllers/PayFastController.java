@@ -242,12 +242,14 @@ public class PayFastController {
             sb.setLength(sb.length() - 1);
         }
 
-        // 3. TEMPORARILY DISABLED: Append passphrase at the end if configured
-        // String passphrase = payFastProperties.getPassphrase();
-        // if (passphrase != null && !passphrase.isBlank()) {
-        //     sb.append("&passphrase=").append(passphrase);
-        //     log.info("[PayFast Signature] Passphrase appended");
-        // }
+        // 3. Append passphrase at the end if configured
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+            log.info("[PayFast Signature] Passphrase appended: {}", passphrase);
+        } else {
+            log.warn("[PayFast Signature] No passphrase configured!");
+        }
 
         String signatureString = sb.toString();
         log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
