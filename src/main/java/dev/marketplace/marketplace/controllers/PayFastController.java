@@ -116,8 +116,8 @@ public class PayFastController {
         log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}, exclude_both+encoded={}, exclude_both+plain={})",
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain, sig_exclude_both_encoded, sig_exclude_both_plain);
 
-        // Primary choice: EXCLUDE both merchant_id and merchant_key from SIGNATURE but INCLUDE both in URL
-        // PayFast requires both merchant_id and merchant_key in the URL, but signature only uses transaction data
+        // Primary choice: INCLUDE merchant_id and merchant_key in SIGNATURE
+        // PayFast expects merchant_id and merchant_key in both URL and signature calculation
         // Use RFC-3986 ENCODED values in the URL string
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
         params.entrySet().stream()
@@ -126,8 +126,8 @@ public class PayFastController {
                    .append("=")
                    .append(rfc3986Encode(entry.getValue()))
                    .append("&"));
-        // use the exclude_both+encoded signature (merchant_id and merchant_key excluded from signature computation)
-        url.append("signature=").append(sig_exclude_both_encoded);
+        // use the include+encoded signature (merchant_id and merchant_key included in signature computation)
+        url.append("signature=").append(sig_include_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
@@ -179,13 +179,13 @@ public class PayFastController {
 
         log.info("[PayFast ITN] Comparing signatures: Received={}, Match={}", receivedSignature, match);
 
-        // If configured to require a single canonical signature, only accept the exclude_both_encoded variant
+        // If configured to require a single canonical signature, only accept the include_encoded variant
         if (payFastProperties.isRequireSignature()) {
-            String canonical = generateSignatureExcludingMerchantData(paramsForValidation, true); // exclude both, RFC3986 encoded
+            String canonical = generateSignature(paramsForValidation, true, true); // include both merchant_id and merchant_key, RFC3986 encoded
             boolean canonicalMatch = receivedSignature != null && receivedSignature.equals(canonical);
-            log.info("[PayFast ITN] requireSignature=true, canonical expected={}, canonicalMatch={}", canonical, canonicalMatch);
+            log.info("[PayFast ITN] requireSignature=true, canonical (include_encoded) expected={}, canonicalMatch={}", canonical, canonicalMatch);
             if (!canonicalMatch) {
-                log.error("[PayFast ITN] SIGNATURE MISMATCH (strict). Received: {}, Expected (canonical): {}", receivedSignature, canonical);
+                log.error("[PayFast ITN] SIGNATURE MISMATCH (strict). Received: {}, Expected (canonical include_encoded): {}", receivedSignature, canonical);
                 return ResponseEntity.status(400).body("Signature mismatch");
             }
         } else if (!match) {
