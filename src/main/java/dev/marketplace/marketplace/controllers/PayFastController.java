@@ -116,20 +116,29 @@ public class PayFastController {
         log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}, exclude_both+encoded={}, exclude_both+plain={})",
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain, sig_exclude_both_encoded, sig_exclude_both_plain);
 
-        // PRODUCTION: Try standard PayFast params only (excluding custom_str* fields)
-        // PayFast may not include custom fields in signature validation
-        Map<String, Object> standardOnly = buildVariantStandardParamsOnly(params, true);
+        // PRODUCTION: Try standard PayFast params only (excluding custom_str* fields and NO passphrase)
+        // Some gateways only use passphrase for ITN, not for initial URL submission
+        Map<String, Object> standardOnly = buildVariantStandardParamsOnlyNoPassphrase(params, true);
         String sig_standard_only = (String) standardOnly.get("signature");
-        log.info("[PayFast] Standard params only signature (RFC3986 encoded): {}", sig_standard_only);
+        String baseStringUsed = (String) standardOnly.get("baseString");
+        log.info("[PayFast] Standard params only (NO passphrase) signature: {}", sig_standard_only);
+        log.info("[PayFast] Standard params baseString: {}", baseStringUsed);
 
-        StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
+        // Build URL with params in EXACT alphabetical order (matching baseString order)
+        // This ensures URL parameter order matches signature calculation
+        Map<String, String> paramsForUrl = new LinkedHashMap<>();
         params.entrySet().stream()
             .sorted(Map.Entry.comparingByKey())
-            .forEach(entry -> url.append(rfc3986Encode(entry.getKey()))
-                   .append("=")
-                   .append(rfc3986Encode(entry.getValue()))
-                   .append("&"));
-        // Use the standard_params_only signature (exclude custom_str fields from signature)
+            .forEach(e -> paramsForUrl.put(e.getKey(), e.getValue()));
+
+        StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
+        paramsForUrl.forEach((key, value) ->
+            url.append(rfc3986Encode(key))
+               .append("=")
+               .append(rfc3986Encode(value))
+               .append("&")
+        );
+        // Use the standard_params_only (no passphrase) signature
         url.append("signature=").append(sig_standard_only);
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
@@ -420,6 +429,38 @@ public class PayFastController {
             result.put("passphrase_sha256", org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase));
             result.put("passphrase_length", passphrase.length());
         }
+        return result;
+    }
+
+    // Variant: Include standard PayFast params only (no custom_str fields) in signature, NO passphrase
+    private Map<String, Object> buildVariantStandardParamsOnlyNoPassphrase(Map<String, String> params, boolean urlEncodeValues) {
+        Map<String, Object> result = new java.util.HashMap<>();
+
+        // Filter to include ONLY standard PayFast parameters (exclude custom_str* fields)
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .filter(e -> !e.getKey().startsWith("custom_")) // Exclude custom fields
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String toAppend = urlEncodeValues ? rfc3986Encode(entry.getValue()) : entry.getValue();
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+        }
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+
+        // NO passphrase appended
+        String baseString = sb.toString();
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        result.put("baseString", baseString);
+        result.put("signature", md5);
         return result;
     }
 
