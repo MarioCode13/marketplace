@@ -361,6 +361,7 @@ public class PayFastController {
         String signatureString = sb.toString();
         log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
 
+        // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
         log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
@@ -401,16 +402,24 @@ public class PayFastController {
         Map<String, Object> v2 = buildVariant(params, true, false);
         Map<String, Object> v3 = buildVariant(params, false, true);
         Map<String, Object> v4 = buildVariant(params, false, false);
-        // New: exclude both merchant_id and merchant_key
+        // New: exclude both variants already added (v5, v6)
         Map<String, Object> v5 = buildVariantExcludingMerchantData(params, true);
         Map<String, Object> v6 = buildVariantExcludingMerchantData(params, false);
 
-        out.put("include_encoded", v1);
-        out.put("include_plain", v2);
-        out.put("exclude_encoded", v3);
-        out.put("exclude_plain", v4);
-        out.put("exclude_both_encoded", v5);
-        out.put("exclude_both_plain", v6);
+        // Additional experimental variants to cover PayFast edge cases
+        Map<String, Object> v_exclude_both_plus = buildVariantExcludingMerchantDataPlus(params, true);
+        Map<String, Object> v_exclude_both_encoded_passphrase = buildVariantExcludingMerchantDataEncodedPassphrase(params, true);
+        Map<String, Object> v_exclude_both_no_passphrase = buildVariantExcludingMerchantDataNoPassphrase(params, true);
+
+         out.put("include_encoded", v1);
+         out.put("include_plain", v2);
+         out.put("exclude_encoded", v3);
+         out.put("exclude_plain", v4);
+         out.put("exclude_both_encoded", v5);
+         out.put("exclude_both_plain", v6);
+         out.put("exclude_both_plus", v_exclude_both_plus);
+         out.put("exclude_both_encoded_passphrase", v_exclude_both_encoded_passphrase);
+         out.put("exclude_both_no_passphrase", v_exclude_both_no_passphrase);
 
         // Build example URLs for each variant with appropriate encoding and parameters
         String baseUrl = payFastProperties.getUrl() + "?";
@@ -451,6 +460,9 @@ public class PayFastController {
         out.put("example_url_exclude_plain", excludePlainBase + "signature=" + v4.get("signature"));
         out.put("example_url_exclude_both_encoded", excludeBothEncodedBase + "signature=" + v5.get("signature"));
         out.put("example_url_exclude_both_plain", excludeBothPlainBase + "signature=" + v6.get("signature"));
+        out.put("example_url_exclude_both_plus", excludeBothEncodedBase.replace("%20","+") + "signature=" + v_exclude_both_plus.get("signature"));
+        out.put("example_url_exclude_both_encoded_passphrase", excludeBothEncodedBase + "signature=" + v_exclude_both_encoded_passphrase.get("signature"));
+        out.put("example_url_exclude_both_no_passphrase", excludeBothEncodedBase + "signature=" + v_exclude_both_no_passphrase.get("signature"));
 
         return ResponseEntity.ok(out);
     }
@@ -545,6 +557,118 @@ public class PayFastController {
             result.put("passphrase_length", passphrase.length());
         }
 
+        return result;
+    }
+
+    // Variant: spaces encoded as + (URLEncoder default) instead of %20
+    private Map<String, Object> buildVariantExcludingMerchantDataPlus(Map<String, String> params, boolean urlEncodeValues) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+        filtered.remove("merchant_id");
+        filtered.remove("merchant_key");
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String toAppend = entry.getValue();
+            // use URLEncoder default (spaces -> +)
+            if (urlEncodeValues) toAppend = URLEncoder.encode(toAppend, StandardCharsets.UTF_8);
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+        }
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+
+        String baseString = sb.toString();
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        result.put("baseString", baseString);
+        result.put("signature", md5);
+        if (passphrase != null) {
+            result.put("passphrase_masked", passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(Math.max(2, passphrase.length() - 2)));
+            result.put("passphrase_sha256", org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase));
+            result.put("passphrase_length", passphrase.length());
+        }
+        return result;
+    }
+
+    // Variant: encode values as RFC3986 but ALSO URL-encode the passphrase before appending
+    private Map<String, Object> buildVariantExcludingMerchantDataEncodedPassphrase(Map<String, String> params, boolean urlEncodeValues) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+        filtered.remove("merchant_id");
+        filtered.remove("merchant_key");
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String toAppend = urlEncodeValues ? rfc3986Encode(entry.getValue()) : entry.getValue();
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+        }
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(URLEncoder.encode(passphrase, StandardCharsets.UTF_8));
+        }
+
+        String baseString = sb.toString();
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        result.put("baseString", baseString);
+        result.put("signature", md5);
+        if (passphrase != null) {
+            result.put("passphrase_masked", passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(Math.max(2, passphrase.length() - 2)));
+            result.put("passphrase_sha256", org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase));
+            result.put("passphrase_length", passphrase.length());
+        }
+        return result;
+    }
+
+    // Variant: exclude both but do not append passphrase at all
+    private Map<String, Object> buildVariantExcludingMerchantDataNoPassphrase(Map<String, String> params, boolean urlEncodeValues) {
+        Map<String, Object> result = new java.util.HashMap<>();
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+        filtered.remove("merchant_id");
+        filtered.remove("merchant_key");
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String toAppend = urlEncodeValues ? rfc3986Encode(entry.getValue()) : entry.getValue();
+            sb.append(entry.getKey()).append("=").append(toAppend).append("&");
+        }
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') sb.setLength(sb.length() - 1);
+
+        String baseString = sb.toString();
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        result.put("baseString", baseString);
+        result.put("signature", md5);
         return result;
     }
 
