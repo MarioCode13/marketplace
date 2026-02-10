@@ -18,5 +18,6 @@ public class PayFastProperties {
     private String cancelUrl;
     private String notifyUrl;
     private String passphrase;
+    // When true, require the canonical signature (exclude both merchant_id and merchant_key, RFC3986 encoding)
+    private boolean requireSignature = false;
 }
-

@@ -179,13 +179,22 @@ public class PayFastController {
 
         log.info("[PayFast ITN] Comparing signatures: Received={}, Match={}", receivedSignature, match);
 
-        if (!match) {
-            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated variants: {} | {} | {} | {}", receivedSignature, gen_inc_enc, gen_inc_plain, gen_exc_enc, gen_exc_plain);
-            log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
-            return ResponseEntity.status(400).body("Signature mismatch");
-        }
+        // If configured to require a single canonical signature, only accept the exclude_both_encoded variant
+        if (payFastProperties.isRequireSignature()) {
+            String canonical = generateSignatureExcludingMerchantData(paramsForValidation, true); // exclude both, RFC3986 encoded
+            boolean canonicalMatch = receivedSignature != null && receivedSignature.equals(canonical);
+            log.info("[PayFast ITN] requireSignature=true, canonical expected={}, canonicalMatch={}", canonical, canonicalMatch);
+            if (!canonicalMatch) {
+                log.error("[PayFast ITN] SIGNATURE MISMATCH (strict). Received: {}, Expected (canonical): {}", receivedSignature, canonical);
+                return ResponseEntity.status(400).body("Signature mismatch");
+            }
+        } else if (!match) {
+             log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Generated variants: {} | {} | {} | {}", receivedSignature, gen_inc_enc, gen_inc_plain, gen_exc_enc, gen_exc_plain);
+             log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
+             return ResponseEntity.status(400).body("Signature mismatch");
+         }
 
-        log.info("[PayFast ITN] Signature validation passed!");
+         log.info("[PayFast ITN] Signature validation passed!");
 
         String email = payload.get("custom_str2");
         String paymentStatus = payload.get("payment_status");
