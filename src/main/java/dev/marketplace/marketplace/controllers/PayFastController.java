@@ -172,16 +172,28 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
-        // 2. Build the string
+        // 2. Build the string (DO NOT URL encode for signature generation)
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
-            sb.append(entry.getKey()).append("=")
-              .append(java.net.URLEncoder.encode(entry.getValue(), java.nio.charset.StandardCharsets.UTF_8)).append("&");
+            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
         }
-        if (sb.length() > 0) {
-            sb.setLength(sb.length() - 1); // Remove trailing &
+
+        // 3. Append passphrase at the end (required by PayFast)
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("passphrase=").append(passphrase);
+        } else {
+            // Remove trailing & if no passphrase
+            if (sb.length() > 0) {
+                sb.setLength(sb.length() - 1);
+            }
         }
-        // 3. MD5 hash
-        return org.apache.commons.codec.digest.DigestUtils.md5Hex(sb.toString());
+
+        log.debug("[PayFast] Signature generation string: {}", sb.toString());
+
+        // 4. MD5 hash
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(sb.toString());
+        log.debug("[PayFast] Generated signature: {}", signature);
+        return signature;
     }
 }
