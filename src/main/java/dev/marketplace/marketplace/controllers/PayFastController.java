@@ -113,13 +113,14 @@ public class PayFastController {
                 sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain);
 
         // Primary choice: include merchant_key and URL-encode values (matches many PayFast examples)
+        // IMPORTANT: Parameters MUST be in alphabetical order to match the signature computation
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            url.append(rfc3986Encode(entry.getKey()))
-               .append("=")
-               .append(rfc3986Encode(entry.getValue()))
-               .append("&");
-        }
+        params.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(entry -> url.append(rfc3986Encode(entry.getKey()))
+                   .append("=")
+                   .append(rfc3986Encode(entry.getValue()))
+                   .append("&"));
         // use the include+encoded signature (merchant_key included, values URL-encoded)
         url.append("signature=").append(sig_include_encoded);
         log.info("[PayFast] Final URL generated: {}", url);
