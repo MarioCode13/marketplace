@@ -434,35 +434,12 @@ public class PayFastController {
             @RequestParam(required = false) String passphrase,
             @RequestParam(defaultValue = "false") boolean urlEncode,
             @RequestParam(defaultValue = "false") boolean returnTestUrl,
-            jakarta.servlet.http.HttpServletRequest request
+            @RequestParam(required = false) String debugSecret
     ) {
-        // Only allow local requests for this debug endpoint
-        String remote = request.getHeader("X-Forwarded-For");
-        if (remote == null || remote.isBlank()) {
-            remote = request.getRemoteAddr();
-        }
-        // Accept common localhost representations and X-Forwarded-For lists that include localhost
-        boolean isLocal = false;
-        if (remote != null) {
-            String r = remote.trim();
-            if (r.equals("127.0.0.1") || r.equals("::1") || r.equals("0:0:0:0:0:0:0:1")) {
-                isLocal = true;
-            }
-            // IPv4-mapped IPv6 like ::ffff:127.0.0.1
-            if (r.contains("127.0.0.1") || r.startsWith("127." ) || r.contains("::ffff:127.0.0.1")) {
-                isLocal = true;
-            }
-            // X-Forwarded-For can be a comma-separated list; accept if any entry is localhost
-            if (r.contains(",")) {
-                String[] parts = r.split(",");
-                for (String p : parts) {
-                    String pp = p.trim();
-                    if (pp.equals("127.0.0.1") || pp.equals("::1") || pp.contains("127.0.0.1")) { isLocal = true; break; }
-                }
-            }
-        }
-        if (!isLocal) {
-            log.warn("[PayFast DEBUG] Forbidden debug access from {}", remote);
+        // Temporary debug endpoint — requires a secret query param
+        // Remove this endpoint after debugging is complete
+        if (debugSecret == null || !debugSecret.equals("payfast123")) {
+            log.warn("[PayFast DEBUG] Forbidden debug access (invalid or missing debugSecret)");
             Map<String, String> resp = new java.util.HashMap<>();
             resp.put("error", "forbidden");
             return ResponseEntity.status(403).body(resp);
