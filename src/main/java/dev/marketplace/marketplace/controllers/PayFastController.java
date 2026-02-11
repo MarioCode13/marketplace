@@ -70,114 +70,84 @@ public class PayFastController {
             @RequestParam(defaultValue = "Pro Store Subscription") String itemName,
             @RequestParam(defaultValue = "100.00") String amount,
             @RequestParam(defaultValue = "100.00") String recurringAmount,
-            @RequestParam(defaultValue = "3") String frequency, // 3 = monthly
-            @RequestParam(defaultValue = "0") String cycles, // 0 = indefinite
-            @RequestParam(defaultValue = "pro_store") String planType, // plan type
+            @RequestParam(defaultValue = "3") String frequency,
+            @RequestParam(defaultValue = "0") String cycles,
+            @RequestParam(defaultValue = "pro_store") String planType,
             @RequestParam(required = false) String itemDescription
     ) {
-        if (!payfastConfigured) {
-            return ResponseEntity.status(503).body("PayFast not configured on this instance");
-        }
+        if (!payfastConfigured) return ResponseEntity.status(503).body("PayFast not configured");
 
-        // Get authenticated user info if parameters not provided
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) return ResponseEntity.status(401).body("Not authenticated");
 
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return ResponseEntity.status(401).body("User not authenticated");
-        }
-
-        String usernameOrEmail = authentication.getName();
-        Optional<User> userOpt = userService.getUserByEmail(usernameOrEmail);
-
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(404).body("User not found");
-        }
+        Optional<User> userOpt = userService.getUserByEmail(auth.getName());
+        if (userOpt.isEmpty()) return ResponseEntity.status(404).body("User not found");
 
         User user = userOpt.get();
+        if (nameFirst == null || nameFirst.isBlank()) nameFirst = user.getFirstName() != null ? user.getFirstName() : "User";
+        if (nameLast == null || nameLast.isBlank()) nameLast = user.getLastName() != null ? user.getLastName() : "Account";
+        if (emailAddress == null || emailAddress.isBlank()) emailAddress = user.getEmail();
 
-        // Use provided parameters or fall back to user data
-        if (nameFirst == null || nameFirst.isBlank()) {
-            nameFirst = user.getFirstName() != null ? user.getFirstName() : "User";
+        // Trim whitespace
+        nameFirst = nameFirst.trim();
+        nameLast = nameLast.trim();
+        emailAddress = emailAddress.trim();
+        itemName = itemName.trim();
+        amount = amount.trim();
+        recurringAmount = recurringAmount.trim();
+
+        log.info("[PayFast] User: {} {} ({})", nameFirst, nameLast, emailAddress);
+
+        // Build signature: alphabetical order, raw values, passphrase at end
+        String pass = payFastProperties.getPassphrase();
+        String sigBase = "amount=" + amount + "&" +
+                "cycles=" + cycles + "&" +
+                "email_address=" + emailAddress + "&" +
+                "frequency=" + frequency + "&" +
+                "item_name=" + itemName + "&" +
+                "merchant_id=" + payFastProperties.getMerchantId() + "&" +
+                "merchant_key=" + payFastProperties.getMerchantKey() + "&" +
+                "name_first=" + nameFirst + "&" +
+                "name_last=" + nameLast + "&" +
+                "recurring_amount=" + recurringAmount + "&" +
+                "subscription_type=1&" +
+                "passphrase=" + pass;
+
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(sigBase);
+        log.info("[PayFast] Sig base: {}", sigBase);
+        log.info("[PayFast] Signature: {}", signature);
+
+        // Build URL with URL encoding
+        String url = payFastProperties.getUrl() + "?" +
+                "amount=" + enc(amount) +
+                "&cancel_url=" + enc(payFastProperties.getCancelUrl()) +
+                "&custom_str1=" + enc(planType) +
+                "&custom_str2=" + enc(emailAddress) +
+                "&cycles=" + cycles +
+                "&email_address=" + enc(emailAddress) +
+                "&frequency=" + frequency +
+                "&item_name=" + enc(itemName) +
+                "&merchant_id=" + payFastProperties.getMerchantId() +
+                "&merchant_key=" + payFastProperties.getMerchantKey() +
+                "&name_first=" + enc(nameFirst) +
+                "&name_last=" + enc(nameLast) +
+                "&notify_url=" + enc(payFastProperties.getNotifyUrl()) +
+                "&recurring_amount=" + enc(recurringAmount) +
+                "&return_url=" + enc(payFastProperties.getReturnUrl()) +
+                "&subscription_type=1" +
+                "&signature=" + signature;
+
+        log.info("[PayFast] Final URL generated");
+        return ResponseEntity.ok(url);
+    }
+
+    private String enc(String s) {
+        if (s == null) return "";
+        try {
+            return java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20");
+        } catch (Exception e) {
+            return s;
         }
-        if (nameLast == null || nameLast.isBlank()) {
-            nameLast = user.getLastName() != null ? user.getLastName() : "Account";
-        }
-        if (emailAddress == null || emailAddress.isBlank()) {
-            emailAddress = user.getEmail();
-        }
-
-        log.info("[PayFast] ========== GENERATING SUBSCRIPTION URL ==========");
-        log.info("[PayFast] Input parameters: nameFirst={}, nameLast={}, emailAddress={}, itemName={}, amount={}, recurringAmount={}, frequency={}, cycles={}, planType={}",
-            nameFirst, nameLast, emailAddress, itemName, amount, recurringAmount, frequency, cycles, planType);
-
-        // Sanitize inputs to avoid stray quote characters or whitespace affecting signature
-        // Only decode request parameters (itemName, amount, etc.), not user fields
-        String safeNameFirst = sanitizeParam(nameFirst);  // From user, don't decode
-        String safeNameLast = sanitizeParam(nameLast);    // From user, don't decode
-        String safeEmailAddress = sanitizeParam(emailAddress);  // From user, don't decode
-        String safeItemName = sanitizeAndDecode(itemName);      // From request, decode
-        String safeAmount = sanitizeAndDecode(amount);          // From request, decode
-        String safeRecurringAmount = sanitizeAndDecode(recurringAmount);  // From request, decode
-        String safeFrequency = sanitizeAndDecode(frequency);    // From request, decode
-        String safeCycles = sanitizeAndDecode(cycles);          // From request, decode
-        String safePlanType = sanitizeAndDecode(planType);      // From request, decode
-        String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";  // From request, decode
-
-        // Build signature params - ONLY standard PayFast fields (no custom fields in signature)
-        // IMPORTANT: Include merchant_key in signature (PayFast requires it)
-        Map<String, String> signatureParams = new LinkedHashMap<>();
-        signatureParams.put("amount", safeAmount);
-        signatureParams.put("cycles", safeCycles);
-        signatureParams.put("email_address", safeEmailAddress);
-        signatureParams.put("frequency", safeFrequency);
-        signatureParams.put("item_name", safeItemName);
-        if (!safeItemDescription.isEmpty()) {
-            signatureParams.put("item_description", safeItemDescription);
-        }
-        signatureParams.put("merchant_id", payFastProperties.getMerchantId());
-        signatureParams.put("merchant_key", payFastProperties.getMerchantKey());  // INCLUDE merchant_key
-        signatureParams.put("name_first", safeNameFirst);
-        signatureParams.put("name_last", safeNameLast);
-        signatureParams.put("recurring_amount", safeRecurringAmount);
-        signatureParams.put("subscription_type", "1");
-
-        log.info("[PayFast] Signature params (alphabetically sorted): {}", signatureParams);
-
-        // Build the URL params FIRST - includes all standard fields plus custom fields for passing metadata
-        Map<String, String> urlParams = new LinkedHashMap<>(signatureParams);
-        // Add merchant_key to URL
-        urlParams.put("merchant_key", payFastProperties.getMerchantKey());
-        urlParams.put("custom_str1", safePlanType); // plan type for ITN callback
-        urlParams.put("custom_str2", safeEmailAddress); // user email for ITN callback
-        if (payFastProperties.getReturnUrl() != null && !payFastProperties.getReturnUrl().isEmpty()) {
-            urlParams.put("return_url", payFastProperties.getReturnUrl());
-        }
-        if (payFastProperties.getCancelUrl() != null && !payFastProperties.getCancelUrl().isEmpty()) {
-            urlParams.put("cancel_url", payFastProperties.getCancelUrl());
-        }
-        if (payFastProperties.getNotifyUrl() != null && !payFastProperties.getNotifyUrl().isEmpty()) {
-            urlParams.put("notify_url", payFastProperties.getNotifyUrl());
-        }
-
-        // Generate signature from standard fields ONLY (NOT custom fields or URLs)
-        String signature = generateSignatureForInitialRequest(signatureParams);
-        log.info("[PayFast] Generated signature: {}", signature);
-
-        // Build URL in alphabetical order
-        StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
-        urlParams.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .forEach(e -> {
-                url.append(rfc3986Encode(e.getKey()))
-                   .append("=")
-                   .append(rfc3986Encode(e.getValue()))
-                   .append("&");
-            });
-        url.append("signature=").append(signature);
-
-        log.info("[PayFast] Final URL generated: {}", url);
-        log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
-        return ResponseEntity.ok(url.toString());
     }
 
     @GetMapping("/debug/signature")
