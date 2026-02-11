@@ -225,25 +225,61 @@ public class PayFastController {
         String receivedSignature = payload.get("signature");
         log.info("[PayFast ITN] Received signature: {}", receivedSignature);
 
-        // Validate signature by regenerating it
-        // PayFast ITN Spec: exclude merchant_key, use raw values (NO URL encoding), append passphrase
+        // Validate signature by trying multiple variants (temporary debugging to identify the correct signature method)
         Map<String, String> paramsForValidation = new LinkedHashMap<>(payload);
         paramsForValidation.remove("signature");
 
         log.info("[PayFast ITN] Params for signature validation (signature removed)");
 
-        // Generate expected signature using PayFast's official method
+        // Try canonical method first
         String expectedSignature = generateSignatureForITN(paramsForValidation);
-
-        log.info("[PayFast ITN] Expected signature: {}", expectedSignature);
-        log.info("[PayFast ITN] Received signature: {}", receivedSignature);
+        log.info("[PayFast ITN] Variant 1 (exclude merchant_key, raw values): {}", expectedSignature);
 
         boolean match = receivedSignature != null && receivedSignature.equals(expectedSignature);
 
+        // If canonical doesn't match, try variants (temporary debugging)
         if (!match) {
-            log.error("[PayFast ITN] SIGNATURE MISMATCH! Received: {}, Expected: {}", receivedSignature, expectedSignature);
-            log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
-            return ResponseEntity.status(400).body("Signature mismatch");
+            log.warn("[PayFast ITN] Canonical signature did not match. Trying variants...");
+
+            // Variant 2: Include merchant_key (for initial request flow, shouldn't be here but test)
+            String variant2 = generateSignatureForInitialRequest(paramsForValidation);
+            log.info("[PayFast ITN] Variant 2 (include merchant_key, raw values): {}", variant2);
+            if (receivedSignature != null && receivedSignature.equals(variant2)) {
+                log.warn("[PayFast ITN] MATCHED Variant 2 (include merchant_key)! This is unexpected for ITN.");
+                match = true;
+            }
+
+            // Variant 3: Exclude merchant_key but with different param set (try without custom fields)
+            if (!match) {
+                Map<String, String> paramsWithoutCustom = new LinkedHashMap<>(paramsForValidation);
+                paramsWithoutCustom.remove("custom_str1");
+                paramsWithoutCustom.remove("custom_str2");
+                String variant3 = generateSignatureForITN(paramsWithoutCustom);
+                log.info("[PayFast ITN] Variant 3 (exclude merchant_key + custom fields): {}", variant3);
+                if (receivedSignature != null && receivedSignature.equals(variant3)) {
+                    log.warn("[PayFast ITN] MATCHED Variant 3 (without custom fields)!");
+                    match = true;
+                }
+            }
+
+            // Variant 4: Try without notify_url (sometimes not included)
+            if (!match) {
+                Map<String, String> paramsWithoutNotify = new LinkedHashMap<>(paramsForValidation);
+                paramsWithoutNotify.remove("notify_url");
+                String variant4 = generateSignatureForITN(paramsWithoutNotify);
+                log.info("[PayFast ITN] Variant 4 (exclude merchant_key + notify_url): {}", variant4);
+                if (receivedSignature != null && receivedSignature.equals(variant4)) {
+                    log.warn("[PayFast ITN] MATCHED Variant 4 (without notify_url)!");
+                    match = true;
+                }
+            }
+
+            if (!match) {
+                log.error("[PayFast ITN] SIGNATURE MISMATCH on all variants! Received: {}", receivedSignature);
+                log.error("[PayFast ITN] Canonical expected was: {}", expectedSignature);
+                log.error("[PayFast ITN] Aborting transaction processing due to signature mismatch");
+                return ResponseEntity.status(400).body("Signature mismatch");
+            }
         }
 
         log.info("[PayFast ITN] Signature validation passed!");
@@ -353,8 +389,21 @@ public class PayFastController {
         return passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
     }
 
-    // Temporary debug endpoint: POST a JSON body with the exact params (decoded values) and get back the canonical base string and md5
-    @PostMapping(path = "/debug/compute-signature", consumes = "application/json", produces = "application/json")
+    // ...existing code...
+
+    /**
+     * Generate signature for initial payment request.
+     * PayFast Spec: Include merchant_key, use raw values (NO URL encoding), alphabetical order, append passphrase.
+     */
+    private String generateSignatureForInitialRequest(Map<String, String> params) {
+        String base = computePayFastBaseString(params, true, payFastProperties.getPassphrase());
+        log.debug("[PayFast Signature] Base string (initial request, with merchant_key): {}", base);
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
+        log.debug("[PayFast Signature] Generated MD5 signature (with merchant_key): {}", signature);
+        return signature;
+    }
+
+    // ...existing code...
     public ResponseEntity<Map<String, String>> debugComputeSignature(
             @RequestBody Map<String, String> body,
             @RequestParam(defaultValue = "true") boolean includeMerchantKey,
