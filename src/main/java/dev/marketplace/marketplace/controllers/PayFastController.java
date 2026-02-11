@@ -144,13 +144,9 @@ public class PayFastController {
 
         log.info("[PayFast] Signature params (alphabetically sorted): {}", signatureParams);
 
-        // Generate signature with passphrase (standard PayFast method)
-        String signature = generateSignatureForInitialRequest(signatureParams);
-        log.info("[PayFast] Generated signature: {}", signature);
-
-        // Build the URL params - includes all standard fields plus custom fields for passing metadata
+        // Build the URL params FIRST - includes all standard fields plus custom fields for passing metadata
         Map<String, String> urlParams = new LinkedHashMap<>(signatureParams);
-        // Add merchant_key to URL (even though it's not used in signature)
+        // Add merchant_key to URL
         urlParams.put("merchant_key", payFastProperties.getMerchantKey());
         urlParams.put("custom_str1", safePlanType); // plan type for ITN callback
         urlParams.put("custom_str2", safeEmailAddress); // user email for ITN callback
@@ -163,6 +159,10 @@ public class PayFastController {
         if (payFastProperties.getNotifyUrl() != null && !payFastProperties.getNotifyUrl().isEmpty()) {
             urlParams.put("notify_url", payFastProperties.getNotifyUrl());
         }
+
+        // Generate signature from ALL URL params (including custom fields)
+        String signature = generateSignatureFromAllParams(urlParams);
+        log.info("[PayFast] Generated signature: {}", signature);
 
         // Build URL in alphabetical order
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
@@ -383,6 +383,7 @@ public class PayFastController {
 
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
 
+        // Return the signature WITH merchant_key (testing different approach)
         return signature;
     }
 
@@ -742,6 +743,44 @@ public class PayFastController {
         return result;
     }
 
+    private String generateSignatureFromAllParams(Map<String, String> params) {
+        log.info("[PayFast Signature] Generating signature from ALL URL params (including custom fields)");
+        log.info("[PayFast Signature] Params for signature: {}", params);
+
+        // Filter and sort
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        // Build base string
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+        }
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') {
+            sb.setLength(sb.length() - 1);
+        }
+
+        // Append passphrase
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+
+        String baseString = sb.toString();
+        log.info("[PayFast Signature] Base string (with ALL params): {}", baseString);
+
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+        log.info("[PayFast Signature] Generated signature (from ALL params): {}", signature);
+
+        return signature;
+    }
 
     // Helper to sanitize incoming request params (trim, remove quotes, and decode URL encoding)
     private String sanitizeAndDecode(String s) {
