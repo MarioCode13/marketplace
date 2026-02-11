@@ -64,82 +64,86 @@ public class PayFastController {
 
     @GetMapping("/subscription-url")
     public ResponseEntity<String> getPayFastSubscriptionUrl(
+            @RequestParam String nameFirst,
+            @RequestParam String nameLast,
+            @RequestParam String emailAddress,
             @RequestParam(defaultValue = "Pro Store Subscription") String itemName,
             @RequestParam(defaultValue = "100.00") String amount,
             @RequestParam(defaultValue = "100.00") String recurringAmount,
             @RequestParam(defaultValue = "3") String frequency, // 3 = monthly
             @RequestParam(defaultValue = "0") String cycles, // 0 = indefinite
             @RequestParam(defaultValue = "pro_store") String planType, // plan type
-            @RequestParam String userEmail // new required param
+            @RequestParam(required = false) String itemDescription
     ) {
         if (!payfastConfigured) {
             return ResponseEntity.status(503).body("PayFast not configured on this instance");
         }
 
         log.info("[PayFast] ========== GENERATING SUBSCRIPTION URL ==========");
-        log.info("[PayFast] Input parameters: itemName={}, amount={}, recurringAmount={}, frequency={}, cycles={}, planType={}, userEmail={}",
-            itemName, amount, recurringAmount, frequency, cycles, planType, userEmail);
+        log.info("[PayFast] Input parameters: nameFirst={}, nameLast={}, emailAddress={}, itemName={}, amount={}, recurringAmount={}, frequency={}, cycles={}, planType={}",
+            nameFirst, nameLast, emailAddress, itemName, amount, recurringAmount, frequency, cycles, planType);
 
         // Sanitize inputs to avoid stray quote characters or whitespace affecting signature
-        // IMPORTANT: Also decode URL-encoded values (e.g., %20 -> space, %40 -> @)
+        String safeNameFirst = sanitizeAndDecode(nameFirst);
+        String safeNameLast = sanitizeAndDecode(nameLast);
+        String safeEmailAddress = sanitizeAndDecode(emailAddress);
         String safeItemName = sanitizeAndDecode(itemName);
         String safeAmount = sanitizeAndDecode(amount);
         String safeRecurringAmount = sanitizeAndDecode(recurringAmount);
         String safeFrequency = sanitizeAndDecode(frequency);
         String safeCycles = sanitizeAndDecode(cycles);
         String safePlanType = sanitizeAndDecode(planType);
-        String safeUserEmail = sanitizeAndDecode(userEmail);
+        String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";
 
-        Map<String, String> params = new LinkedHashMap<>();
-        params.put("merchant_id", payFastProperties.getMerchantId());
-        params.put("merchant_key", payFastProperties.getMerchantKey());
-        params.put("amount", safeAmount);
-        params.put("item_name", safeItemName);
-        params.put("subscription_type", "1");
-        params.put("recurring_amount", safeRecurringAmount);
-        params.put("frequency", safeFrequency);
-        params.put("cycles", safeCycles);
-        params.put("custom_str1", safePlanType); // pass plan type
-        params.put("custom_str2", safeUserEmail); // pass user email
+        // Build signature params - ONLY standard PayFast fields (no custom fields in signature)
+        Map<String, String> signatureParams = new LinkedHashMap<>();
+        signatureParams.put("amount", safeAmount);
+        signatureParams.put("cycles", safeCycles);
+        signatureParams.put("email_address", safeEmailAddress);
+        signatureParams.put("frequency", safeFrequency);
+        signatureParams.put("item_name", safeItemName);
+        if (!safeItemDescription.isEmpty()) {
+            signatureParams.put("item_description", safeItemDescription);
+        }
+        signatureParams.put("merchant_id", payFastProperties.getMerchantId());
+        signatureParams.put("merchant_key", payFastProperties.getMerchantKey());
+        signatureParams.put("name_first", safeNameFirst);
+        signatureParams.put("name_last", safeNameLast);
+        signatureParams.put("recurring_amount", safeRecurringAmount);
+        signatureParams.put("subscription_type", "1");
 
-        log.info("[PayFast] Parameters map before signature: {}", params);
+        log.info("[PayFast] Signature params (alphabetically sorted): {}", signatureParams);
 
-        // Generate multiple signature variants for debugging and compatibility
-        String sig_include_encoded = generateSignature(params, true, true);
-        String sig_include_plain = generateSignature(params, true, false);
-        String sig_exclude_encoded = generateSignature(params, false, true);
-        String sig_exclude_plain = generateSignature(params, false, false);
-        // Additional variant: exclude both merchant_id and merchant_key (PayFast might only use transaction data)
-        String sig_exclude_both_encoded = generateSignatureExcludingMerchantData(params, true);
-        String sig_exclude_both_plain = generateSignatureExcludingMerchantData(params, false);
+        // Generate signature with passphrase (standard PayFast method)
+        String signature = generateSignatureForInitialRequest(signatureParams);
+        log.info("[PayFast] Generated signature: {}", signature);
 
-        log.info("[PayFast] Signature variants (include+encoded={}, include+plain={}, exclude+encoded={}, exclude+plain={}, exclude_both+encoded={}, exclude_both+plain={})",
-                sig_include_encoded, sig_include_plain, sig_exclude_encoded, sig_exclude_plain, sig_exclude_both_encoded, sig_exclude_both_plain);
+        // Build the URL params - includes all standard fields plus custom fields for passing metadata
+        Map<String, String> urlParams = new LinkedHashMap<>(signatureParams);
+        urlParams.put("custom_str1", safePlanType); // plan type for ITN callback
+        urlParams.put("custom_str2", safeEmailAddress); // user email for ITN callback
+        if (payFastProperties.getReturnUrl() != null && !payFastProperties.getReturnUrl().isEmpty()) {
+            urlParams.put("return_url", payFastProperties.getReturnUrl());
+        }
+        if (payFastProperties.getCancelUrl() != null && !payFastProperties.getCancelUrl().isEmpty()) {
+            urlParams.put("cancel_url", payFastProperties.getCancelUrl());
+        }
+        if (payFastProperties.getNotifyUrl() != null && !payFastProperties.getNotifyUrl().isEmpty()) {
+            urlParams.put("notify_url", payFastProperties.getNotifyUrl());
+        }
 
-        // PRODUCTION: Try standard PayFast params only (excluding custom_str* fields and NO passphrase)
-        // Some gateways only use passphrase for ITN, not for initial URL submission
-        Map<String, Object> standardOnly = buildVariantStandardParamsOnlyNoPassphrase(params, true);
-        String sig_standard_only = (String) standardOnly.get("signature");
-        String baseStringUsed = (String) standardOnly.get("baseString");
-        log.info("[PayFast] Standard params only (NO passphrase) signature: {}", sig_standard_only);
-        log.info("[PayFast] Standard params baseString: {}", baseStringUsed);
-
-        // Build URL with params in EXACT alphabetical order (matching baseString order)
-        // This ensures URL parameter order matches signature calculation
-        Map<String, String> paramsForUrl = new LinkedHashMap<>();
-        params.entrySet().stream()
-            .sorted(Map.Entry.comparingByKey())
-            .forEach(e -> paramsForUrl.put(e.getKey(), e.getValue()));
-
+        // Build URL in alphabetical order
         StringBuilder url = new StringBuilder(payFastProperties.getUrl() + "?");
-        paramsForUrl.forEach((key, value) ->
-            url.append(rfc3986Encode(key))
-               .append("=")
-               .append(rfc3986Encode(value))
-               .append("&")
-        );
-        // Use the standard_params_only (no passphrase) signature
-        url.append("signature=").append(sig_standard_only);
+        urlParams.entrySet().stream()
+            .sorted(Map.Entry.comparingByKey())
+            .forEach(e -> {
+                url.append(rfc3986Encode(e.getKey()))
+                   .append("=")
+                   .append(rfc3986Encode(e.getValue()))
+                   .append("&");
+            });
+        url.append("signature=").append(signature);
+
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
@@ -251,6 +255,62 @@ public class PayFastController {
         return ResponseEntity.ok(response);
     }
 
+    // ...existing code...
+
+    private String generateSignatureForInitialRequest(Map<String, String> params) {
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION FOR INITIAL REQUEST ==========");
+
+        // 1. Filter: exclude empty values and signature field
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        log.info("[PayFast Signature] Filtered params (sorted alphabetically): {}", filtered);
+
+        // 2. Build base string: key=value&key=value&...
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            String value = entry.getValue();
+            // For initial request, do NOT URL-encode values in the signature calculation
+            // PayFast expects raw values
+            sb.append(entry.getKey()).append("=").append(value).append("&");
+            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), value);
+        }
+
+        // Trim trailing '&'
+        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') {
+            sb.setLength(sb.length() - 1);
+        }
+
+        // 3. Append passphrase at the end (CRITICAL - this is required for initial request)
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+            String masked = passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
+            String passphraseHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase);
+            log.info("[PayFast Signature] Passphrase appended (masked={}, sha256={}, length={})", masked, passphraseHash, passphrase.length());
+        } else {
+            log.warn("[PayFast Signature] No passphrase configured! This will cause signature validation to fail.");
+        }
+
+        String signatureString = sb.toString();
+        log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
+
+        // 4. MD5 hash
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
+        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
+        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
+
+        return signature;
+    }
+
+    // ...existing code...
     private String generateSignature(Map<String, String> params, boolean includeMerchantKey, boolean urlEncodeValues) {
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION START (includeMerchantKey={}, urlEncodeValues={}) ==========", includeMerchantKey, urlEncodeValues);
 
