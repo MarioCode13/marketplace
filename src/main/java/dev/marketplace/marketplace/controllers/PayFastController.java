@@ -99,6 +99,7 @@ public class PayFastController {
         log.info("[PayFast] User: {} {} ({})", nameFirst, nameLast, emailAddress);
 
         // Build signature: alphabetical order, raw values, passphrase at end
+        // NOTE: merchant_key is NOT included in signature for PayFast subscriptions
         String pass = payFastProperties.getPassphrase();
         String sigBase = "amount=" + amount + "&" +
                 "cycles=" + cycles + "&" +
@@ -106,7 +107,6 @@ public class PayFastController {
                 "frequency=" + frequency + "&" +
                 "item_name=" + itemName + "&" +
                 "merchant_id=" + payFastProperties.getMerchantId() + "&" +
-                "merchant_key=" + payFastProperties.getMerchantKey() + "&" +
                 "name_first=" + nameFirst + "&" +
                 "name_last=" + nameLast + "&" +
                 "recurring_amount=" + recurringAmount + "&" +
