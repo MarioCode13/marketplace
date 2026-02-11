@@ -31,9 +31,10 @@ import jakarta.annotation.PostConstruct;
  * 1. INITIAL REQUEST: Include merchant_id and merchant_key, raw values (NO URL encoding), alphabetical order, append passphrase
  * 2. ITN CALLBACK: Exclude merchant_key, raw values (NO URL encoding), alphabetical order, append passphrase
  */
-@ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true")
-@RestController
-@RequestMapping("/api/payments/payfast")
+// DISABLED - using PayFastController_SIMPLE instead
+// @ConditionalOnProperty(prefix = "payfast", name = "enabled", havingValue = "true")
+// @RestController
+// @RequestMapping("/api/payments/payfast")
 public class PayFastController {
     private static final Logger log = LoggerFactory.getLogger(PayFastController.class);
 
