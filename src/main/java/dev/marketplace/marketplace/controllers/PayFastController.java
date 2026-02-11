@@ -150,6 +150,8 @@ public class PayFastController {
 
         // Build the URL params - includes all standard fields plus custom fields for passing metadata
         Map<String, String> urlParams = new LinkedHashMap<>(signatureParams);
+        // Add merchant_key to URL (even though it's not used in signature)
+        urlParams.put("merchant_key", payFastProperties.getMerchantKey());
         urlParams.put("custom_str1", safePlanType); // plan type for ITN callback
         urlParams.put("custom_str2", safeEmailAddress); // user email for ITN callback
         if (payFastProperties.getReturnUrl() != null && !payFastProperties.getReturnUrl().isEmpty()) {
