@@ -124,7 +124,7 @@ public class PayFastController {
         String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";  // From request, decode
 
         // Build signature params - ONLY standard PayFast fields (no custom fields in signature)
-        // IMPORTANT: Some payment gateways (like PayFast) do NOT include merchant_key in signature
+        // IMPORTANT: Include merchant_key in signature (PayFast requires it)
         Map<String, String> signatureParams = new LinkedHashMap<>();
         signatureParams.put("amount", safeAmount);
         signatureParams.put("cycles", safeCycles);
@@ -135,8 +135,7 @@ public class PayFastController {
             signatureParams.put("item_description", safeItemDescription);
         }
         signatureParams.put("merchant_id", payFastProperties.getMerchantId());
-        // DO NOT INCLUDE merchant_key - PayFast likely uses transaction data only
-        // signatureParams.put("merchant_key", payFastProperties.getMerchantKey());
+        signatureParams.put("merchant_key", payFastProperties.getMerchantKey());  // INCLUDE merchant_key
         signatureParams.put("name_first", safeNameFirst);
         signatureParams.put("name_last", safeNameLast);
         signatureParams.put("recurring_amount", safeRecurringAmount);
