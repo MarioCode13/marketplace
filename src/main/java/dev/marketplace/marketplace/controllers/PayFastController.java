@@ -64,9 +64,9 @@ public class PayFastController {
 
     @GetMapping("/subscription-url")
     public ResponseEntity<String> getPayFastSubscriptionUrl(
-            @RequestParam String nameFirst,
-            @RequestParam String nameLast,
-            @RequestParam String emailAddress,
+            @RequestParam(required = false) String nameFirst,
+            @RequestParam(required = false) String nameLast,
+            @RequestParam(required = false) String emailAddress,
             @RequestParam(defaultValue = "Pro Store Subscription") String itemName,
             @RequestParam(defaultValue = "100.00") String amount,
             @RequestParam(defaultValue = "100.00") String recurringAmount,
@@ -77,6 +77,13 @@ public class PayFastController {
     ) {
         if (!payfastConfigured) {
             return ResponseEntity.status(503).body("PayFast not configured on this instance");
+        }
+
+        // Validate required parameters
+        if (nameFirst == null || nameFirst.isBlank() ||
+            nameLast == null || nameLast.isBlank() ||
+            emailAddress == null || emailAddress.isBlank()) {
+            return ResponseEntity.status(400).body("Missing required parameters: nameFirst, nameLast, emailAddress");
         }
 
         log.info("[PayFast] ========== GENERATING SUBSCRIPTION URL ==========");
