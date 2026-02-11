@@ -100,45 +100,80 @@ public class PayFastController {
 
         log.info("[PayFast] Building subscription URL for user: {} {} ({})", nameFirst, nameLast, emailAddress);
 
-        // Build signature using raw values in alphabetical order, append passphrase
-        String passphrase = payFastProperties.getPassphrase();
-        String sigBase = "amount=" + amount + "&" +
-                "cycles=" + cycles + "&" +
-                "email_address=" + emailAddress + "&" +
-                "frequency=" + frequency + "&" +
-                "item_name=" + itemName + "&" +
-                "merchant_id=" + payFastProperties.getMerchantId() + "&" +
-                "name_first=" + nameFirst + "&" +
-                "name_last=" + nameLast + "&" +
-                "recurring_amount=" + recurringAmount + "&" +
-                "subscription_type=1&" +
-                "passphrase=" + passphrase;
+        // Build the full set of parameters exactly as they will appear in the final URL
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("amount", amount);
+        params.put("cancel_url", payFastProperties.getCancelUrl());
+        params.put("custom_str1", planType);
+        params.put("custom_str2", emailAddress);
+        params.put("cycles", cycles);
+        params.put("email_address", emailAddress);
+        params.put("frequency", frequency);
+        params.put("item_name", itemName);
+        params.put("merchant_id", payFastProperties.getMerchantId());
+        params.put("merchant_key", payFastProperties.getMerchantKey());
+        params.put("name_first", nameFirst);
+        params.put("name_last", nameLast);
+        params.put("notify_url", payFastProperties.getNotifyUrl());
+        params.put("recurring_amount", recurringAmount);
+        params.put("return_url", payFastProperties.getReturnUrl());
+        params.put("subscription_type", "1");
 
-        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(sigBase);
-        log.info("[PayFast] Generated subscription signature");
+        // Compute signature deterministically from params (alphabetical order, raw values, include merchant_key, append passphrase)
+        String signature = computePayFastSignature(params, true, payFastProperties.getPassphrase());
+        log.debug("[PayFast] Signature base computed and MD5 generated");
 
         // Build URL with URL-encoded parameters (for transmission)
-        String url = payFastProperties.getUrl() + "?" +
-                "amount=" + enc(amount) +
-                "&cancel_url=" + enc(payFastProperties.getCancelUrl()) +
-                "&custom_str1=" + enc(planType) +
-                "&custom_str2=" + enc(emailAddress) +
-                "&cycles=" + cycles +
-                "&email_address=" + enc(emailAddress) +
-                "&frequency=" + frequency +
-                "&item_name=" + enc(itemName) +
-                "&merchant_id=" + payFastProperties.getMerchantId() +
-                "&merchant_key=" + payFastProperties.getMerchantKey() +
-                "&name_first=" + enc(nameFirst) +
-                "&name_last=" + enc(nameLast) +
-                "&notify_url=" + enc(payFastProperties.getNotifyUrl()) +
-                "&recurring_amount=" + enc(recurringAmount) +
-                "&return_url=" + enc(payFastProperties.getReturnUrl()) +
-                "&subscription_type=1" +
-                "&signature=" + signature;
+        StringBuilder url = new StringBuilder(payFastProperties.getUrl()).append("?");
+        boolean first = true;
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            if (!first) url.append('&');
+            first = false;
+            url.append(e.getKey()).append('=').append(enc(e.getValue()));
+        }
+        url.append("&signature=").append(signature);
 
         log.info("[PayFast] Subscription URL generated successfully");
-        return ResponseEntity.ok(url);
+        return ResponseEntity.ok(url.toString());
+    }
+
+    // New helper: build canonical base string for PayFast signature
+    private String computePayFastBaseString(Map<String, String> params, boolean includeMerchantKey, String passphrase) {
+        Map<String, String> filtered = params.entrySet().stream()
+            .filter(e -> e.getValue() != null && !e.getValue().isEmpty())
+            .collect(java.util.stream.Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (a, b) -> a,
+                java.util.LinkedHashMap::new
+            ));
+
+        if (!includeMerchantKey) {
+            filtered.remove("merchant_key");
+        }
+
+        java.util.List<String> keys = new java.util.ArrayList<>(filtered.keySet());
+        java.util.Collections.sort(keys);
+
+        StringBuilder sb = new StringBuilder();
+        for (String k : keys) {
+            sb.append(k).append("=").append(filtered.get(k)).append("&");
+        }
+        if (sb.length() > 0 && sb.charAt(sb.length()-1) == '&') sb.setLength(sb.length()-1);
+
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+        return sb.toString();
+    }
+
+    // Refactor computePayFastSignature to use the base-string helper
+    private String computePayFastSignature(Map<String, String> params, boolean includeMerchantKey, String passphrase) {
+        String base = computePayFastBaseString(params, includeMerchantKey, passphrase);
+        log.info("[PayFast Signature] Base string to hash: {}", base);
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
+        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
+        return signature;
     }
 
     private String enc(String s) {
@@ -162,18 +197,11 @@ public class PayFastController {
         params.put("merchant_id", merchant_id);
         params.put("merchant_key", merchant_key);
 
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
-        }
-        sb.append("passphrase=").append(passphrase);
-
-        String baseString = sb.toString();
-        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+        String signature = computePayFastSignature(params, true, passphrase);
 
         Map<String, String> response = new LinkedHashMap<>();
-        response.put("baseString", baseString);
         response.put("signature", signature);
+        response.put("baseString", "(masked)");
 
         return ResponseEntity.ok(response);
     }
@@ -319,62 +347,29 @@ public class PayFastController {
         return signature;
     }
 
-    /**
-     * Generate signature for initial payment request.
-     * PayFast Spec: Include merchant_key, use raw values (NO URL encoding), alphabetical order, append passphrase.
-     */
-    private String generateSignatureForInitialRequest(Map<String, String> params) {
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION FOR INITIAL REQUEST ==========");
-
-        // 1. Filter: exclude empty values and signature field
-        Map<String, String> filtered = params.entrySet().stream()
-            .filter(e -> e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey()))
-            .sorted(Map.Entry.comparingByKey())  // Alphabetical order
-            .collect(java.util.stream.Collectors.toMap(
-                Map.Entry::getKey,
-                Map.Entry::getValue,
-                (a, b) -> a,
-                java.util.LinkedHashMap::new
-            ));
-
-        log.debug("[PayFast Signature] Filtered params (sorted): {}", filtered);
-
-        // 2. Build base string: key=value&key=value&... (raw values, NO URL encoding)
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, String> entry : filtered.entrySet()) {
-            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
-        }
-
-        // Trim trailing '&'
-        if (!sb.isEmpty() && sb.charAt(sb.length() - 1) == '&') {
-            sb.setLength(sb.length() - 1);
-        }
-
-        // 3. Append passphrase at the end
-        String passphrase = payFastProperties.getPassphrase();
-        if (passphrase != null && !passphrase.isBlank()) {
-            sb.append("&passphrase=").append(passphrase);
-            String masked = maskPassphrase(passphrase);
-            log.debug("[PayFast Signature] Passphrase appended (masked={}, length={})", masked, passphrase.length());
-        } else {
-            log.warn("[PayFast Signature] No passphrase configured!");
-        }
-
-        String baseString = sb.toString();
-        log.debug("[PayFast Signature] Base string to hash: {}", baseString);
-
-        // 4. MD5 hash
-        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
-        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
-        log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
-
-        return signature;
-    }
-
     private String maskPassphrase(String passphrase) {
         if (passphrase == null || passphrase.isEmpty()) return "";
         if (passphrase.length() <= 4) return "****";
         return passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
     }
-}
 
+    // Temporary debug endpoint: POST a JSON body with the exact params (decoded values) and get back the canonical base string and md5
+    @PostMapping(path = "/debug/compute-signature", consumes = "application/json", produces = "application/json")
+    public ResponseEntity<Map<String, String>> debugComputeSignature(
+            @RequestBody Map<String, String> body,
+            @RequestParam(defaultValue = "true") boolean includeMerchantKey,
+            @RequestParam(required = false) String passphrase
+    ) {
+        if (body == null) body = new java.util.HashMap<>();
+        // Prefer explicit passphrase param, otherwise fall back to configured passphrase
+        String pf = (passphrase != null && !passphrase.isBlank()) ? passphrase : payFastProperties.getPassphrase();
+        String base = computePayFastBaseString(body, includeMerchantKey, pf);
+        String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
+        Map<String, String> resp = new java.util.LinkedHashMap<>();
+        resp.put("baseString", base);
+        resp.put("md5", md5);
+        resp.put("includeMerchantKey", String.valueOf(includeMerchantKey));
+        resp.put("usedPassphraseMasked", pf == null ? "(none)" : (pf.length() <= 4 ? "****" : pf.substring(0,2)+"****"+pf.substring(pf.length()-2)));
+        return ResponseEntity.ok(resp);
+    }
+}
