@@ -79,11 +79,31 @@ public class PayFastController {
             return ResponseEntity.status(503).body("PayFast not configured on this instance");
         }
 
-        // Validate required parameters
-        if (nameFirst == null || nameFirst.isBlank() ||
-            nameLast == null || nameLast.isBlank() ||
-            emailAddress == null || emailAddress.isBlank()) {
-            return ResponseEntity.status(400).body("Missing required parameters: nameFirst, nameLast, emailAddress");
+        // Get authenticated user info if parameters not provided
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(401).body("User not authenticated");
+        }
+
+        String usernameOrEmail = authentication.getName();
+        Optional<User> userOpt = userService.getUserByEmail(usernameOrEmail);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+
+        User user = userOpt.get();
+
+        // Use provided parameters or fall back to user data
+        if (nameFirst == null || nameFirst.isBlank()) {
+            nameFirst = user.getFirstName() != null ? user.getFirstName() : "User";
+        }
+        if (nameLast == null || nameLast.isBlank()) {
+            nameLast = user.getLastName() != null ? user.getLastName() : "Account";
+        }
+        if (emailAddress == null || emailAddress.isBlank()) {
+            emailAddress = user.getEmail();
         }
 
         log.info("[PayFast] ========== GENERATING SUBSCRIPTION URL ==========");
