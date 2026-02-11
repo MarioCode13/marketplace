@@ -114,9 +114,9 @@ public class PayFastController {
         params.put("merchant_key", payFastProperties.getMerchantKey());
         params.put("name_first", nameFirst);
         params.put("name_last", nameLast);
-        params.put("notify_url", payFastProperties.getNotifyUrl());
+        params.put("notify_url", payFastProperties.getNotifyUrl() != null ? payFastProperties.getNotifyUrl() : "");
         params.put("recurring_amount", recurringAmount);
-        params.put("return_url", payFastProperties.getReturnUrl());
+        params.put("return_url", payFastProperties.getReturnUrl() != null ? payFastProperties.getReturnUrl() : "");
         params.put("subscription_type", "1");
 
         // Compute signature deterministically from params (alphabetical order, raw values, include merchant_key, append passphrase)
