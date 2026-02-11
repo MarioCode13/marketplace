@@ -124,6 +124,7 @@ public class PayFastController {
         String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";  // From request, decode
 
         // Build signature params - ONLY standard PayFast fields (no custom fields in signature)
+        // IMPORTANT: Some payment gateways (like PayFast) do NOT include merchant_key in signature
         Map<String, String> signatureParams = new LinkedHashMap<>();
         signatureParams.put("amount", safeAmount);
         signatureParams.put("cycles", safeCycles);
@@ -134,7 +135,8 @@ public class PayFastController {
             signatureParams.put("item_description", safeItemDescription);
         }
         signatureParams.put("merchant_id", payFastProperties.getMerchantId());
-        signatureParams.put("merchant_key", payFastProperties.getMerchantKey());
+        // DO NOT INCLUDE merchant_key - PayFast likely uses transaction data only
+        // signatureParams.put("merchant_key", payFastProperties.getMerchantKey());
         signatureParams.put("name_first", safeNameFirst);
         signatureParams.put("name_last", safeNameLast);
         signatureParams.put("recurring_amount", safeRecurringAmount);
@@ -360,7 +362,23 @@ public class PayFastController {
 
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
-        log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
+        log.info("[PayFast Signature] Generated MD5 signature (WITH merchant_key): {}", signature);
+
+        // Also test WITHOUT merchant_key (PayFast might only use transaction data for subscription)
+        StringBuilder sbWithoutKey = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            if ("merchant_key".equals(entry.getKey())) continue;  // Skip merchant_key
+            String value = entry.getValue();
+            sbWithoutKey.append(entry.getKey()).append("=").append(value).append("&");
+        }
+        if (!sbWithoutKey.isEmpty() && sbWithoutKey.charAt(sbWithoutKey.length() - 1) == '&') {
+            sbWithoutKey.setLength(sbWithoutKey.length() - 1);
+        }
+        sbWithoutKey.append("&passphrase=").append(passphrase);
+        String signatureWithoutKey = org.apache.commons.codec.digest.DigestUtils.md5Hex(sbWithoutKey.toString());
+        log.info("[PayFast Signature] Generated MD5 signature (WITHOUT merchant_key): {}", signatureWithoutKey);
+        log.info("[PayFast Signature] Base string without key: {}", sbWithoutKey.toString());
+
         log.info("[PayFast Signature] ========== SIGNATURE GENERATION END ==========");
 
         return signature;
