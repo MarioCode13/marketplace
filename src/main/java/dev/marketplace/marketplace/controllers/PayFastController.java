@@ -111,16 +111,17 @@ public class PayFastController {
             nameFirst, nameLast, emailAddress, itemName, amount, recurringAmount, frequency, cycles, planType);
 
         // Sanitize inputs to avoid stray quote characters or whitespace affecting signature
-        String safeNameFirst = sanitizeAndDecode(nameFirst);
-        String safeNameLast = sanitizeAndDecode(nameLast);
-        String safeEmailAddress = sanitizeAndDecode(emailAddress);
-        String safeItemName = sanitizeAndDecode(itemName);
-        String safeAmount = sanitizeAndDecode(amount);
-        String safeRecurringAmount = sanitizeAndDecode(recurringAmount);
-        String safeFrequency = sanitizeAndDecode(frequency);
-        String safeCycles = sanitizeAndDecode(cycles);
-        String safePlanType = sanitizeAndDecode(planType);
-        String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";
+        // Only decode request parameters (itemName, amount, etc.), not user fields
+        String safeNameFirst = sanitizeParam(nameFirst);  // From user, don't decode
+        String safeNameLast = sanitizeParam(nameLast);    // From user, don't decode
+        String safeEmailAddress = sanitizeParam(emailAddress);  // From user, don't decode
+        String safeItemName = sanitizeAndDecode(itemName);      // From request, decode
+        String safeAmount = sanitizeAndDecode(amount);          // From request, decode
+        String safeRecurringAmount = sanitizeAndDecode(recurringAmount);  // From request, decode
+        String safeFrequency = sanitizeAndDecode(frequency);    // From request, decode
+        String safeCycles = sanitizeAndDecode(cycles);          // From request, decode
+        String safePlanType = sanitizeAndDecode(planType);      // From request, decode
+        String safeItemDescription = itemDescription != null ? sanitizeAndDecode(itemDescription) : "";  // From request, decode
 
         // Build signature params - ONLY standard PayFast fields (no custom fields in signature)
         Map<String, String> signatureParams = new LinkedHashMap<>();
@@ -174,6 +175,34 @@ public class PayFastController {
         log.info("[PayFast] Final URL generated: {}", url);
         log.info("[PayFast] ========== END SUBSCRIPTION URL GENERATION ==========");
         return ResponseEntity.ok(url.toString());
+    }
+
+    @GetMapping("/debug/signature")
+    public ResponseEntity<Map<String, String>> debugSignature(
+            @RequestParam String merchant_id,
+            @RequestParam String merchant_key,
+            @RequestParam String amount,
+            @RequestParam String passphrase
+    ) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("amount", amount);
+        params.put("merchant_id", merchant_id);
+        params.put("merchant_key", merchant_key);
+
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+        }
+        sb.append("passphrase=").append(passphrase);
+
+        String baseString = sb.toString();
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(baseString);
+
+        Map<String, String> response = new LinkedHashMap<>();
+        response.put("baseString", baseString);
+        response.put("signature", signature);
+
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/itn")
@@ -298,16 +327,15 @@ public class PayFastController {
                 java.util.LinkedHashMap::new
             ));
 
-        log.info("[PayFast Signature] Filtered params (sorted alphabetically): {}", filtered);
+        log.info("[PayFast Signature] Filtered params (sorted alphabetically):");
+        filtered.forEach((k, v) -> log.info("[PayFast Signature]   {}={}", k, v));
 
         // 2. Build base string: key=value&key=value&...
+        // CRITICAL: Use raw values, NOT URL-encoded
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> entry : filtered.entrySet()) {
             String value = entry.getValue();
-            // For initial request, do NOT URL-encode values in the signature calculation
-            // PayFast expects raw values
             sb.append(entry.getKey()).append("=").append(value).append("&");
-            log.debug("[PayFast Signature] Adding param: {}={}", entry.getKey(), value);
         }
 
         // Trim trailing '&'
@@ -320,14 +348,15 @@ public class PayFastController {
         if (passphrase != null && !passphrase.isBlank()) {
             sb.append("&passphrase=").append(passphrase);
             String masked = passphrase.length() <= 4 ? "****" : passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
-            String passphraseHash = org.apache.commons.codec.digest.DigestUtils.sha256Hex(passphrase);
-            log.info("[PayFast Signature] Passphrase appended (masked={}, sha256={}, length={})", masked, passphraseHash, passphrase.length());
+            log.info("[PayFast Signature] Passphrase appended (masked={}, length={})", masked, passphrase.length());
         } else {
-            log.warn("[PayFast Signature] No passphrase configured! This will cause signature validation to fail.");
+            log.warn("[PayFast Signature] No passphrase configured!");
         }
 
         String signatureString = sb.toString();
-        log.info("[PayFast Signature] Base string to hash (length={}): {}", signatureString.length(), signatureString);
+        log.info("[PayFast Signature] ========== BASE STRING TO HASH ==========");
+        log.info("[PayFast Signature] {}", signatureString);
+        log.info("[PayFast Signature] ========== LENGTH: {} ==========", signatureString.length());
 
         // 4. MD5 hash
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(signatureString);
