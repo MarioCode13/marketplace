@@ -114,7 +114,12 @@ public class PayFastController {
         params.put("merchant_key", payFastProperties.getMerchantKey());
         params.put("name_first", nameFirst);
         params.put("name_last", nameLast);
-        params.put("notify_url", payFastProperties.getNotifyUrl() != null ? payFastProperties.getNotifyUrl() : "");
+
+        // DEBUG: Log the notify_url from config
+        String notifyUrl = payFastProperties.getNotifyUrl();
+        log.info("[PayFast DEBUG] notifyUrl from config: {}", notifyUrl);
+        params.put("notify_url", notifyUrl != null ? notifyUrl : "");
+
         params.put("recurring_amount", recurringAmount);
         params.put("return_url", payFastProperties.getReturnUrl() != null ? payFastProperties.getReturnUrl() : "");
         params.put("subscription_type", "1");
