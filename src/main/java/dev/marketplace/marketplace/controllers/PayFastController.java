@@ -160,8 +160,8 @@ public class PayFastController {
             urlParams.put("notify_url", payFastProperties.getNotifyUrl());
         }
 
-        // Generate signature from ALL URL params (including custom fields)
-        String signature = generateSignatureFromAllParams(urlParams);
+        // Generate signature from standard fields ONLY (NOT custom fields or URLs)
+        String signature = generateSignatureForInitialRequest(signatureParams);
         log.info("[PayFast] Generated signature: {}", signature);
 
         // Build URL in alphabetical order
