@@ -143,7 +143,7 @@ public class PayFastController {
     }
 
     // New helper: build canonical base string for PayFast signature
-    private String computePayFastBaseString(Map<String, String> params, boolean includeMerchantKey, String passphrase) {
+    private String computePayFastBaseString(Map<String, String> params, boolean includeMerchantKey, String passphrase, boolean urlEncodeValues) {
         Map<String, String> filtered = params.entrySet().stream()
             .filter(e -> e.getValue() != null && !e.getValue().isEmpty())
             .collect(java.util.stream.Collectors.toMap(
@@ -162,7 +162,9 @@ public class PayFastController {
 
         StringBuilder sb = new StringBuilder();
         for (String k : keys) {
-            sb.append(k).append("=").append(filtered.get(k)).append("&");
+            String v = filtered.get(k);
+            String toAppend = urlEncodeValues ? rfc3986Encode(v) : v;
+            sb.append(k).append("=").append(toAppend).append("&");
         }
         if (sb.length() > 0 && sb.charAt(sb.length()-1) == '&') sb.setLength(sb.length()-1);
 
@@ -172,22 +174,30 @@ public class PayFastController {
         return sb.toString();
     }
 
-    // Refactor computePayFastSignature to use the base-string helper
-    private String computePayFastSignature(Map<String, String> params, boolean includeMerchantKey, String passphrase) {
-        String base = computePayFastBaseString(params, includeMerchantKey, passphrase);
+    // Helper: RFC3986 encode for signature variants
+    private String rfc3986Encode(String s) {
+        if (s == null) return "";
+        try {
+            String encoded = java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8.name());
+            encoded = encoded.replace("+", "%20").replace("%7E", "~");
+            return encoded;
+        } catch (Exception e) {
+            return s;
+        }
+    }
+
+    // Refactor existing computePayFastSignature to delegate to the new base-string method
+    private String computePayFastSignature(Map<String, String> params, boolean includeMerchantKey, String passphrase, boolean urlEncodeValues) {
+        String base = computePayFastBaseString(params, includeMerchantKey, passphrase, urlEncodeValues);
         log.info("[PayFast Signature] Base string to hash: {}", base);
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
         log.info("[PayFast Signature] Generated MD5 signature: {}", signature);
         return signature;
     }
 
-    private String enc(String s) {
-        if (s == null) return "";
-        try {
-            return URLEncoder.encode(s, "UTF-8").replace("+", "%20");
-        } catch (Exception e) {
-            return s;
-        }
+    // Overload kept for backward compatibility (raw values)
+    private String computePayFastSignature(Map<String, String> params, boolean includeMerchantKey, String passphrase) {
+        return computePayFastSignature(params, includeMerchantKey, passphrase, false);
     }
 
     @GetMapping("/debug/signature")
@@ -394,36 +404,97 @@ public class PayFastController {
         return passphrase.substring(0, 2) + "****" + passphrase.substring(passphrase.length() - 2);
     }
 
-    // ...existing code...
-
     /**
      * Generate signature for initial payment request.
      * PayFast Spec: Include merchant_key, use raw values (NO URL encoding), alphabetical order, append passphrase.
      */
     private String generateSignatureForInitialRequest(Map<String, String> params) {
-        String base = computePayFastBaseString(params, true, payFastProperties.getPassphrase());
+        // call the 4-arg base-string builder with urlEncodeValues=false
+        String base = computePayFastBaseString(params, true, payFastProperties.getPassphrase(), false);
         log.debug("[PayFast Signature] Base string (initial request, with merchant_key): {}", base);
         String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
         log.debug("[PayFast Signature] Generated MD5 signature (with merchant_key): {}", signature);
         return signature;
     }
 
-    // ...existing code...
+    // Helper used when building redirect URL to URL-encode parameter values
+    private String enc(String s) {
+        if (s == null) return "";
+        try {
+            return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8.name()).replace("+", "%20");
+        } catch (Exception e) {
+            return s;
+        }
+    }
+
+    @PostMapping(path = "/debug/compute-signature", consumes = "application/json", produces = "application/json")
     public ResponseEntity<Map<String, String>> debugComputeSignature(
             @RequestBody Map<String, String> body,
             @RequestParam(defaultValue = "true") boolean includeMerchantKey,
-            @RequestParam(required = false) String passphrase
+            @RequestParam(required = false) String passphrase,
+            @RequestParam(defaultValue = "false") boolean urlEncode,
+            @RequestParam(defaultValue = "false") boolean returnTestUrl,
+            jakarta.servlet.http.HttpServletRequest request
     ) {
+        // Only allow local requests for this debug endpoint
+        String remote = request.getHeader("X-Forwarded-For");
+        if (remote == null || remote.isBlank()) {
+            remote = request.getRemoteAddr();
+        }
+        // Accept common localhost representations and X-Forwarded-For lists that include localhost
+        boolean isLocal = false;
+        if (remote != null) {
+            String r = remote.trim();
+            if (r.equals("127.0.0.1") || r.equals("::1") || r.equals("0:0:0:0:0:0:0:1")) {
+                isLocal = true;
+            }
+            // IPv4-mapped IPv6 like ::ffff:127.0.0.1
+            if (r.contains("127.0.0.1") || r.startsWith("127." ) || r.contains("::ffff:127.0.0.1")) {
+                isLocal = true;
+            }
+            // X-Forwarded-For can be a comma-separated list; accept if any entry is localhost
+            if (r.contains(",")) {
+                String[] parts = r.split(",");
+                for (String p : parts) {
+                    String pp = p.trim();
+                    if (pp.equals("127.0.0.1") || pp.equals("::1") || pp.contains("127.0.0.1")) { isLocal = true; break; }
+                }
+            }
+        }
+        if (!isLocal) {
+            log.warn("[PayFast DEBUG] Forbidden debug access from {}", remote);
+            Map<String, String> resp = new java.util.HashMap<>();
+            resp.put("error", "forbidden");
+            return ResponseEntity.status(403).body(resp);
+        }
+
         if (body == null) body = new java.util.HashMap<>();
-        // Prefer explicit passphrase param, otherwise fall back to configured passphrase
         String pf = (passphrase != null && !passphrase.isBlank()) ? passphrase : payFastProperties.getPassphrase();
-        String base = computePayFastBaseString(body, includeMerchantKey, pf);
+        String base = computePayFastBaseString(body, includeMerchantKey, pf, urlEncode);
         String md5 = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
         Map<String, String> resp = new java.util.LinkedHashMap<>();
         resp.put("baseString", base);
         resp.put("md5", md5);
         resp.put("includeMerchantKey", String.valueOf(includeMerchantKey));
+        resp.put("urlEncodeValues", String.valueOf(urlEncode));
         resp.put("usedPassphraseMasked", pf == null ? "(none)" : (pf.length() <= 4 ? "****" : pf.substring(0,2)+"****"+pf.substring(pf.length()-2)));
+        if (returnTestUrl) {
+            // build the full redirect URL with encoded params (use rfc3986 for param values)
+            StringBuilder testUrl = new StringBuilder(payFastProperties.getUrl()).append("?");
+            boolean first = true;
+            // iterate original body keys in insertion order if present, otherwise use the canonical sorted order
+            java.util.List<String> keys = new java.util.ArrayList<>(body.keySet());
+            if (keys.isEmpty()) keys = new java.util.ArrayList<>(body.keySet());
+            for (String k : keys) {
+                if (!first) testUrl.append('&');
+                first = false;
+                String v = body.get(k);
+                testUrl.append(k).append("=").append(rfc3986Encode(v));
+            }
+            if (!first) testUrl.append('&');
+            testUrl.append("signature=").append(md5);
+            resp.put("testUrl", testUrl.toString());
+        }
         return ResponseEntity.ok(resp);
     }
 }
