@@ -116,7 +116,7 @@ public class PayFastController_SIMPLE {
         params.put("frequency", frequency);
         params.put("cycles", cycles);
 
-        String signature = computeSignature(params, true);
+        String signature = computeSignature(params, false);
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl()).append("?");
         List<String> keys = new ArrayList<>(params.keySet());
