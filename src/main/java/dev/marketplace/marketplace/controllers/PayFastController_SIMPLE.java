@@ -137,6 +137,7 @@ public class PayFastController_SIMPLE {
     }
 
     private String computeSignature(Map<String, String> params, boolean includeMerchantKey) {
+
         SortedMap<String, String> sorted = new TreeMap<>();
 
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -158,17 +159,20 @@ public class PayFastController_SIMPLE {
         StringBuilder sb = new StringBuilder();
 
         for (Map.Entry<String, String> entry : sorted.entrySet()) {
+
+            String encodedValue = encode(entry.getValue());
+
             sb.append(entry.getKey())
                     .append("=")
-                    .append(entry.getValue())
+                    .append(encodedValue)
                     .append("&");
         }
 
-        sb.append("passphrase=").append(payFastProperties.getPassphrase());
+        sb.append("passphrase=").append(encode(payFastProperties.getPassphrase()));
 
         String baseString = sb.toString();
 
-        log.info("[PayFast] Signature base string: {}", baseString);
+        log.info("[PayFast] Signature base string (ENCODED): {}", baseString);
 
         return DigestUtils.md5Hex(baseString);
     }
