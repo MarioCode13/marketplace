@@ -159,23 +159,21 @@ public class PayFastController_SIMPLE {
         StringBuilder sb = new StringBuilder();
 
         for (Map.Entry<String, String> entry : sorted.entrySet()) {
-
-            String encodedValue = encode(entry.getValue());
-
+            // ⚠ Use raw value, no encoding
             sb.append(entry.getKey())
                     .append("=")
-                    .append(encodedValue)
+                    .append(entry.getValue())
                     .append("&");
         }
 
         sb.append("passphrase=").append("dealioMarket1");
 
         String baseString = sb.toString();
-
-        log.info("[PayFast] Signature base string (ENCODED): {}", baseString);
+        log.info("[PayFast] Signature base string: {}", baseString);
 
         return DigestUtils.md5Hex(baseString);
     }
+
 
     private String encode(String s) {
         if (s == null) return "";
