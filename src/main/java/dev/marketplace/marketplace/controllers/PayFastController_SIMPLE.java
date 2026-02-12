@@ -93,22 +93,28 @@ public class PayFastController_SIMPLE {
 
         // Build params map (these are the decoded values)
         Map<String, String> params = new LinkedHashMap<>();
-        params.put("amount", amount);
-        params.put("cancel_url", payFastProperties.getCancelUrl());
-        params.put("custom_str1", planType);
-        params.put("custom_str2", emailAddress);
-        params.put("cycles", cycles);
-        params.put("email_address", emailAddress);
-        params.put("frequency", frequency);
-        params.put("item_name", itemName);
+
         params.put("merchant_id", payFastProperties.getMerchantId());
         params.put("merchant_key", payFastProperties.getMerchantKey());
+
+        params.put("return_url", payFastProperties.getReturnUrl());
+        params.put("cancel_url", payFastProperties.getCancelUrl());
+        params.put("notify_url", payFastProperties.getNotifyUrl());
+
         params.put("name_first", nameFirst);
         params.put("name_last", nameLast);
-        params.put("notify_url", payFastProperties.getNotifyUrl());
-        params.put("recurring_amount", recurringAmount);
-        params.put("return_url", payFastProperties.getReturnUrl());
+        params.put("email_address", emailAddress);
+
+        params.put("amount", amount);
+        params.put("item_name", itemName);
+
+        params.put("custom_str1", planType);
+        params.put("custom_str2", emailAddress);
+
         params.put("subscription_type", "1");
+        params.put("recurring_amount", recurringAmount);
+        params.put("frequency", frequency);
+        params.put("cycles", cycles);
 
         // Compute signature
         String signature = computeSignature(params, true); // include merchant_key for initial request
