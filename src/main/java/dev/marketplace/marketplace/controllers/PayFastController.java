@@ -125,9 +125,9 @@ public class PayFastController {
         params.put("return_url", payFastProperties.getReturnUrl() != null ? payFastProperties.getReturnUrl() : "");
         params.put("subscription_type", "1");
 
-        // Compute signature deterministically from params (alphabetical order, raw values, include merchant_key, append passphrase)
-        String signature = computePayFastSignature(params, true, payFastProperties.getPassphrase());
-        log.debug("[PayFast] Signature base computed and MD5 generated");
+        // Compute redirect signature using params in the same order as they will be sent
+        String signature = computeRedirectSignature(params);
+        log.debug("[PayFast] Redirect signature computed and MD5 generated");
 
         // Build URL with URL-encoded parameters (for transmission)
         StringBuilder url = new StringBuilder(payFastProperties.getUrl()).append("?");
@@ -141,6 +141,44 @@ public class PayFastController {
 
         log.info("[PayFast] Subscription URL generated successfully");
         return ResponseEntity.ok(url.toString());
+    }
+
+    /**
+     * Generate signature for the initial redirect to PayFast.
+     * Important: DO NOT sort keys here – use the params in the same order
+     * as they are added to the map / sent in the query string.
+     * Values are used raw (no URL encoding) for the hash, and the passphrase
+     * is appended at the end if configured.
+     */
+    private String computeRedirectSignature(Map<String, String> params) {
+        // 1. Filter out empty values and the 'signature' field, preserving insertion order
+        Map<String, String> filtered = new LinkedHashMap<>();
+        for (Map.Entry<String, String> e : params.entrySet()) {
+            if (e.getValue() != null && !e.getValue().isEmpty() && !"signature".equals(e.getKey())) {
+                filtered.put(e.getKey(), e.getValue());
+            }
+        }
+
+        // 2. Build base string in the SAME order as params (no URL encoding)
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : filtered.entrySet()) {
+            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+        }
+        if (sb.length() > 0 && sb.charAt(sb.length() - 1) == '&') {
+            sb.setLength(sb.length() - 1);
+        }
+
+        // 3. Append passphrase if configured
+        String passphrase = payFastProperties.getPassphrase();
+        if (passphrase != null && !passphrase.isBlank()) {
+            sb.append("&passphrase=").append(passphrase);
+        }
+
+        String base = sb.toString();
+        log.info("[PayFast Redirect Signature] Base string to hash: {}", base);
+        String signature = org.apache.commons.codec.digest.DigestUtils.md5Hex(base);
+        log.info("[PayFast Redirect Signature] Generated MD5 signature: {}", signature);
+        return signature;
     }
 
     // New helper: build canonical base string for PayFast signature
