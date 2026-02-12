@@ -100,7 +100,7 @@ public class PayFastController_SIMPLE {
         Map<String, String> params = new HashMap<>();
 
         params.put("merchant_id", payFastProperties.getMerchantId());
-        params.put("merchant_key", payFastProperties.getMerchantKey());
+//        params.put("merchant_key", payFastProperties.getMerchantKey());
         params.put("return_url", payFastProperties.getReturnUrl());
         params.put("cancel_url", payFastProperties.getCancelUrl());
         params.put("notify_url", payFastProperties.getNotifyUrl());
