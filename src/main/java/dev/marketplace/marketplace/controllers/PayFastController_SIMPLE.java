@@ -168,7 +168,7 @@ public class PayFastController_SIMPLE {
                     .append("&");
         }
 
-        sb.append("passphrase=").append(encode(payFastProperties.getPassphrase()));
+        sb.append("passphrase=").append("dealioMarket1");
 
         String baseString = sb.toString();
 
