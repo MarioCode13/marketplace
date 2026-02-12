@@ -137,7 +137,6 @@ public class PayFastController_SIMPLE {
     }
 
     private String computeSignature(Map<String, String> params, boolean includeMerchantKey) {
-
         SortedMap<String, String> sorted = new TreeMap<>();
 
         for (Map.Entry<String, String> entry : params.entrySet()) {
@@ -157,16 +156,15 @@ public class PayFastController_SIMPLE {
         }
 
         StringBuilder sb = new StringBuilder();
-
         for (Map.Entry<String, String> entry : sorted.entrySet()) {
-            // ⚠ Use raw value, no encoding
+            // ⚠ Use raw value
             sb.append(entry.getKey())
                     .append("=")
                     .append(entry.getValue())
                     .append("&");
         }
 
-        sb.append("passphrase=").append("dealioMarket1");
+        sb.append("passphrase=").append(payFastProperties.getPassphrase());
 
         String baseString = sb.toString();
         log.info("[PayFast] Signature base string: {}", baseString);
