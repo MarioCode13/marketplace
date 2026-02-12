@@ -136,39 +136,36 @@ public class PayFastController_SIMPLE {
         return ResponseEntity.ok(url.toString());
     }
 
-    private String computeSignature(Map<String, String> params, boolean includeMerchantKey) {
-        SortedMap<String, String> sorted = new TreeMap<>();
-
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-
-            if (value == null || value.isBlank())
-                continue;
-
-            if (!includeMerchantKey && key.equals("merchant_key"))
-                continue;
-
-            if (key.equals("signature"))
-                continue;
-
-            sorted.put(key, value);
-        }
+    private String computeSignature(Map<String, String> params) {
+        String[] order = {
+                "merchant_id",
+                "return_url",
+                "cancel_url",
+                "notify_url",
+                "name_first",
+                "name_last",
+                "email_address",
+                "amount",
+                "item_name",
+                "custom_str1",
+                "custom_str2",
+                "subscription_type",
+                "recurring_amount",
+                "frequency",
+                "cycles"
+        };
 
         StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String, String> entry : sorted.entrySet()) {
-            // ⚠ Use raw value
-            sb.append(entry.getKey())
-                    .append("=")
-                    .append(entry.getValue())
-                    .append("&");
+        for (String key : order) {
+            String value = params.get(key);
+            if (value != null && !value.isBlank()) {
+                sb.append(key).append("=").append(value).append("&");
+            }
         }
 
         sb.append("passphrase=").append(payFastProperties.getPassphrase());
-
         String baseString = sb.toString();
         log.info("[PayFast] Signature base string: {}", baseString);
-
         return DigestUtils.md5Hex(baseString);
     }
 
