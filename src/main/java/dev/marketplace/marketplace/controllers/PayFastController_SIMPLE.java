@@ -128,9 +128,6 @@ public class PayFastController_SIMPLE {
                     .append(encode(entry.getValue()));
         }
 
-        // Append passphrase= at the end (use empty value - PayFast support confirmed this works)
-        sb.append("&passphrase=");
-
         return sb.toString();
     }
 
@@ -143,13 +140,11 @@ public class PayFastController_SIMPLE {
 
         String receivedSignature = payload.get("signature");
 
-        // ITN: exclude merchant_key, alphabetical order, URL-encoded values, passphrase= (empty)
+        // Alphabetical order for ITN
         SortedMap<String, String> sorted = new TreeMap<>();
         for (Map.Entry<String, String> entry : payload.entrySet()) {
-            if (!entry.getKey().equals("signature") && !entry.getKey().equals("merchant_key")) {
-                if (entry.getValue() != null && !entry.getValue().isEmpty()) {
-                    sorted.put(entry.getKey(), entry.getValue());
-                }
+            if (!entry.getKey().equals("signature")) {
+                sorted.put(entry.getKey(), entry.getValue());
             }
         }
 
@@ -164,8 +159,6 @@ public class PayFastController_SIMPLE {
                     .append("=")
                     .append(encode(entry.getValue()));
         }
-
-        sb.append("&passphrase=");
 
         String expectedSignature = DigestUtils.md5Hex(sb.toString());
 
