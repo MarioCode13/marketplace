@@ -87,7 +87,7 @@ public class PayFastController_SIMPLE {
         params.put("frequency", frequency);
         params.put("cycles", cycles);
 
-        String signature = generateSignature(params);
+        String signature = generateSignatureExact();
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl()).append("?");
 
@@ -107,6 +107,28 @@ public class PayFastController_SIMPLE {
 
         return ResponseEntity.ok(url.toString());
     }
+
+//    TEST
+private String generateSignatureExact() {
+
+    String baseString =
+            "merchant_id=12247699" +
+                    "&merchant_key=fdsyodv8kudog" +
+                    "&return_url=https%3A%2F%2Fwww.dealio.org.za%2Fsubscriptions%2Fsuccess" +
+                    "&cancel_url=https%3A%2F%2Fwww.dealio.org.za%2Fsubscriptions%2Fcancel" +
+                    "&notify_url=https%3A%2F%2Fapi.dealio.org.za%2Fapi%2Fpayments%2Fpayfast%2Fitn" +
+                    "&name_first=Jimi" +
+                    "&name_last=Hendrix" +
+                    "&email_address=jimi%40gmail.com" +
+                    "&amount=49.00" +
+                    "&item_name=Testers" +
+                    "&custom_str1=Extra+order+information" +
+                    "&subscription_type=1" +
+                    "&frequency=3" +
+                    "&cycles=12";
+
+    return DigestUtils.md5Hex(baseString);
+}
 
     private String generateSignature(LinkedHashMap<String, String> params) {
         String baseString = buildBaseString(params);
