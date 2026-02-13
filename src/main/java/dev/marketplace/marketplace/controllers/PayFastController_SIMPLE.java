@@ -75,6 +75,7 @@ public class PayFastController_SIMPLE {
             @RequestParam(defaultValue = "0") String cycles,
             @RequestParam(defaultValue = "pro_store") String planType
     ) {
+
         if (!payfastConfigured)
             return ResponseEntity.status(503).body("PayFast not configured");
 
@@ -97,7 +98,9 @@ public class PayFastController_SIMPLE {
 
         log.info("[PayFast] Building URL for {} {} ({})", nameFirst, nameLast, emailAddress);
 
-        Map<String, String> params = new HashMap<>();
+        Map<String, String> params = new LinkedHashMap<>();
+
+        // EXACT documentation order
         params.put("merchant_id", payFastProperties.getMerchantId());
         params.put("merchant_key", payFastProperties.getMerchantKey());
         params.put("return_url", payFastProperties.getReturnUrl());
@@ -115,100 +118,98 @@ public class PayFastController_SIMPLE {
         params.put("frequency", frequency);
         params.put("cycles", cycles);
 
-        // Compute signature for redirect (exclude merchant_key)
-        String signature = computeRedirectSignature(params);
-
-        // Build URL in **exact same order as signature**
-        String[] urlOrder = {
-                "merchant_id", "merchant_key", "return_url", "cancel_url", "notify_url",
-                "name_first", "name_last", "email_address", "amount", "item_name",
-                "custom_str1", "custom_str2", "subscription_type", "recurring_amount", "frequency", "cycles"
-        };
+        String signature = generateSignature(params);
 
         StringBuilder url = new StringBuilder(payFastProperties.getUrl()).append("?");
+
         boolean first = true;
-        for (String key : urlOrder) {
+        for (Map.Entry<String, String> entry : params.entrySet()) {
             if (!first) url.append("&");
             first = false;
-            url.append(key).append("=").append(encode(params.get(key)));
+            url.append(entry.getKey())
+                    .append("=")
+                    .append(encode(entry.getValue()));
         }
+
         url.append("&signature=").append(signature);
 
-        log.info("[PayFast] Redirect signature: {}", signature);
+        log.info("[PayFast] Signature: {}", signature);
+
         return ResponseEntity.ok(url.toString());
     }
 
-    private String computeRedirectSignature(Map<String, String> params) {
-        // Fixed order for subscription URL
-        String[] order = {
-                "merchant_id", "return_url", "cancel_url", "notify_url",
-                "name_first", "name_last", "email_address", "amount", "item_name",
-                "custom_str1", "custom_str2", "subscription_type", "recurring_amount", "frequency", "cycles"
-        };
+    private String generateSignature(Map<String, String> params) {
 
         StringBuilder sb = new StringBuilder();
-        for (String key : order) {
-            String value = params.get(key);
-            if (value != null && !value.isBlank()) {
-                sb.append(key).append("=").append(value).append("&");
-            }
+        boolean first = true;
+
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+
+            String value = entry.getValue();
+            if (value == null || value.isBlank()) continue;
+
+            if (!first) sb.append("&");
+            first = false;
+
+            sb.append(entry.getKey())
+                    .append("=")
+                    .append(encode(value));
         }
 
-        sb.append("passphrase=").append(payFastProperties.getPassphrase());
+        sb.append("&passphrase=").append(encode(payFastProperties.getPassphrase()));
+
         String baseString = sb.toString();
+
         log.info("[PayFast] Signature base string: {}", baseString);
+
         return DigestUtils.md5Hex(baseString);
     }
 
-    private String computeITNSignature(Map<String, String> params) {
-        // ITN requires alphabetical sorting
+    private String computeITNSignature(Map<String, String> payload) {
+
         SortedMap<String, String> sorted = new TreeMap<>();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            String key = entry.getKey();
-            String value = entry.getValue();
-            if (value != null && !value.isBlank() && !key.equals("signature")) {
-                sorted.put(key, value);
+
+        for (Map.Entry<String, String> entry : payload.entrySet()) {
+            if (!entry.getKey().equals("signature")
+                    && entry.getValue() != null
+                    && !entry.getValue().isBlank()) {
+                sorted.put(entry.getKey(), entry.getValue());
             }
         }
 
         StringBuilder sb = new StringBuilder();
+        boolean first = true;
+
         for (Map.Entry<String, String> entry : sorted.entrySet()) {
-            sb.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+
+            if (!first) sb.append("&");
+            first = false;
+
+            sb.append(entry.getKey())
+                    .append("=")
+                    .append(encode(entry.getValue()));
         }
-        sb.append("passphrase=").append(payFastProperties.getPassphrase());
+
+        sb.append("&passphrase=").append(encode(payFastProperties.getPassphrase()));
+
         return DigestUtils.md5Hex(sb.toString());
     }
 
     private String encode(String s) {
         if (s == null) return "";
-        try {
-            return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
-        } catch (Exception e) {
-            return s;
-        }
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     @PostMapping("/itn")
     public ResponseEntity<String> handlePayFastITN(@RequestParam Map<String, String> payload) {
-        if (!payfastConfigured) {
-            log.warn("[PayFast ITN] Ignored (not configured)");
-            return ResponseEntity.ok("OK");
-        }
-
-        log.info("[PayFast ITN] Received payload");
 
         String receivedSignature = payload.get("signature");
         String expectedSignature = computeITNSignature(payload);
-
-        log.info("[PayFast ITN] Received signature: {}", receivedSignature);
-        log.info("[PayFast ITN] Expected signature: {}", expectedSignature);
 
         if (receivedSignature == null || !receivedSignature.equals(expectedSignature)) {
             log.error("[PayFast ITN] Signature mismatch!");
             return ResponseEntity.status(400).body("Signature mismatch");
         }
-
-        log.info("[PayFast ITN] Signature OK");
 
         String email = payload.get("custom_str2");
         String status = payload.get("payment_status");
@@ -216,36 +217,14 @@ public class PayFastController_SIMPLE {
 
         if ("COMPLETE".equalsIgnoreCase(status) && email != null && plan != null) {
             Optional<User> userOpt = userService.getUserByEmail(email);
-            if (userOpt.isPresent()) {
-                try {
+            userOpt.ifPresent(user ->
                     subscriptionService.createOrActivatePayFastSubscription(
-                            userOpt.get().getId(),
+                            user.getId(),
                             Subscription.PlanType.valueOf(plan.toUpperCase())
-                    );
-                    log.info("[PayFast ITN] Subscription activated for {}", email);
-                } catch (Exception e) {
-                    log.error("[PayFast ITN] Subscription activation failed", e);
-                }
-            } else {
-                log.error("[PayFast ITN] User not found: {}", email);
-            }
+                    )
+            );
         }
 
         return ResponseEntity.ok("OK");
-    }
-
-    @GetMapping("/user/subscription-status")
-    public ResponseEntity<Map<String, Boolean>> getSubscriptionStatus() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated())
-            return ResponseEntity.status(401).build();
-
-        UUID userId = userService.getUserIdByUsername(auth.getName());
-        boolean active = userService.hasActiveSubscription(userId);
-
-        Map<String, Boolean> resp = new HashMap<>();
-        resp.put("active", active);
-
-        return ResponseEntity.ok(resp);
     }
 }
