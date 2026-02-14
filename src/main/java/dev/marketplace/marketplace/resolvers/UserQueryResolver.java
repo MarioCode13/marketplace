@@ -370,6 +370,14 @@ public class UserQueryResolver {
         return listingService.getListingsByUserId(id);
     }
 
+    @QueryMapping
+    public Boolean checkUsernameAvailable(@Argument String username) {
+        if (username == null || username.trim().isEmpty()) {
+            return false;
+        }
+        return userService.findByUsername(username).isEmpty();
+    }
+
 
 }
 

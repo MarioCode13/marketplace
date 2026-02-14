@@ -460,6 +460,7 @@ type Query {
     getBusinessDocumentByType(businessId: ID!, documentType: DocumentType!): VerificationDocument
     businessTrustRating(businessId: ID!): BusinessTrustRating
     isStoreSlugAvailable(slug: String!): Boolean!
+    checkUsernameAvailable(username: String!): Boolean!
     business(id: ID!): Business
     myBusiness: Business
     myBusinesses: [Business!]!

@@ -404,6 +404,10 @@ public class UserService implements UserDetailsService {
         return userRepository.findByEmail(email);
     }
 
+    public java.util.Optional<dev.marketplace.marketplace.model.User> findByUsername(String username) {
+        return userRepository.findByUsername(username);
+    }
+
     @Transactional
     public User updateUserPlanType(UUID userId, PlanType planType) {
         User user = userRepository.findById(userId)
