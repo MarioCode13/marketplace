@@ -118,3 +118,8 @@ payfast:
   returnUrl: ${PAYFAST_RETURN_URL:}
   cancelUrl: ${PAYFAST_CANCEL_URL:}
   notifyUrl: ${PAYFAST_NOTIFY_URL:}
+
+# Feature flags for trust model
+trust:
+  newModel:
+    enabled: ${TRUST_NEW_MODEL_ENABLED:false}

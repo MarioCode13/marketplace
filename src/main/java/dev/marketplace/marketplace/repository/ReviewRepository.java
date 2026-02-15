@@ -55,4 +55,8 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
 
     @Query("SELECT COUNT(r) FROM Review r WHERE r.business.id = :businessId")
     Long countReviewsByBusinessId(@Param("businessId") UUID businessId);
+
+    // Platform-wide average rating (used as prior C in Bayesian weighting)
+    @Query("SELECT AVG(r.rating) FROM Review r")
+    BigDecimal getGlobalAverageRating();
 }

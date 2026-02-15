@@ -135,6 +135,10 @@ type Transaction {
 }
 
 type Review {
+    """
+    A review in a transaction. Both buyer and seller can review each other.
+    The reviewer is the party leaving the review, and reviewedUser is the other party being reviewed.
+    """
     id: ID!
     reviewer: User!
     reviewedUser: User!

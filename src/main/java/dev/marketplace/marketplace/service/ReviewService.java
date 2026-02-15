@@ -62,13 +62,14 @@ public class ReviewService {
             throw new IllegalArgumentException("Can only review completed transactions");
         }
         
-        // Validate that the reviewer is the buyer and reviewed user is the seller
-        if (!transaction.getBuyer().getId().equals(reviewerId)) {
-            throw new IllegalArgumentException("Only the buyer can review the seller");
-        }
-        
-        if (!transaction.getSeller().getId().equals(reviewedUserId)) {
-            throw new IllegalArgumentException("Can only review the seller of the transaction");
+        // Validate that reviewer and reviewed user are opposite parties in the transaction
+        boolean isBuyerReviewingSeller = transaction.getBuyer().getId().equals(reviewerId) &&
+                                          transaction.getSeller().getId().equals(reviewedUserId);
+        boolean isSellerReviewingBuyer = transaction.getSeller().getId().equals(reviewerId) &&
+                                          transaction.getBuyer().getId().equals(reviewedUserId);
+
+        if (!isBuyerReviewingSeller && !isSellerReviewingBuyer) {
+            throw new IllegalArgumentException("Can only review the other party in this transaction");
         }
 
         Review review = Review.builder()
@@ -79,6 +80,10 @@ public class ReviewService {
                 .comment(comment)
                 .build();
         Review savedReview = reviewRepository.save(review);
+
+        // Recalculate trust rating for the reviewed user (seller)
+        trustRatingService.calculateAndUpdateTrustRating(reviewedUserId);
+
         // Recalculate business trust rating if this is a business review
         if (savedReview.getBusiness() != null) {
             businessService.getBusinessTrustRating(savedReview.getBusiness().getId());
@@ -93,6 +98,10 @@ public class ReviewService {
         review.setRating(rating);
         review.setComment(comment);
         Review updatedReview = reviewRepository.save(review);
+
+        // Recalculate trust rating for the reviewed user
+        trustRatingService.calculateAndUpdateTrustRating(updatedReview.getReviewedUser().getId());
+
         // Recalculate business trust rating if this is a business review
         if (updatedReview.getBusiness() != null) {
             businessService.getBusinessTrustRating(updatedReview.getBusiness().getId());
@@ -104,8 +113,13 @@ public class ReviewService {
     public void deleteReview(UUID reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new IllegalArgumentException("Review not found: " + reviewId));
+        UUID reviewedUserId = review.getReviewedUser().getId();
         UUID businessId = review.getBusiness() != null ? review.getBusiness().getId() : null;
         reviewRepository.delete(review);
+
+        // Recalculate trust rating for the reviewed user
+        trustRatingService.calculateAndUpdateTrustRating(reviewedUserId);
+
         // Recalculate business trust rating if this was a business review
         if (businessId != null) {
             businessService.getBusinessTrustRating(businessId);

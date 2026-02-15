@@ -29,6 +29,7 @@ public class TransactionService {
     private final UserRepository userRepository;
     private final ListingImageService imageService;
     private final ListingService listingService;
+    private final TrustRatingService trustRatingService;
 
     /**
      * Create a transaction when a listing is sold to a specific buyer
@@ -92,6 +93,10 @@ public class TransactionService {
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         Transaction completed = transactionRepository.save(transaction);
 
+        // Update trust ratings for both buyer and seller after transaction completion
+        trustRatingService.calculateAndUpdateTrustRating(seller.getId());
+        trustRatingService.calculateAndUpdateTrustRating(buyerId);
+
         log.info("Transaction created and completed: {}", completed.getId());
         return completed;
     }
@@ -122,6 +127,11 @@ public class TransactionService {
         transaction.setStatus(Transaction.TransactionStatus.COMPLETED);
         Transaction saved = transactionRepository.save(transaction);
         
+        // Update trust ratings for both buyer and seller after transaction completion
+        UUID buyerId = transaction.getBuyer().getId();
+        trustRatingService.calculateAndUpdateTrustRating(sellerId);
+        trustRatingService.calculateAndUpdateTrustRating(buyerId);
+
         log.info("Transaction completed successfully: {}", transactionId);
         
         return saved;
