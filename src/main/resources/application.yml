@@ -107,7 +107,9 @@ jwt:
 
 # Omnicheck default (can be environment supplied or profile-specific)
 omnicheck:
+  dryRun: ${OMNICHECK_DRY_RUN:true}
   apiKey: ${OMNICHECK_API_KEY:}
+  baseUrl: ${OMNICHECK_BASE_URL:https://www.omnicheck.co.za/webservice}
 
 # PayFast base defaults (override via profile / env)
 payfast:
