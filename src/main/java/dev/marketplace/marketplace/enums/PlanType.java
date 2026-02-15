@@ -2,7 +2,7 @@ package dev.marketplace.marketplace.enums;
 
 public enum PlanType {
     FREE,
-    VERIFIED,
+    SELLER_PLUS,
     RESELLER,
     PRO_STORE
 }

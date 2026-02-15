@@ -94,9 +94,9 @@ public class Subscription {
     }
     
     public enum PlanType {
-        VERIFIED_USER("Verified User", new BigDecimal("50.00")),
-        RESELLER("Reseller", new BigDecimal("150.00")),
-        PRO_STORE("Pro Store", new BigDecimal("300.00"));
+        SELLER_PLUS("Seller+", new BigDecimal("1")),
+        RESELLER("Reseller", new BigDecimal("1")),
+        PRO_STORE("Pro Store", new BigDecimal("1"));
 
         private final String displayName;
         private final BigDecimal price;
