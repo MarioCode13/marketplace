@@ -3,14 +3,18 @@ package dev.marketplace.marketplace.controllers;
 import dev.marketplace.marketplace.model.User;
 import dev.marketplace.marketplace.security.JwtUtil;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.config.AppConfig;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.Optional;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @RestController
 @RequestMapping({"/api/auth", "/graphql/api/auth"})
@@ -18,10 +22,12 @@ public class AuthController {
 
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    private final AppConfig appConfig;
 
-    public AuthController(UserService userService, JwtUtil jwtUtil) {
+    public AuthController(UserService userService, JwtUtil jwtUtil, AppConfig appConfig) {
         this.userService = userService;
         this.jwtUtil = jwtUtil;
+        this.appConfig = appConfig;
     }
 
     @PostMapping("/login")
@@ -174,26 +180,54 @@ public class AuthController {
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+    public RedirectView verifyEmail(@RequestParam String token, HttpServletResponse response) {
+        String baseUrl = appConfig.getBaseUrl();
+
+        // Fallback to localhost if baseUrl is not set
+        if (baseUrl == null || baseUrl.isEmpty()) {
+            baseUrl = "http://localhost:3000";
+        }
+
         if (token == null || token.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "Verification token is required"));
+            return new RedirectView(baseUrl + "/verify-email?success=false&error=Verification%20token%20is%20required");
         }
 
         try {
             boolean verified = userService.verifyEmailToken(token);
             if (verified) {
+                return new RedirectView(baseUrl + "/verify-email?success=true&message=Email%20verified%20successfully");
+            } else {
+                return new RedirectView(baseUrl + "/verify-email?success=false&error=Invalid%20or%20expired%20verification%20token");
+            }
+        } catch (Exception e) {
+            String encodedError = URLEncoder.encode("Error verifying email: " + e.getMessage(), StandardCharsets.UTF_8);
+            return new RedirectView(baseUrl + "/verify-email?success=false&error=" + encodedError);
+        }
+    }
+
+    @PostMapping("/resend-verification-email")
+    public ResponseEntity<?> resendVerificationEmail(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email is required"));
+        }
+
+        try {
+            boolean sent = userService.resendVerificationEmail(email);
+            if (sent) {
                 return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Email verified successfully! You can now log in."
+                    "message", "Verification email sent! Please check your inbox."
                 ));
             } else {
                 return ResponseEntity.status(400).body(Map.of(
-                    "error", "Invalid or expired verification token"
+                    "error", "Email not found or already verified"
                 ));
             }
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of(
-                "error", "Error verifying email: " + e.getMessage()
+                "error", "Error sending verification email: " + e.getMessage()
             ));
         }
     }

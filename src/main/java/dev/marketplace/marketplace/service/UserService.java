@@ -48,6 +48,9 @@ public class UserService implements UserDetailsService {
     @Autowired
     private TokenService tokenService;
 
+    @Autowired
+    private dev.marketplace.marketplace.config.AppConfig appConfig;
+
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository, PasswordValidationService passwordValidationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -117,9 +120,18 @@ public class UserService implements UserDetailsService {
         savedUser.setEmailVerificationTokenExpiry(java.time.LocalDateTime.now().plusHours(24)); // Expires in 24 hours
         userRepository.save(savedUser);
 
-        // Send verification email with in-app notification
-        String verificationUrl = "http://localhost:8080/api/auth/verify-email?token=" + verificationToken;
-        notificationService.sendEmailVerificationNotification(savedUser, verificationUrl);
+        // Send verification email (wrapped in try-catch to prevent registration failure)
+        String baseUrl = appConfig.getBaseUrl();
+        if (baseUrl == null || baseUrl.isEmpty()) {
+            baseUrl = "http://localhost:8080";
+        }
+        String verificationUrl = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
+        try {
+            notificationService.sendEmailVerificationNotification(savedUser, verificationUrl);
+            logger.info("Verification email sent successfully to: {}", savedUser.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send verification email to {}, but user was registered successfully. They can request resend.", savedUser.getEmail(), e);
+        }
 
         return savedUser;
     }
@@ -274,6 +286,13 @@ public class UserService implements UserDetailsService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             logger.debug("Found user: {} (ID: {}) with stored password hash: {}", user.getEmail(), user.getId(), user.getPassword());
+
+            // Check if email is verified
+            if (user.getEmailVerified() == null || !user.getEmailVerified()) {
+                logger.warn("Authentication failed: Email not verified for user: {}", user.getEmail());
+                throw new ValidationException("Please verify your email address before logging in. Check your inbox for the verification link.");
+            }
+
             logger.debug("Attempting to match password: '{}' with stored hash", password);
             
             boolean passwordMatches = passwordEncoder.matches(password, user.getPassword());
@@ -471,5 +490,53 @@ public class UserService implements UserDetailsService {
 
         logger.info("Email verified successfully for user: {}", user.getEmail());
         return true;
+    }
+
+    /**
+     * Resend verification email to user
+     * @param email The user's email address
+     * @return True if email was sent successfully, false if user not found or already verified
+     */
+    @Transactional
+    public boolean resendVerificationEmail(String email) {
+        if (email == null || email.isBlank()) {
+            logger.warn("Resend verification email failed: Email is empty");
+            return false;
+        }
+
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            logger.warn("Resend verification email failed: No user found with email: {}", email);
+            return false;
+        }
+
+        User user = userOpt.get();
+
+        // Don't resend if already verified
+        if (user.getEmailVerified() != null && user.getEmailVerified()) {
+            logger.warn("Resend verification email failed: Email already verified for user: {}", email);
+            return false;
+        }
+
+        // Generate new verification token
+        String verificationToken = tokenService.generateEmailVerificationToken();
+        user.setEmailVerificationToken(verificationToken);
+        user.setEmailVerificationTokenExpiry(java.time.LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        // Send verification email
+        String baseUrl = appConfig.getBaseUrl();
+        if (baseUrl == null || baseUrl.isEmpty()) {
+            baseUrl = "http://localhost:8080";
+        }
+        String verificationUrl = baseUrl + "/api/auth/verify-email?token=" + verificationToken;
+        try {
+            notificationService.sendEmailVerificationNotification(user, verificationUrl);
+            logger.info("Resent verification email for user: {}", email);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to resend verification email for user: {}", email, e);
+            return false;
+        }
     }
 }

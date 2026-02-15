@@ -76,20 +76,11 @@ public class NotificationService {
     }
 
     public void sendEmailVerificationNotification(User user, String verificationUrl) {
-        // Create in-app notification
-        Notification notification = createNotification(
-                user,
-                "EMAIL_VERIFICATION_REQUIRED",
-                "Please verify your email address to activate your account",
-                user.getId().toString(),
-                true
-        );
-
-        // Send email
+        // Send email only (no in-app notification needed for email verification)
         try {
             emailService.sendEmailVerificationEmail(user.getEmail(), user.getUsername(), verificationUrl);
         } catch (Exception e) {
-            // Log error but don't fail registration - user can still manually verify
+            // Log error but don't fail - user can resend email later
             System.err.println("Failed to send email verification email to " + user.getEmail() + ": " + e.getMessage());
         }
     }
