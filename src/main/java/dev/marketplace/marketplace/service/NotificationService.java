@@ -3,6 +3,7 @@ package dev.marketplace.marketplace.service;
 import dev.marketplace.marketplace.enums.BusinessUserRole;
 import dev.marketplace.marketplace.model.Notification;
 import dev.marketplace.marketplace.model.User;
+import dev.marketplace.marketplace.model.Business;
 import dev.marketplace.marketplace.repository.NotificationRepository;
 import dev.marketplace.marketplace.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,23 +54,49 @@ public class NotificationService {
     }
 
     public void sendBusinessInviteNotification(User user, dev.marketplace.marketplace.model.Business business, User inviter) {
-        String message = String.format("You have been invited to join the business '%s' by %s.", business.getName(), inviter.getEmail());
-        createNotification(user, "BUSINESS_INVITE", message, String.valueOf(business.getId()), true);
+        // Create in-app notification
+        Notification notification = createNotification(
+                user,
+                "BUSINESS_INVITE",
+                inviter.getUsername() + " invited you to join " + business.getName(),
+                business.getId().toString(),
+                true
+        );
     }
 
     public void sendRoleChangeNotification(User user, dev.marketplace.marketplace.model.Business business, BusinessUserRole newRole, User changer) {
-        String message = String.format("Your role in business '%s' has been changed to %s by %s.", business.getName(), newRole.name(), changer.getEmail());
-        createNotification(user, "ROLE_CHANGE", message, String.valueOf(business.getId()), false);
+        // Create in-app notification
+        Notification notification = createNotification(
+                user,
+                "ROLE_CHANGE",
+                "Your role in " + business.getName() + " has been changed to " + newRole.name(),
+                business.getId().toString(),
+                false
+        );
+    }
+
+    public void sendEmailVerificationNotification(User user, String verificationUrl) {
+        // Create in-app notification
+        Notification notification = createNotification(
+                user,
+                "EMAIL_VERIFICATION_REQUIRED",
+                "Please verify your email address to activate your account",
+                user.getId().toString(),
+                true
+        );
+
+        // Send email
+        try {
+            emailService.sendEmailVerificationEmail(user.getEmail(), user.getUsername(), verificationUrl);
+        } catch (Exception e) {
+            // Log error but don't fail registration - user can still manually verify
+            System.err.println("Failed to send email verification email to " + user.getEmail() + ": " + e.getMessage());
+        }
     }
 
     public void sendBusinessVerificationEmail(String email, String token, String businessName) {
-        String subject = "Verify your business email for " + businessName;
-        String verificationUrl = "https://yourdomain.com/business/verify-email?token=" + token;
-        try {
-            emailService.sendBusinessVerificationEmail(email, businessName, verificationUrl);
-        } catch (Exception e) {
-            // Log error or handle as needed
-            System.err.println("Failed to send business verification email: " + e.getMessage());
-        }
+        // This would send a verification email
+        // Implementation depends on EmailService
     }
 }
+

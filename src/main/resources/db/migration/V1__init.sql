@@ -43,6 +43,9 @@ CREATE TABLE IF NOT EXISTS "users" (
     custom_city VARCHAR(100),
     contact_number VARCHAR(255),
     id_number VARCHAR(255),
+    email_verified BOOLEAN DEFAULT false,
+    email_verification_token VARCHAR(255),
+    email_verification_token_expiry TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

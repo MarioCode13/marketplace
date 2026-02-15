@@ -1,0 +1,63 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background:#f6f9fc; color:#333; padding: 16px }
+        .container { max-width:600px; margin: 24px auto; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden }
+        .header { background:#0b6cff; color:white; padding:16px 20px }
+        .brand { font-size:20px; font-weight:700 }
+        .content { padding:20px }
+        .greeting { margin-bottom:12px; font-weight:600 }
+        .message { margin:12px 0; line-height:1.6; font-size:14px }
+        .info-box { background:#f3f6fb; border-radius:6px; padding:12px; margin:12px 0; font-size:13px; color:#555 }
+        .info-box ul { margin:8px 0 0 20px; padding:0 }
+        .info-box li { margin:4px 0 }
+        .cta { display:block; margin:18px 0; text-align:center }
+        .btn { display:inline-block; background:#0b6cff; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight:600 }
+        .btn:hover { background:#0a5ce8 }
+        .link-section { background:#f3f6fb; border-radius:6px; padding:12px; margin:12px 0; font-size:12px; color:#666 }
+        .link-text { word-break:break-all; color:#0b6cff; margin-top:6px; font-family:monospace }
+        .meta { font-size:12px; color:#999; margin:12px 0 }
+        .footer { font-size:12px; color:#999; padding:12px 20px; background:#fafafa }
+        .footer a { color:#0b6cff; text-decoration:none }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">Dealio</div>
+    </div>
+    <div class="content">
+        <div class="greeting">Welcome, <span th:text="${userName}">User</span>!</div>
+
+        <div class="message">Thank you for signing up with Dealio. To complete your registration, please verify your email address by clicking the button below:</div>
+
+        <div class="cta">
+            <a th:href="${verificationUrl}" class="btn">Verify Email Address</a>
+        </div>
+
+        <div class="link-section">
+            <strong>Or copy and paste this link:</strong>
+            <div class="link-text" th:text="${verificationUrl}">https://dealio.com/verify?token=xxx</div>
+        </div>
+
+        <div class="info-box">
+            <strong>What happens next?</strong>
+            <ul>
+                <li>Your email will be verified</li>
+                <li>You'll have full access to buy and sell</li>
+                <li>Start building your marketplace reputation</li>
+            </ul>
+        </div>
+
+        <div class="meta">
+            <strong>🔒 Security:</strong> This link expires in 24 hours. If you didn't create this account, please ignore this email.
+        </div>
+    </div>
+    <div class="footer">This message was sent by Dealio — <a href="https://www.dealio.org.za">Visit your Dealio dashboard</a></div>
+</div>
+</body>
+</html>
+

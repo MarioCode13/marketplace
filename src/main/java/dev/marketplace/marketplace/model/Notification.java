@@ -3,6 +3,7 @@ package dev.marketplace.marketplace.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
+import dev.marketplace.marketplace.model.User;
 
 @Data
 @Entity

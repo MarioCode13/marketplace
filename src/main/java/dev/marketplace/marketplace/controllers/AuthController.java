@@ -172,4 +172,29 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of("success", true));
     }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmail(@RequestParam String token) {
+        if (token == null || token.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Verification token is required"));
+        }
+
+        try {
+            boolean verified = userService.verifyEmailToken(token);
+            if (verified) {
+                return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Email verified successfully! You can now log in."
+                ));
+            } else {
+                return ResponseEntity.status(400).body(Map.of(
+                    "error", "Invalid or expired verification token"
+                ));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "error", "Error verifying email: " + e.getMessage()
+            ));
+        }
+    }
 }

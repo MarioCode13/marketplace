@@ -42,6 +42,12 @@ public class UserService implements UserDetailsService {
     @Autowired
     private TrustRatingService trustRatingService;
 
+    @Autowired
+    private NotificationService notificationService;
+
+    @Autowired
+    private TokenService tokenService;
+
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, B2StorageService b2StorageService, CityRepository cityRepository, SubscriptionRepository subscriptionRepository, PasswordValidationService passwordValidationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -99,10 +105,22 @@ public class UserService implements UserDetailsService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(Role.HAS_ACCOUNT);
+        user.setEmailVerified(false);
 
         User savedUser = userRepository.save(user);
         logger.info("User registered successfully - ID: {}, Email: {}", savedUser.getId(), savedUser.getEmail());
         trustRatingService.calculateAndUpdateTrustRating(savedUser.getId());
+
+        // Generate email verification token
+        String verificationToken = tokenService.generateEmailVerificationToken();
+        savedUser.setEmailVerificationToken(verificationToken);
+        savedUser.setEmailVerificationTokenExpiry(java.time.LocalDateTime.now().plusHours(24)); // Expires in 24 hours
+        userRepository.save(savedUser);
+
+        // Send verification email with in-app notification
+        String verificationUrl = "http://localhost:8080/api/auth/verify-email?token=" + verificationToken;
+        notificationService.sendEmailVerificationNotification(savedUser, verificationUrl);
+
         return savedUser;
     }
 
@@ -414,5 +432,44 @@ public class UserService implements UserDetailsService {
             .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         // No planType field anymore, so just return user or handle as needed
         return userRepository.save(user);
+    }
+
+    /**
+     * Verify email using the verification token
+     * @param token The email verification token
+     * @return True if email was verified successfully, false if token is invalid or expired
+     */
+    @Transactional
+    public boolean verifyEmailToken(String token) {
+        if (token == null || token.isBlank()) {
+            logger.warn("Email verification failed: Token is empty");
+            return false;
+        }
+
+        Optional<User> userOpt = userRepository.findAll().stream()
+            .filter(u -> token.equals(u.getEmailVerificationToken()))
+            .findFirst();
+
+        if (userOpt.isEmpty()) {
+            logger.warn("Email verification failed: No user found with this token");
+            return false;
+        }
+
+        User user = userOpt.get();
+
+        // Check if token has expired
+        if (user.getEmailVerificationTokenExpiry() == null || java.time.LocalDateTime.now().isAfter(user.getEmailVerificationTokenExpiry())) {
+            logger.warn("Email verification failed: Token expired for user {}", user.getEmail());
+            return false;
+        }
+
+        // Mark email as verified and clear the token
+        user.setEmailVerified(true);
+        user.setEmailVerificationToken(null);
+        user.setEmailVerificationTokenExpiry(null);
+        userRepository.save(user);
+
+        logger.info("Email verified successfully for user: {}", user.getEmail());
+        return true;
     }
 }

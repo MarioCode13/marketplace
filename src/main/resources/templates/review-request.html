@@ -1,0 +1,54 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background:#f6f9fc; color:#333; padding: 16px }
+        .container { max-width:600px; margin: 24px auto; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden }
+        .header { background:#0b6cff; color:white; padding:16px 20px }
+        .brand { font-size:20px; font-weight:700 }
+        .content { padding:20px }
+        .greeting { margin-bottom:12px; font-weight:600 }
+        .message { margin:12px 0; line-height:1.6; font-size:14px }
+        .listing-box { background:#f3f6fb; border-radius:6px; padding:12px; margin:12px 0; font-size:13px }
+        .listing-title { font-weight:600; color:#333; margin-bottom:4px }
+        .listing-meta { color:#666; margin:4px 0 }
+        .cta { display:block; margin:18px 0; text-align:center }
+        .btn { display:inline-block; background:#0b6cff; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight:600; margin:0 4px }
+        .btn:hover { background:#0a5ce8 }
+        .btn-secondary { background:#e5e7eb; color:#374151 }
+        .btn-secondary:hover { background:#d1d5db }
+        .meta { font-size:12px; color:#999; margin:12px 0 }
+        .footer { font-size:12px; color:#999; padding:12px 20px; background:#fafafa }
+        .footer a { color:#0b6cff; text-decoration:none }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">Dealio</div>
+    </div>
+    <div class="content">
+        <div class="greeting">Please review your purchase</div>
+
+        <div class="message">Hi <span th:text="${buyerName}">Buyer</span>, your transaction with <strong th:text="${sellerName}">Seller</strong> has been completed. We'd love to know how it went!</div>
+
+        <div class="listing-box">
+            <div class="listing-title" th:text="${listingTitle}">Item Title</div>
+            <div class="listing-meta">Sold by <span th:text="${sellerName}">Seller</span></div>
+            <div class="listing-meta" style="margin-top:8px">Please rate this seller and share your experience to help other buyers.</div>
+        </div>
+
+        <div class="cta">
+            <a th:href="${reviewUrl}" class="btn">Leave Review</a>
+            <a href="https://www.dealio.org.za" class="btn btn-secondary">Skip</a>
+        </div>
+
+        <div class="meta">Your feedback helps Dealio maintain a trustworthy community. You can also review this transaction later from your purchase history.</div>
+    </div>
+    <div class="footer">This message was sent by Dealio — <a href="https://www.dealio.org.za">Visit your Dealio dashboard</a></div>
+</div>
+</body>
+</html>
+

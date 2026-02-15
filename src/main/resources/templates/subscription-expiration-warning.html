@@ -1,0 +1,75 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; background:#f6f9fc; color:#333; padding: 16px }
+        .container { max-width:600px; margin: 24px auto; background:white; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.08); overflow:hidden }
+        .header { background:#0b6cff; color:white; padding:16px 20px }
+        .brand { font-size:20px; font-weight:700 }
+        .content { padding:20px }
+        .greeting { margin-bottom:12px; font-weight:600 }
+        .message { margin:12px 0; line-height:1.6; font-size:14px }
+        .warning-box { background:#fff3cd; border-radius:6px; padding:12px; margin:12px 0; font-size:13px; color:#856404 }
+        .warning-box strong { color:#333 }
+        .details { background:#f3f6fb; border-radius:6px; padding:12px; margin:12px 0; font-size:13px }
+        .detail-row { margin:6px 0; display:flex; justify-content:space-between }
+        .detail-label { font-weight:600; color:#666 }
+        .detail-value { color:#333 }
+        .auto-renew { background:#d4edda; border-radius:6px; padding:12px; margin:12px 0; font-size:13px; color:#155724 }
+        .auto-renew strong { color:#0f5132 }
+        .manual-renew { background:#d1ecf1; border-radius:6px; padding:12px; margin:12px 0; font-size:13px; color:#0c5460 }
+        .manual-renew strong { color:#055160 }
+        .cta { display:block; margin:18px 0; text-align:center }
+        .btn { display:inline-block; background:#0b6cff; color:white; padding:12px 20px; border-radius:6px; text-decoration:none; font-weight:600 }
+        .btn:hover { background:#0a5ce8 }
+        .meta { font-size:12px; color:#999; margin:12px 0 }
+        .footer { font-size:12px; color:#999; padding:12px 20px; background:#fafafa }
+        .footer a { color:#0b6cff; text-decoration:none }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="brand">Dealio</div>
+    </div>
+    <div class="content">
+        <div class="greeting">Subscription Expiring Soon</div>
+
+        <div class="warning-box">
+            <strong>⚠️ Your <span th:text="${planName}">subscription</span> expires on <span th:text="${expiryDate}">date</span></strong>
+        </div>
+
+        <div class="details">
+            <div class="detail-row">
+                <span class="detail-label">Plan:</span>
+                <span class="detail-value" th:text="${planName}">Premium</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Expiry Date:</span>
+                <span class="detail-value" th:text="${expiryDate}">TBD</span>
+            </div>
+        </div>
+
+        <div th:if="${isAutoRenewal}" class="auto-renew">
+            <strong>✓ Auto-renewal enabled</strong>
+            <br/>Your subscription will automatically renew on the expiry date. You'll be charged the same amount.
+        </div>
+
+        <div th:unless="${isAutoRenewal}" class="manual-renew">
+            <strong>Action Required:</strong>
+            <br/>Your subscription requires manual renewal. Click below to renew before your plan expires.
+        </div>
+
+        <div class="cta">
+            <a th:href="${renewUrl}" class="btn" th:text="${isAutoRenewal} ? 'Manage Subscription' : 'Renew Now'">Renew Now</a>
+        </div>
+
+        <div class="meta">You can manage your subscription settings and billing preferences anytime from your account. For questions, visit our Help Center.</div>
+    </div>
+    <div class="footer">This message was sent by Dealio — <a href="https://www.dealio.org.za">Visit your Dealio dashboard</a></div>
+</div>
+</body>
+</html>
+
