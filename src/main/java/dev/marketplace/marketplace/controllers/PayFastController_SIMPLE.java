@@ -167,6 +167,36 @@ public class PayFastController_SIMPLE {
             return ResponseEntity.status(400).body("Signature mismatch");
         }
 
+        log.info("[PayFast ITN] ========== RECEIVED ITN CALLBACK ==========");
+        log.info("[PayFast ITN] Signature validation passed!");
+
+        String email = payload.get("custom_str2");
+        String paymentStatus = payload.get("payment_status");
+        String planTypeStr = payload.get("custom_str1");
+        log.info("[PayFast ITN] Parsed values: email={}, paymentStatus={}, planTypeStr={}", email, paymentStatus, planTypeStr);
+
+        if (email != null && !email.isEmpty() && "COMPLETE".equalsIgnoreCase(paymentStatus) && planTypeStr != null) {
+            var userOpt = userService.getUserByEmail(email);
+            if (userOpt.isPresent()) {
+                var user = userOpt.get();
+                log.info("[PayFast ITN] Found user: id={}, email={}", user.getId(), user.getEmail());
+                try {
+                    var planType = Subscription.PlanType.valueOf(planTypeStr.toUpperCase());
+                    log.info("[PayFast ITN] Parsed planType enum: {}", planType);
+                    subscriptionService.createOrActivatePayFastSubscription(user.getId(), planType);
+                    log.info("[PayFast ITN] Subscription activated for user {} with plan {}", email, planType);
+                } catch (IllegalArgumentException e) {
+                    log.error("[PayFast ITN] Invalid plan type: {}", planTypeStr, e);
+                } catch (Exception e) {
+                    log.error("[PayFast ITN] Exception during subscription activation for user {}: {}", email, e.getMessage(), e);
+                }
+            } else {
+                log.error("[PayFast ITN] No user found for email: {}", email);
+            }
+        } else {
+            log.error("[PayFast ITN] Missing email, payment not complete, or plan type. email={}, status={}, planTypeStr={}", email, paymentStatus, planTypeStr);
+        }
+        log.info("[PayFast ITN] ========== END ITN CALLBACK ==========");
         return ResponseEntity.ok("OK");
     }
 }

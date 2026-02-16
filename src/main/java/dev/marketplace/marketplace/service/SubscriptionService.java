@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import dev.marketplace.marketplace.service.EmailService;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +39,7 @@ public class SubscriptionService {
     private final ListingRepository listingRepository;
     private final BusinessUserRepository businessUserRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
+    private final EmailService emailService;
 
     /**
      * Check if user has active subscription
@@ -316,6 +318,29 @@ public class SubscriptionService {
             } catch (Exception e) {
                 log.error("[PayFast Sub] Failed to add trust rating bonus for userId={}", userId, e);
             }
+
+            // Send subscription confirmation email
+            try {
+                String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+                String planName = planType.getDisplayName();
+                String amount = planType.getPrice().toString();
+                String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
+                String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
+
+                emailService.sendSubscriptionConfirmationEmail(
+                    user.getEmail(),
+                    userName,
+                    planName,
+                    amount,
+                    billingCycle,
+                    nextBillingDate
+                );
+                log.info("[PayFast Sub] Subscription confirmation email sent to {}", user.getEmail());
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to send subscription confirmation email to {}: {}", user.getEmail(), e.getMessage(), e);
+                // Don't fail the subscription creation if email fails
+            }
+
             log.info("[PayFast Sub] PayFast subscription created for user: {} with plan: {}", userId, planType);
         } else {
             log.info("[PayFast Sub] User {} already has an active subscription, skipping createOrActivatePayFastSubscription", userId);
