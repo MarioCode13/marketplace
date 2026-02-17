@@ -173,7 +173,10 @@ public class PayFastController_SIMPLE {
         String email = payload.get("custom_str2");
         String paymentStatus = payload.get("payment_status");
         String planTypeStr = payload.get("custom_str1");
-        log.info("[PayFast ITN] Parsed values: email={}, paymentStatus={}, planTypeStr={}", email, paymentStatus, planTypeStr);
+        String paymentType = payload.get("payment_type");           // NEW: Detect initial vs renewal
+        String amountStr = payload.get("amount");                   // NEW: Get amount for renewal
+        log.info("[PayFast ITN] Parsed values: email={}, paymentStatus={}, planTypeStr={}, paymentType={}",
+                 email, paymentStatus, planTypeStr, paymentType);
 
         if (email != null && !email.isEmpty() && "COMPLETE".equalsIgnoreCase(paymentStatus) && planTypeStr != null) {
             var userOpt = userService.getUserByEmail(email);
@@ -183,12 +186,26 @@ public class PayFastController_SIMPLE {
                 try {
                     var planType = Subscription.PlanType.valueOf(planTypeStr.toUpperCase());
                     log.info("[PayFast ITN] Parsed planType enum: {}", planType);
-                    subscriptionService.createOrActivatePayFastSubscription(user.getId(), planType);
-                    log.info("[PayFast ITN] Subscription activated for user {} with plan {}", email, planType);
+
+                    // NEW: Detect if this is initial or renewal payment
+                    if ("initial".equals(paymentType) || paymentType == null) {
+                        log.info("[PayFast ITN] Processing initial subscription payment");
+                        subscriptionService.createOrActivatePayFastSubscription(user.getId(), planType);
+                        log.info("[PayFast ITN] Subscription activated for user {} with plan {}", email, planType);
+                    }
+                    else if ("recurring".equals(paymentType) || "subscription".equals(paymentType)) {
+                        log.info("[PayFast ITN] Processing recurring subscription renewal payment");
+                        var amount = new java.math.BigDecimal(amountStr != null ? amountStr : "0");
+                        subscriptionService.renewPayFastSubscription(user.getId(), planType, amount);
+                        log.info("[PayFast ITN] Subscription renewed for user {} with plan {}", email, planType);
+                    }
+                    else {
+                        log.warn("[PayFast ITN] Unknown payment type: {}", paymentType);
+                    }
                 } catch (IllegalArgumentException e) {
                     log.error("[PayFast ITN] Invalid plan type: {}", planTypeStr, e);
                 } catch (Exception e) {
-                    log.error("[PayFast ITN] Exception during subscription activation for user {}: {}", email, e.getMessage(), e);
+                    log.error("[PayFast ITN] Exception during payment processing for user {}: {}", email, e.getMessage(), e);
                 }
             } else {
                 log.error("[PayFast ITN] No user found for email: {}", email);

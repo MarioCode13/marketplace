@@ -504,4 +504,139 @@ public class SubscriptionService {
             List.of(Subscription.SubscriptionStatus.ACTIVE, Subscription.SubscriptionStatus.TRIAL)
         );
     }
+
+    /**
+     * Renew an existing PayFast subscription (called by PayFast renewal ITN callback)
+     * Updates the subscription period dates and sends renewal confirmation email
+     */
+    @Transactional
+    public Subscription renewPayFastSubscription(UUID userId,
+                                               Subscription.PlanType planType,
+                                               BigDecimal amount) {
+        log.info("[PayFast Renewal] Called for userId={}, planType={}, amount={}", userId, planType, amount);
+
+        // 1. Find user's current subscription
+        Subscription subscription = getActiveSubscription(userId)
+            .orElseThrow(() -> new IllegalArgumentException("No active subscription found for user: " + userId));
+
+        log.info("[PayFast Renewal] Found existing subscription: id={}, currentPeriodEnd={}",
+                 subscription.getId(), subscription.getCurrentPeriodEnd());
+
+        // 2. Verify it's the correct plan type (log warning if mismatch but continue)
+        if (!subscription.getPlanType().equals(planType)) {
+            log.warn("[PayFast Renewal] Plan type mismatch. Expected: {}, Got: {}",
+                     subscription.getPlanType(), planType);
+        }
+
+        // 3. Calculate new period dates
+        LocalDateTime newPeriodStart = subscription.getCurrentPeriodEnd();
+        LocalDateTime newPeriodEnd = subscription.getBillingCycle() == Subscription.BillingCycle.MONTHLY
+            ? newPeriodStart.plusMonths(1)
+            : newPeriodStart.plusYears(1);
+
+        // 4. Update subscription record
+        subscription.setCurrentPeriodStart(newPeriodStart);
+        subscription.setCurrentPeriodEnd(newPeriodEnd);
+        subscription.setAmount(amount);
+        subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+
+        Subscription renewed = subscriptionRepository.save(subscription);
+        log.info("[PayFast Renewal] Subscription renewed for user {}. New period: {} to {}",
+                 userId, newPeriodStart, newPeriodEnd);
+
+        // 5. Send renewal confirmation email
+        try {
+            User user = renewed.getUser();
+            String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+            String planName = planType.getDisplayName();
+            String billingCycle = renewed.getBillingCycle().toString();
+            String nextBillingDate = newPeriodEnd.toString();
+
+            emailService.sendSubscriptionConfirmationEmail(
+                user.getEmail(),
+                userName,
+                planName,
+                amount.toString(),
+                billingCycle,
+                nextBillingDate
+            );
+            log.info("[PayFast Renewal] Renewal confirmation email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("[PayFast Renewal] Failed to send renewal confirmation email to {}: {}",
+                      userId, e.getMessage(), e);
+            // Don't fail renewal if email fails
+        }
+
+        log.info("[PayFast Renewal] PayFast subscription renewed for user: {} with plan: {}", userId, planType);
+        return renewed;
+    }
+
+    /**
+     * Renew user's subscription (convenience method for testing/development)
+     * If no active subscription exists, this will throw an exception.
+     */
+    @Transactional
+    public Subscription renewSubscriptionForUser(UUID userId) {
+        log.info("[Sub Renewal] Renewing subscription for user: {}", userId);
+
+        Subscription subscription = getActiveSubscription(userId)
+            .orElseThrow(() -> new IllegalArgumentException("No active subscription found for user: " + userId));
+
+        // Calculate new period dates
+        LocalDateTime newPeriodStart = subscription.getCurrentPeriodEnd();
+        LocalDateTime newPeriodEnd = subscription.getBillingCycle() == Subscription.BillingCycle.MONTHLY
+            ? newPeriodStart.plusMonths(1)
+            : newPeriodStart.plusYears(1);
+
+        // Update subscription record
+        subscription.setCurrentPeriodStart(newPeriodStart);
+        subscription.setCurrentPeriodEnd(newPeriodEnd);
+
+        Subscription renewed = subscriptionRepository.save(subscription);
+        log.info("[Sub Renewal] Subscription renewed for user {}. New period: {} to {}",
+                 userId, newPeriodStart, newPeriodEnd);
+
+        return renewed;
+    }
+
+    /**
+     * Cancel user's subscription immediately (not just at period end)
+     */
+    @Transactional
+    public Subscription cancelSubscriptionNow(UUID userId) {
+        log.info("[Sub Cancel] Immediately cancelling subscription for user: {}", userId);
+
+        Subscription subscription = getActiveSubscription(userId)
+            .orElseThrow(() -> new IllegalArgumentException("No active subscription found for user: " + userId));
+
+        // Cancel PayFast recurring profile if present
+        if (subscription.getPayfastProfileId() != null && !subscription.getPayfastProfileId().isBlank()) {
+            cancelPayFastProfile(subscription.getPayfastProfileId());
+        }
+
+        subscription.setStatus(Subscription.SubscriptionStatus.CANCELLED);
+        subscription.setCancelledAt(LocalDateTime.now());
+
+        Subscription cancelled = subscriptionRepository.save(subscription);
+
+        // Update user role if they don't have business
+        User user = subscription.getUser();
+        boolean isInBusiness = !businessRepository.findByUser(user).isEmpty() || businessRepository.findByOwner(user).isPresent();
+        if (!hasActiveSubscription(user.getId()) && !isInBusiness) {
+            user.setRole(Role.HAS_ACCOUNT);
+            userRepository.save(user);
+            trustRatingService.removeSubscriptionBonus(user.getId());
+        }
+
+        log.info("[Sub Cancel] Subscription cancelled for user {}", userId);
+        return cancelled;
+    }
+
+    /**
+     * Get list of all subscriptions for user (including inactive ones)
+     */
+    @Transactional(readOnly = true)
+    public List<Subscription> getAllUserSubscriptions(UUID userId) {
+        return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
 }

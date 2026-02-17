@@ -151,7 +151,7 @@ type Review {
 }
 
 enum PlanType {
-    VERIFIED_USER
+    SELLER_PLUS
     RESELLER
     PRO_STORE
 }
