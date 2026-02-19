@@ -41,8 +41,9 @@ public class PayFastController_SIMPLE {
         this.payFastProperties = payFastProperties;
     }
 
+    // Changed return type to JSON (Map) so frontend can call res.json() reliably
     @GetMapping("/subscription-url")
-    public ResponseEntity<String> getPayFastSubscriptionUrl(
+    public ResponseEntity<Map<String, String>> getPayFastSubscriptionUrl(
             @RequestParam(required = false) String nameFirst,
             @RequestParam(required = false) String nameLast,
             @RequestParam(required = false) String emailAddress,
@@ -55,11 +56,11 @@ public class PayFastController_SIMPLE {
 
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated())
-            return ResponseEntity.status(401).body("Not authenticated");
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
 
         Optional<User> userOpt = userService.getUserByEmail(auth.getName());
         if (userOpt.isEmpty())
-            return ResponseEntity.status(404).body("User not found");
+            return ResponseEntity.status(404).body(Map.of("error", "User not found"));
 
         User user = userOpt.get();
 
@@ -105,7 +106,8 @@ public class PayFastController_SIMPLE {
         log.info("[PayFast] Signature base string used: {}", buildBaseString(params));
         log.info("[PayFast] Signature generated: {}", signature);
 
-        return ResponseEntity.ok(url.toString());
+        // Return JSON with url field so FE can parse without error
+        return ResponseEntity.ok(Map.of("url", url.toString()));
     }
 
     private String generateSignature(LinkedHashMap<String, String> params) {

@@ -40,6 +40,7 @@ public class SubscriptionService {
     private final BusinessUserRepository businessUserRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
     private final EmailService emailService;
+    private final BusinessService businessService;
 
     /**
      * Check if user has active subscription
@@ -216,47 +217,49 @@ public class SubscriptionService {
     @Transactional
     public void createOrActivatePayFastSubscription(UUID userId, Subscription.PlanType planType) {
         log.info("[PayFast Sub] Called for userId={}, planType={}", userId, planType);
-        if (!hasActiveSubscription(userId)) {
-            log.debug("[PayFast Sub] No active subscription, proceeding to create for user {} plan {}", userId, planType);
-            User user = null;
-            try {
-                user = userRepository.findById(userId)
+
+        // Load user early
+        User user;
+        try {
+            user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
-            } catch (Exception e) {
-                log.error("[PayFast Sub] User lookup failed for userId={}", userId, e);
-                throw e;
+        } catch (Exception e) {
+            log.error("[PayFast Sub] User lookup failed for userId={}", userId, e);
+            throw e;
+        }
+
+        Optional<Subscription> existingOpt = getActiveSubscription(userId);
+        if (existingOpt.isPresent()) {
+            Subscription existing = existingOpt.get();
+            // If same plan, nothing to do
+            if (existing.getPlanType() == planType) {
+                log.info("[PayFast Sub] User {} already has an active subscription with same plan {}, skipping createOrActivatePayFastSubscription", userId, planType);
+                return;
             }
-            LocalDateTime now = LocalDateTime.now();
-            LocalDateTime periodEnd = now.plusMonths(1);
-            Subscription subscription = Subscription.builder()
-                .user(user)
-                .planType(planType)
-                .status(Subscription.SubscriptionStatus.ACTIVE)
-                .amount(planType.getPrice())
-                .currency("ZAR")
-                .billingCycle(Subscription.BillingCycle.MONTHLY)
-                .currentPeriodStart(now)
-                .currentPeriodEnd(periodEnd)
-                .cancelAtPeriodEnd(false)
-                .build();
+
+            // Upgrade path: update existing subscription to the new plan
+            log.info("[PayFast Sub] Upgrading subscription for user {} from {} to {}", userId, existing.getPlanType(), planType);
             try {
-                subscriptionRepository.save(subscription);
-                log.info("[PayFast Sub] Subscription saved for user {} subscriptionPlan {}", userId, planType);
+                LocalDateTime now = LocalDateTime.now();
+                LocalDateTime newPeriodEnd = now.plusMonths(1);
+
+                existing.setPlanType(planType);
+                existing.setAmount(planType.getPrice());
+                existing.setBillingCycle(Subscription.BillingCycle.MONTHLY);
+                existing.setCurrentPeriodStart(now);
+                existing.setCurrentPeriodEnd(newPeriodEnd);
+                existing.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+                existing.setCancelAtPeriodEnd(false);
+
+                subscriptionRepository.save(existing);
+                log.info("[PayFast Sub] Subscription upgraded and saved for user {} to plan {}", userId, planType);
             } catch (Exception e) {
-                log.error("[PayFast Sub] Failed to save subscription for userId={}", userId, e);
+                log.error("[PayFast Sub] Failed to upgrade subscription for userId={}", userId, e);
                 throw e;
             }
-            // Update user role
-            try {
-                user.setRole(Role.SUBSCRIBED);
-                userRepository.save(user);
-                log.info("[PayFast Sub] User role updated for user {}", userId);
-            } catch (Exception e) {
-                log.error("[PayFast Sub] Failed to update user role for userId={}", userId, e);
-                throw e;
-            }
-            // If plan is PRO_STORE and user doesn't already own a business, create one
-            if (planType == Subscription.PlanType.PRO_STORE) {
+
+            // For PRO_STORE and RESELLER plans, create a business (if not present) and link the user as owner
+            if (planType == Subscription.PlanType.PRO_STORE || planType == Subscription.PlanType.RESELLER) {
                 boolean hasOwnerBusiness = false;
                 try {
                     hasOwnerBusiness = businessRepository.findByOwner(user).isPresent() ||
@@ -268,22 +271,139 @@ public class SubscriptionService {
                     try {
                         Business business = new Business();
                         business.setOwner(user);
-                        // Set required fields for business entity
                         if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
                             business.setName(user.getFirstName() + "'s Store");
                         } else {
                             business.setName(user.getEmail() + "'s Store");
                         }
-                        business.setEmail(user.getEmail()); // Set the email field
-                        // Set business type to PRO_STORE for Pro_Store plan
-                        business.setBusinessType(BusinessType.PRO_STORE);
-                        // Set other required fields here if needed
-                        businessRepository.save(business);
-                        log.info("[PayFast Sub] Business created for user {} businessId {}", userId, business.getId());
+                        business.setEmail(user.getEmail());
+                        if (planType == Subscription.PlanType.PRO_STORE) {
+                            business.setBusinessType(BusinessType.PRO_STORE);
+                        } else {
+                            business.setBusinessType(BusinessType.RESELLER);
+                        }
+                        // Delegate to BusinessService so verification email, slug checks and listing migration run
+                        Business created = businessService.createBusiness(business, false);
+                        log.info("[PayFast Sub] Business created via BusinessService for user {} businessId {} (upgrade)", userId, created.getId());
 
-                        // Create BusinessTrustRating entry for the new business
                         BusinessTrustRating businessTrustRating = BusinessTrustRating.builder()
-                            .business(business)
+                                .business(created)
+                                .overallScore(BigDecimal.ZERO)
+                                .verificationScore(BigDecimal.ZERO)
+                                .profileScore(BigDecimal.ZERO)
+                                .reviewScore(BigDecimal.ZERO)
+                                .transactionScore(BigDecimal.ZERO)
+                                .totalReviews(0)
+                                .positiveReviews(0)
+                                .totalTransactions(0)
+                                .successfulTransactions(0)
+                                .build();
+                        businessTrustRatingRepository.save(businessTrustRating);
+                        log.info("[PayFast Sub] BusinessTrustRating created for businessId {} (upgrade)", created.getId());
+                     } catch (Exception e) {
+                         log.error("[PayFast Sub] Failed to create business for userId={}", userId, e);
+                         throw e;
+                     }
+                 } else {
+                     log.info("[PayFast Sub] User {} already has a business; skipping creation (upgrade)", userId);
+                 }
+             }
+
+            // Add trust rating bonus if not already applied - attempt add (TrustRatingService should handle idempotency)
+            try {
+                trustRatingService.addSubscriptionBonus(userId);
+                log.info("[PayFast Sub] Trust rating bonus ensured for userId={}", userId);
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to add trust rating bonus during upgrade for userId={}", userId, e);
+            }
+
+            // Send subscription upgrade confirmation email
+            try {
+                String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+                String planName = planType.getDisplayName();
+                String amount = planType.getPrice().toString();
+                String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
+                String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
+
+                emailService.sendSubscriptionConfirmationEmail(
+                        user.getEmail(),
+                        userName,
+                        planName,
+                        amount,
+                        billingCycle,
+                        nextBillingDate
+                );
+                log.info("[PayFast Sub] Subscription upgrade confirmation email sent to {}", user.getEmail());
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to send subscription upgrade email to {}: {}", user.getEmail(), e.getMessage(), e);
+                // Don't fail upgrade if email fails
+            }
+
+            return; // upgrade handled
+        }
+
+        // No active subscription -> create new one
+        log.debug("[PayFast Sub] No active subscription, proceeding to create for user {} plan {}", userId, planType);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime periodEnd = now.plusMonths(1);
+
+        Subscription subscription = Subscription.builder()
+                .user(user)
+                .planType(planType)
+                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .amount(planType.getPrice())
+                .currency("ZAR")
+                .billingCycle(Subscription.BillingCycle.MONTHLY)
+                .currentPeriodStart(now)
+                .currentPeriodEnd(periodEnd)
+                .cancelAtPeriodEnd(false)
+                .build();
+        try {
+            subscriptionRepository.save(subscription);
+            log.info("[PayFast Sub] Subscription saved for user {} subscriptionPlan {}", userId, planType);
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to save subscription for userId={}", userId, e);
+            throw e;
+        }
+        // Update user role
+        try {
+            user.setRole(Role.SUBSCRIBED);
+            userRepository.save(user);
+            log.info("[PayFast Sub] User role updated for user {}", userId);
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to update user role for userId={}", userId, e);
+            throw e;
+        }
+        // For PRO_STORE and RESELLER plans, create a business (if not present) and link the user as owner
+        if (planType == Subscription.PlanType.PRO_STORE || planType == Subscription.PlanType.RESELLER) {
+            boolean hasOwnerBusiness = false;
+            try {
+                hasOwnerBusiness = businessRepository.findByOwner(user).isPresent() ||
+                                   !businessRepository.findByUser(user).isEmpty();
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Error checking business ownership for userId={}", userId, e);
+            }
+            if (!hasOwnerBusiness) {
+                try {
+                    Business business = new Business();
+                    business.setOwner(user);
+                    // Set required fields for business entity
+                    if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
+                        business.setName(user.getFirstName() + "'s Store");
+                    } else {
+                        business.setName(user.getEmail() + "'s Store");
+                    }
+                    business.setEmail(user.getEmail()); // Set the email field
+                    if (planType == Subscription.PlanType.PRO_STORE) {
+                        business.setBusinessType(BusinessType.PRO_STORE);
+                    } else {
+                        business.setBusinessType(BusinessType.RESELLER);
+                    }
+                    Business created = businessService.createBusiness(business, false);
+                    log.info("[PayFast Sub] Business created via BusinessService for user {} businessId {}", userId, created.getId());
+
+                    BusinessTrustRating businessTrustRating = BusinessTrustRating.builder()
+                            .business(created)
                             .overallScore(BigDecimal.ZERO)
                             .verificationScore(BigDecimal.ZERO)
                             .profileScore(BigDecimal.ZERO)
@@ -294,57 +414,46 @@ public class SubscriptionService {
                             .totalTransactions(0)
                             .successfulTransactions(0)
                             .build();
-                        businessTrustRatingRepository.save(businessTrustRating);
-                        log.info("[PayFast Sub] BusinessTrustRating created for businessId {}", business.getId());
-
-                        // Create BusinessUser entry for owner
-                        BusinessUser businessUser = new BusinessUser();
-                        businessUser.setBusiness(business);
-                        businessUser.setUser(user);
-                        businessUser.setRole(BusinessUserRole.OWNER);
-                        businessUserRepository.save(businessUser);
-                        log.info("[PayFast Sub] BusinessUser OWNER entry created for user {} businessId {}", userId, business.getId());
-                    } catch (Exception e) {
-                        log.error("[PayFast Sub] Failed to create business for userId={}", userId, e);
-                        throw e;
-                    }
-                } else {
-                    log.info("[PayFast Sub] User {} already has a business; skipping creation", userId);
-                }
-            }
-            try {
-                trustRatingService.addSubscriptionBonus(userId);
-                log.info("[PayFast Sub] Trust rating bonus added for userId={}", userId);
-            } catch (Exception e) {
-                log.error("[PayFast Sub] Failed to add trust rating bonus for userId={}", userId, e);
-            }
-
-            // Send subscription confirmation email
-            try {
-                String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
-                String planName = planType.getDisplayName();
-                String amount = planType.getPrice().toString();
-                String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
-                String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
-
-                emailService.sendSubscriptionConfirmationEmail(
-                    user.getEmail(),
-                    userName,
-                    planName,
-                    amount,
-                    billingCycle,
-                    nextBillingDate
-                );
-                log.info("[PayFast Sub] Subscription confirmation email sent to {}", user.getEmail());
-            } catch (Exception e) {
-                log.error("[PayFast Sub] Failed to send subscription confirmation email to {}: {}", user.getEmail(), e.getMessage(), e);
-                // Don't fail the subscription creation if email fails
-            }
-
-            log.info("[PayFast Sub] PayFast subscription created for user: {} with plan: {}", userId, planType);
-        } else {
-            log.info("[PayFast Sub] User {} already has an active subscription, skipping createOrActivatePayFastSubscription", userId);
+                    businessTrustRatingRepository.save(businessTrustRating);
+                    log.info("[PayFast Sub] BusinessTrustRating created for businessId {}", created.getId());
+                 } catch (Exception e) {
+                     log.error("[PayFast Sub] Failed to create business for userId={}", userId, e);
+                     throw e;
+                 }
+             } else {
+                 log.info("[PayFast Sub] User {} already has a business; skipping creation", userId);
+             }
+         }
+        try {
+            trustRatingService.addSubscriptionBonus(userId);
+            log.info("[PayFast Sub] Trust rating bonus added for userId={}", userId);
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to add trust rating bonus for userId={}", userId, e);
         }
+
+        // Send subscription confirmation email
+        try {
+            String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+            String planName = planType.getDisplayName();
+            String amount = planType.getPrice().toString();
+            String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
+            String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
+
+            emailService.sendSubscriptionConfirmationEmail(
+                user.getEmail(),
+                userName,
+                planName,
+                amount,
+                billingCycle,
+                nextBillingDate
+            );
+            log.info("[PayFast Sub] Subscription confirmation email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to send subscription confirmation email to {}: {}", user.getEmail(), e.getMessage(), e);
+            // Don't fail the subscription creation if email fails
+        }
+
+        log.info("[PayFast Sub] PayFast subscription created for user: {} with plan: {}", userId, planType);
     }
     
     /**
@@ -638,5 +747,166 @@ public class SubscriptionService {
     @Transactional(readOnly = true)
     public List<Subscription> getAllUserSubscriptions(UUID userId) {
         return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    /**
+     * Send subscription confirmation email for an existing user and plan.
+     * This is a helper used by dev flows to force-send the confirmation email
+     * even when a subscription already exists.
+     */
+    @Transactional
+    public void sendSubscriptionConfirmationEmailForUser(UUID userId, Subscription.PlanType planType) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        try {
+            String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+            String planName = planType.getDisplayName();
+            String amount = planType.getPrice().toString();
+            String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
+            String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
+
+            emailService.sendSubscriptionConfirmationEmail(
+                    user.getEmail(),
+                    userName,
+                    planName,
+                    amount,
+                    billingCycle,
+                    nextBillingDate
+            );
+            log.info("[Sub Email] Subscription confirmation email sent to {} (forced)", user.getEmail());
+        } catch (Exception e) {
+            log.error("[Sub Email] Failed to send subscription confirmation email to {}: {}", user.getEmail(), e.getMessage(), e);
+            throw new RuntimeException("Failed to send subscription confirmation email: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Forcefully set or update user's active subscription to the given plan.
+     * Creates a subscription if none exists, or updates the existing one.
+     * Sends confirmation email after operation.
+     */
+    @Transactional
+    public Subscription forceSetSubscriptionPlan(UUID userId, Subscription.PlanType planType) {
+        log.info("[PayFast Sub] forceSetSubscriptionPlan called for userId={}, planType={}", userId, planType);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
+
+        Optional<Subscription> existingOpt = getActiveSubscription(userId);
+        Subscription subscription;
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime periodEnd = now.plusMonths(1);
+        if (existingOpt.isPresent()) {
+            subscription = existingOpt.get();
+            subscription.setPlanType(planType);
+            subscription.setAmount(planType.getPrice());
+            subscription.setBillingCycle(Subscription.BillingCycle.MONTHLY);
+            subscription.setCurrentPeriodStart(now);
+            subscription.setCurrentPeriodEnd(periodEnd);
+            subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+            subscription.setCancelAtPeriodEnd(false);
+            subscription = subscriptionRepository.save(subscription);
+            log.info("[PayFast Sub] force-updated existing subscription {} for user {} to plan {}", subscription.getId(), userId, planType);
+        } else {
+            subscription = Subscription.builder()
+                    .user(user)
+                    .planType(planType)
+                    .status(Subscription.SubscriptionStatus.ACTIVE)
+                    .amount(planType.getPrice())
+                    .currency("ZAR")
+                    .billingCycle(Subscription.BillingCycle.MONTHLY)
+                    .currentPeriodStart(now)
+                    .currentPeriodEnd(periodEnd)
+                    .cancelAtPeriodEnd(false)
+                    .build();
+            subscription = subscriptionRepository.save(subscription);
+            log.info("[PayFast Sub] force-created new subscription {} for user {} plan {}", subscription.getId(), userId, planType);
+
+            // Update user role
+            try {
+                user.setRole(Role.SUBSCRIBED);
+                userRepository.save(user);
+                log.info("[PayFast Sub] User role updated for user {} (force)", userId);
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Failed to update user role for userId={} (force)", userId, e);
+            }
+        }
+
+        // For PRO_STORE and RESELLER plans, create a business (if not present) and link the user as owner
+        if (planType == Subscription.PlanType.PRO_STORE || planType == Subscription.PlanType.RESELLER) {
+            boolean hasOwnerBusiness = false;
+            try {
+                hasOwnerBusiness = businessRepository.findByOwner(user).isPresent() ||
+                                   !businessRepository.findByUser(user).isEmpty();
+            } catch (Exception e) {
+                log.error("[PayFast Sub] Error checking business ownership for userId={} (force)", userId, e);
+            }
+            if (!hasOwnerBusiness) {
+                try {
+                    Business business = new Business();
+                    business.setOwner(user);
+                    if (user.getFirstName() != null && !user.getFirstName().isBlank()) {
+                        business.setName(user.getFirstName() + "'s Store");
+                    } else {
+                        business.setName(user.getEmail() + "'s Store");
+                    }
+                    business.setEmail(user.getEmail());
+                    if (planType == Subscription.PlanType.PRO_STORE) {
+                        business.setBusinessType(BusinessType.PRO_STORE);
+                    } else {
+                        business.setBusinessType(BusinessType.RESELLER);
+                    }
+                    Business created = businessService.createBusiness(business, false);
+                    log.info("[PayFast Sub] Business created via BusinessService for user {} businessId {} (force)", userId, created.getId());
+
+                    BusinessTrustRating businessTrustRating = BusinessTrustRating.builder()
+                            .business(created)
+                            .overallScore(BigDecimal.ZERO)
+                            .verificationScore(BigDecimal.ZERO)
+                            .profileScore(BigDecimal.ZERO)
+                            .reviewScore(BigDecimal.ZERO)
+                            .transactionScore(BigDecimal.ZERO)
+                            .totalReviews(0)
+                            .positiveReviews(0)
+                            .totalTransactions(0)
+                            .successfulTransactions(0)
+                            .build();
+                    businessTrustRatingRepository.save(businessTrustRating);
+                    log.info("[PayFast Sub] BusinessTrustRating created for businessId {} (force)", created.getId());
+                 } catch (Exception e) {
+                     log.error("[PayFast Sub] Failed to create business for userId={} (force)", userId, e);
+                 }
+             }
+        }
+
+        // Ensure trust rating bonus
+        try {
+            trustRatingService.addSubscriptionBonus(userId);
+            log.info("[PayFast Sub] Trust rating bonus ensured for userId={} (force)", userId);
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to add trust rating bonus for userId={} (force)", userId, e);
+        }
+
+        // Send confirmation email
+        try {
+            String userName = user.getFirstName() != null ? user.getFirstName() : user.getUsername();
+            String planName = planType.getDisplayName();
+            String amount = planType.getPrice().toString();
+            String billingCycle = Subscription.BillingCycle.MONTHLY.toString();
+            String nextBillingDate = LocalDateTime.now().plusMonths(1).toString();
+
+            emailService.sendSubscriptionConfirmationEmail(
+                    user.getEmail(),
+                    userName,
+                    planName,
+                    amount,
+                    billingCycle,
+                    nextBillingDate
+            );
+            log.info("[PayFast Sub] Force subscription confirmation email sent to {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("[PayFast Sub] Failed to send force subscription confirmation email to {}: {}", user.getEmail(), e.getMessage(), e);
+        }
+
+        return subscription;
     }
 }

@@ -84,6 +84,9 @@ public class Business {
     @Column(nullable = false, unique = true)
     private String slug;
 
+    @Transient
+    private Boolean profileCompleted; // transient: runtime-only flag (no DB column) to avoid adding migrations
+
     // Helper methods
     public boolean isOwner(User user) {
         return owner != null && owner.getId().equals(user.getId());

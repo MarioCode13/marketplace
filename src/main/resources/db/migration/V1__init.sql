@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS business (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     email_verification_token VARCHAR(255),
     is_email_verified BOOLEAN DEFAULT FALSE,
+    is_profile_completed BOOLEAN DEFAULT FALSE,
     slug VARCHAR(255) UNIQUE
 );
 

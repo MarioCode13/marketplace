@@ -8,15 +8,17 @@ import dev.marketplace.marketplace.repository.BusinessTrustRatingRepository;
 import dev.marketplace.marketplace.repository.BusinessUserRepository;
 import dev.marketplace.marketplace.repository.ListingRepository;
 import dev.marketplace.marketplace.repository.ReviewRepository;
+import dev.marketplace.marketplace.repository.SubscriptionRepository;
 import java.math.BigDecimal;
+import java.text.Normalizer;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -32,7 +34,7 @@ public class BusinessService {
     private final B2StorageService b2StorageService;
     private final ReviewRepository reviewRepository;
     private final BusinessTrustRatingRepository businessTrustRatingRepository;
-    private final SubscriptionService subscriptionService;
+    private final SubscriptionRepository subscriptionRepository;
 
     public Optional<Business> findById(UUID id) {
         return businessRepository.findById(id);
@@ -44,7 +46,15 @@ public class BusinessService {
 
     @Transactional
     public Business createBusiness(Business business) {
-        log.info("Creating business: {}", business.getName());
+        return createBusiness(business, true);
+    }
+
+    /**
+     * Create a business. If persistFullProfile is false, create as a draft: don't delete personal listings or send verification.
+     */
+    @Transactional
+    public Business createBusiness(Business business, boolean persistFullProfile) {
+        log.info("Creating business: {} (persistFullProfile={})", business.getName(), persistFullProfile);
 
         if (businessRepository.existsByEmail(business.getEmail())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
@@ -54,8 +64,26 @@ public class BusinessService {
             throw new IllegalArgumentException("Business email is required for verification.");
         }
 
+        // Ensure we have a slug (generate if missing) to satisfy DB non-null/unique constraints
+        if (business.getSlug() == null || business.getSlug().isBlank()) {
+            String base = business.getName() != null && !business.getName().isBlank() ? business.getName() : business.getEmail();
+            String candidate = generateSlug(base);
+            int attempts = 0;
+            while (businessRepository.findBySlug(candidate).isPresent() && attempts < 10) {
+                candidate = generateSlug(base + " " + randomSuffix());
+                attempts++;
+            }
+            // if still exists after attempts, append UUID
+            if (businessRepository.findBySlug(candidate).isPresent()) {
+                candidate = generateSlug(base + " " + UUID.randomUUID().toString().substring(0, 8));
+            }
+            business.setSlug(candidate);
+            log.info("Generated slug for business draft: {}", candidate);
+        }
+
         business.setEmailVerificationToken(UUID.randomUUID().toString());
         business.setEmailVerified(false);
+        business.setProfileCompleted(persistFullProfile);
         // If businessType is not set, default to RESELLER
         if (business.getBusinessType() == null) {
             business.setBusinessType(BusinessType.RESELLER);
@@ -68,40 +96,45 @@ public class BusinessService {
         ownerRelation.setRole(BusinessUserRole.OWNER);
         businessUserRepository.save(ownerRelation);
 
-        // Delete the owner's personal listings because the user account has been converted to a business account
-        try {
-            UUID ownerId = business.getOwner() != null ? business.getOwner().getId() : null;
-            if (ownerId != null) {
-                log.info("Deleting personal listings for user {} as they become a business owner", ownerId);
-                java.util.List<dev.marketplace.marketplace.model.Listing> ownerListings = listingRepository.findAllByUserId(ownerId);
-                if (!ownerListings.isEmpty()) {
-                    // First remove images from B2 for each listing
-                    ownerListings.forEach(l -> {
-                        if (l.getImages() != null) {
-                            l.getImages().forEach(img -> {
-                                try {
-                                    String filename = listingImageService.extractFilenameFromUrl(img);
-                                    b2StorageService.deleteImage(filename);
-                                } catch (Exception e) {
-                                    log.warn("Failed to delete listing image from B2: {} (listing={}), error={}", img, l.getId(), e.getMessage());
-                                }
-                            });
-                        }
-                    });
-                     listingRepository.deleteAll(ownerListings);
-                     log.info("Deleted {} listings for user {}", ownerListings.size(), ownerId);
+        if (persistFullProfile) {
+            // Delete the owner's personal listings because the user account has been converted to a business account
+            try {
+                UUID ownerId = business.getOwner() != null ? business.getOwner().getId() : null;
+                if (ownerId != null) {
+                    log.info("Deleting personal listings for user {} as they become a business owner", ownerId);
+                    java.util.List<dev.marketplace.marketplace.model.Listing> ownerListings = listingRepository.findAllByUserId(ownerId);
+                    if (!ownerListings.isEmpty()) {
+                        // First remove images from B2 for each listing
+                        ownerListings.forEach(l -> {
+                            if (l.getImages() != null) {
+                                l.getImages().forEach(img -> {
+                                    try {
+                                        String filename = listingImageService.extractFilenameFromUrl(img);
+                                        b2StorageService.deleteImage(filename);
+                                    } catch (Exception e) {
+                                        log.warn("Failed to delete listing image from B2: {} (listing={}), error={}", img, l.getId(), e.getMessage());
+                                    }
+                                });
+                            }
+                        });
+                         listingRepository.deleteAll(ownerListings);
+                         log.info("Deleted {} listings for user {}", ownerListings.size(), ownerId);
+                     }
                  }
+             } catch (Exception ex) {
+                 log.warn("Failed to delete personal listings for new business owner: {}", ex.getMessage());
+                 // Swallowing exception to avoid failing business creation, but log it for investigation
              }
-         } catch (Exception ex) {
-             log.warn("Failed to delete personal listings for new business owner: {}", ex.getMessage());
-             // Swallowing exception to avoid failing business creation, but log it for investigation
-         }
 
-        notificationService.sendBusinessVerificationEmail(
-            business.getBusinessEmail(),
-            business.getEmailVerificationToken(),
-            business.getName()
-        );
+            notificationService.sendBusinessVerificationEmail(
+                business.getBusinessEmail(),
+                business.getEmailVerificationToken(),
+                business.getName()
+            );
+        } else {
+            log.info("Created business as draft (profileCompleted=false) for owner {}. Verification email suppressed.", business.getOwner() != null ? business.getOwner().getId() : null);
+        }
+
         return savedBusiness;
     }
     
@@ -296,6 +329,41 @@ public class BusinessService {
     }
 
     public Optional<dev.marketplace.marketplace.model.Subscription> getActiveSubscriptionForBusiness(UUID businessId) {
-        return subscriptionService.getActiveSubscriptionForBusiness(businessId);
+        return subscriptionRepository.findByBusinessIdAndStatusIn(
+                businessId,
+                List.of(dev.marketplace.marketplace.model.Subscription.SubscriptionStatus.ACTIVE, dev.marketplace.marketplace.model.Subscription.SubscriptionStatus.TRIAL)
+        );
+    }
+
+    // Helper to make a URL-friendly slug from a string
+    private String generateSlug(String input) {
+        if (input == null) return "business" + System.currentTimeMillis();
+        String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
+        // remove diacritics
+        normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+        // replace non-alphanumeric with hyphens
+        normalized = normalized.replaceAll("[^\\p{Alnum}]+", "-");
+        // collapse hyphens
+        normalized = normalized.replaceAll("-+", "-");
+        // trim hyphens
+        normalized = normalized.replaceAll("^-|-$", "");
+        String slug = normalized.toLowerCase();
+        if (slug.length() > 50) slug = slug.substring(0, 50);
+        if (slug.isBlank()) slug = "business-" + System.currentTimeMillis();
+        return slug;
+    }
+
+    private String randomSuffix() {
+        int leftLimit = 48; // '0'
+        int rightLimit = 122; // 'z'
+        int targetStringLength = 4;
+        Random random = new Random();
+        StringBuilder buffer = new StringBuilder(targetStringLength);
+        while (buffer.length() < targetStringLength) {
+            int randomLimitedInt = leftLimit + (int) (random.nextFloat() * (rightLimit - leftLimit + 1));
+            char c = (char) randomLimitedInt;
+            if (Character.isLetterOrDigit(c)) buffer.append(c);
+        }
+        return buffer.toString().toLowerCase();
     }
 }
