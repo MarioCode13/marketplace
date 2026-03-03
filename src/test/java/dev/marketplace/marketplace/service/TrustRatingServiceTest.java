@@ -46,16 +46,15 @@ public class TrustRatingServiceTest {
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(trustRatingRepository.findByUserId(userId)).thenReturn(Optional.empty());
         when(reviewRepository.countReviewsByUserId(userId)).thenReturn(0L);
-        when(reviewRepository.getAverageRatingByUserId(userId)).thenReturn(null);
         when(reviewRepository.getGlobalAverageRating()).thenReturn(BigDecimal.valueOf(4.2));
         when(transactionRepository.countBySellerId(userId)).thenReturn(0L);
         when(transactionRepository.countByBuyerId(userId)).thenReturn(0L);
 
         TrustComponentsDTO components = trustRatingService.calculateTrustComponents(userId);
 
-        // reviewScore should equal 4.2 * 20 = 84.00
-        assertEquals(BigDecimal.valueOf(84.00).setScale(2, RoundingMode.HALF_UP), components.getReviewScore());
-        // overall = review*0.35 = 84*0.35 = 29.40 (other components 0)
+        // reviewScore should be 0 (no actual reviews)
+        assertEquals(BigDecimal.valueOf(0.00).setScale(2, RoundingMode.HALF_UP), components.getReviewScore());
+        // overall = 0*0.35 + bayesian_boost where boost = 4.2*20*0.35 = 29.40
         assertEquals(BigDecimal.valueOf(29.40).setScale(2, RoundingMode.HALF_UP), components.getOverallScore());
     }
 

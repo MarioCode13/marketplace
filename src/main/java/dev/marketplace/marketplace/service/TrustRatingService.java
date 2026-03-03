@@ -74,7 +74,7 @@ public class TrustRatingService {
      * fetches necessary aggregates from repositories and returns the computed components.
      */
     public TrustComponentsDTO calculateTrustComponents(UUID userId) {
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with ID: " + userId));
 
         // Profile score
@@ -82,8 +82,8 @@ public class TrustRatingService {
         // Verification score: keep existing semantics: binary Omnicheck ID
         TrustRating existing = trustRatingRepository.findByUserId(userId).orElse(null);
         BigDecimal verificationScore = (existing != null && existing.getVerifiedId()) ? BigDecimal.valueOf(70) : BigDecimal.ZERO;
-        // Review score: Bayesian-weighted score mapped to 0-100
-        BigDecimal reviewScore = calculateBayesianReviewScoreForUser(userId);
+        // Review score: actual user reviews only (0 if no reviews, actual Bayesian score if reviews exist)
+        BigDecimal reviewScore = calculateActualReviewScoreForUser(userId);
         // Transaction score: completion rate + log-volume boost (capped)
         BigDecimal transactionScore = calculateTransactionScoreWithVolumeBoost(userId);
 
@@ -92,10 +92,8 @@ public class TrustRatingService {
 
         // Derive overall using new weights from the model doc:
         // review 35%, transactions 30%, verification 20%, profile 15% (sum=100)
-        BigDecimal overall = reviewScore.multiply(BigDecimal.valueOf(0.35))
-                .add(transactionScore.multiply(BigDecimal.valueOf(0.30)))
-                .add(verificationScore.multiply(BigDecimal.valueOf(0.20)))
-                .add(profileScore.multiply(BigDecimal.valueOf(0.15)));
+        // Apply Bayesian prior weighting at the overall level
+        BigDecimal overall = applyBayesianPriorToOverall(userId, reviewScore, transactionScore, verificationScore, profileScore);
         // Round to scale 2
         overall = overall.setScale(2, RoundingMode.HALF_UP);
 
@@ -109,29 +107,27 @@ public class TrustRatingService {
     }
 
     /**
-     * New Bayesian review score helper. Implements weighted average: (v/(v+m))*R + (m/(v+m))*C
-     * where v = number of reviews for the user, R = user's average rating (0-5),
-     * C = global average rating (0-5), m = prior weight (default 10). The result is mapped to 0-100.
+     * Calculate actual review score for user based only on real reviews received.
+     * Does NOT apply Bayesian prior - returns 0 if user has no reviews.
+     * For users with reviews: applies Bayesian weighting to smooth toward global average.
      *
-     * For new users with zero reviews: returns global average mapped to 0-100 (around 84 if global avg is 4.2).
+     * Bayesian formula: (v/(v+m))*R + (m/(v+m))*C
+     * where v = number of reviews, R = user's average rating (0-5),
+     * C = global average rating (0-5), m = prior weight (default 10)
      */
-    private BigDecimal calculateBayesianReviewScoreForUser(UUID userId) {
+    private BigDecimal calculateActualReviewScoreForUser(UUID userId) {
         long v = Optional.ofNullable(reviewRepository.countReviewsByUserId(userId)).orElse(0L);
-        BigDecimal R = Optional.ofNullable(reviewRepository.getAverageRatingByUserId(userId)).orElse(BigDecimal.ZERO);
-        // Global average: use 4.2 as default (reasonable marketplace average)
-        BigDecimal C = Optional.ofNullable(reviewRepository.getGlobalAverageRating()).orElse(BigDecimal.valueOf(4.2));
-        int m = 10; // prior weight (minimum number of reviews to reach user's true average)
 
-        // If no reviews, apply Bayesian formula with zero user rating
-        // This gives: (0/(0+10))*0 + (10/(0+10))*4.2 = 4.2
-        // Mapped to 0-100: 4.2 * 20 = 84.00
+        // If no reviews, return 0 (honest representation of no review data)
         if (v == 0) {
-            // Use full Bayesian formula even with zero reviews
-            // weightedRating = (0/10)*0 + (10/10)*C = C
-            return C.multiply(BigDecimal.valueOf(20)).setScale(2, RoundingMode.HALF_UP);
+            return BigDecimal.ZERO;
         }
 
         // User has reviews: apply Bayesian weighting
+        BigDecimal R = Optional.ofNullable(reviewRepository.getAverageRatingByUserId(userId)).orElse(BigDecimal.ZERO);
+        BigDecimal C = Optional.ofNullable(reviewRepository.getGlobalAverageRating()).orElse(BigDecimal.valueOf(4.2));
+        int m = 10; // prior weight
+
         // weightedRating = (v/(v+m))*R + (m/(v+m))*C
         BigDecimal bdV = BigDecimal.valueOf(v);
         BigDecimal weighted = bdV.divide(bdV.add(BigDecimal.valueOf(m)), 10, RoundingMode.HALF_UP)
@@ -139,7 +135,45 @@ public class TrustRatingService {
                         BigDecimal.valueOf(m).divide(bdV.add(BigDecimal.valueOf(m)), 10, RoundingMode.HALF_UP).multiply(C)
                 );
         // Map 0-5 to 0-100
-        return weighted.multiply(BigDecimal.valueOf(20));
+        return weighted.multiply(BigDecimal.valueOf(20)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Apply Bayesian prior weighting at the overall trust rating level.
+     *
+     * For new users with zero reviews, this boosts the overall rating by incorporating
+     * the global marketplace average, giving them a fair initial standing without
+     * misleading individual component scores.
+     *
+     * The Bayesian boost only applies to new users (v == 0) and gradually diminishes
+     * as they accumulate reviews.
+     */
+    private BigDecimal applyBayesianPriorToOverall(UUID userId, BigDecimal reviewScore,
+                                                    BigDecimal transactionScore, BigDecimal verificationScore,
+                                                    BigDecimal profileScore) {
+        long v = Optional.ofNullable(reviewRepository.countReviewsByUserId(userId)).orElse(0L);
+
+        // Calculate base overall score
+        BigDecimal baseOverall = reviewScore.multiply(BigDecimal.valueOf(0.35))
+                .add(transactionScore.multiply(BigDecimal.valueOf(0.30)))
+                .add(verificationScore.multiply(BigDecimal.valueOf(0.20)))
+                .add(profileScore.multiply(BigDecimal.valueOf(0.15)));
+
+        // Apply Bayesian prior only for new users (zero reviews)
+        if (v == 0) {
+            // Use global average as a boost factor
+            BigDecimal C = Optional.ofNullable(reviewRepository.getGlobalAverageRating()).orElse(BigDecimal.valueOf(4.2));
+            int m = 10; // prior weight
+
+            // Bayesian contribution: (m/(0+m))*C * weight of review component
+            // = (10/10) * 4.2 * 20 * 0.35 = 29.40
+            BigDecimal bayesianBoost = C.multiply(BigDecimal.valueOf(20))
+                    .multiply(BigDecimal.valueOf(0.35));
+
+            return baseOverall.add(bayesianBoost);
+        }
+
+        return baseOverall;
     }
 
     /**
@@ -288,14 +322,11 @@ public class TrustRatingService {
         // Calculate components
         BigDecimal profileScore = calculateBusinessProfileScore(business);
         BigDecimal verificationScore = calculateBusinessVerificationScore(businessId);
-        BigDecimal reviewScore = calculateBusinessReviewScore(businessId);
+        BigDecimal reviewScore = calculateActualBusinessReviewScore(businessId);
         BigDecimal transactionScore = calculateBusinessTransactionScore(businessId);
 
-        // Derive overall using weighted formula
-        BigDecimal overall = reviewScore.multiply(BigDecimal.valueOf(0.35))
-                .add(transactionScore.multiply(BigDecimal.valueOf(0.30)))
-                .add(verificationScore.multiply(BigDecimal.valueOf(0.20)))
-                .add(profileScore.multiply(BigDecimal.valueOf(0.15)))
+        // Derive overall with Bayesian prior applied at this level
+        BigDecimal overall = applyBayesianPriorToBusinessOverall(businessId, reviewScore, transactionScore, verificationScore, profileScore)
                 .setScale(2, RoundingMode.HALF_UP);
 
         // Ensure component scales
@@ -327,14 +358,11 @@ public class TrustRatingService {
         // Calculate using new weighted model
         BigDecimal profileScore = calculateBusinessProfileScore(business);
         BigDecimal verificationScore = calculateBusinessVerificationScore(businessId);
-        BigDecimal reviewScore = calculateBusinessReviewScore(businessId);
+        BigDecimal reviewScore = calculateActualBusinessReviewScore(businessId);
         BigDecimal transactionScore = calculateBusinessTransactionScore(businessId);
         
-        // Weighted overall: review 35%, transaction 30%, verification 20%, profile 15%
-        BigDecimal overallScore = reviewScore.multiply(BigDecimal.valueOf(0.35))
-                .add(transactionScore.multiply(BigDecimal.valueOf(0.30)))
-                .add(verificationScore.multiply(BigDecimal.valueOf(0.20)))
-                .add(profileScore.multiply(BigDecimal.valueOf(0.15)))
+        // Weighted overall with Bayesian prior applied at this level
+        BigDecimal overallScore = applyBayesianPriorToBusinessOverall(businessId, reviewScore, transactionScore, verificationScore, profileScore)
                 .setScale(2, RoundingMode.HALF_UP);
         
         // Update counts
@@ -392,20 +420,20 @@ public class TrustRatingService {
         if (totalDocs == 0) return BigDecimal.ZERO;
         return BigDecimal.valueOf(verifiedDocs).multiply(BigDecimal.valueOf(100)).divide(BigDecimal.valueOf(totalDocs), 2, RoundingMode.HALF_UP);
     }
-    private BigDecimal calculateBusinessReviewScore(UUID businessId) {
+    private BigDecimal calculateActualBusinessReviewScore(UUID businessId) {
         long v = Optional.ofNullable(reviewRepository.countReviewsByBusinessId(businessId)).orElse(0L);
+
+        // If no reviews, return 0 (honest representation of no review data)
+        if (v == 0) {
+            return BigDecimal.ZERO;
+        }
+
+        // Business has reviews: apply Bayesian weighting
         BigDecimal R = Optional.ofNullable(reviewRepository.getAverageRatingByBusinessId(businessId)).orElse(BigDecimal.ZERO);
         // Global average: use 4.2 as default (consistent with user trust)
         BigDecimal C = Optional.ofNullable(reviewRepository.getGlobalAverageRating()).orElse(BigDecimal.valueOf(4.2));
         int m = 10; // prior weight
 
-        // If no reviews, apply Bayesian formula with zero rating
-        // This gives: 4.2 * 20 = 84.00
-        if (v == 0) {
-            return C.multiply(BigDecimal.valueOf(20)).setScale(2, RoundingMode.HALF_UP);
-        }
-
-        // Business has reviews: apply Bayesian weighting
         // weightedRating = (v/(v+m))*R + (m/(v+m))*C
         BigDecimal bdV = BigDecimal.valueOf(v);
         BigDecimal weighted = bdV.divide(bdV.add(BigDecimal.valueOf(m)), 10, RoundingMode.HALF_UP)
@@ -413,7 +441,40 @@ public class TrustRatingService {
                         BigDecimal.valueOf(m).divide(bdV.add(BigDecimal.valueOf(m)), 10, RoundingMode.HALF_UP).multiply(C)
                 );
         // Map 0-5 to 0-100
-        return weighted.multiply(BigDecimal.valueOf(20));
+        return weighted.multiply(BigDecimal.valueOf(20)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Apply Bayesian prior weighting at the business overall trust rating level.
+     * Similar to user trust: for new businesses with zero reviews, boost overall rating
+     * by incorporating global marketplace average.
+     */
+    private BigDecimal applyBayesianPriorToBusinessOverall(UUID businessId, BigDecimal reviewScore,
+                                                            BigDecimal transactionScore, BigDecimal verificationScore,
+                                                            BigDecimal profileScore) {
+        long v = Optional.ofNullable(reviewRepository.countReviewsByBusinessId(businessId)).orElse(0L);
+
+        // Calculate base overall score
+        BigDecimal baseOverall = reviewScore.multiply(BigDecimal.valueOf(0.35))
+                .add(transactionScore.multiply(BigDecimal.valueOf(0.30)))
+                .add(verificationScore.multiply(BigDecimal.valueOf(0.20)))
+                .add(profileScore.multiply(BigDecimal.valueOf(0.15)));
+
+        // Apply Bayesian prior only for new businesses (zero reviews)
+        if (v == 0) {
+            // Use global average as a boost factor
+            BigDecimal C = Optional.ofNullable(reviewRepository.getGlobalAverageRating()).orElse(BigDecimal.valueOf(4.2));
+            int m = 10; // prior weight
+
+            // Bayesian contribution: (m/(0+m))*C * weight of review component
+            // = (10/10) * 4.2 * 20 * 0.35 = 29.40
+            BigDecimal bayesianBoost = C.multiply(BigDecimal.valueOf(20))
+                    .multiply(BigDecimal.valueOf(0.35));
+
+            return baseOverall.add(bayesianBoost);
+        }
+
+        return baseOverall;
     }
     private BigDecimal calculateBusinessTransactionScore(UUID businessId) {
         // Get all listings for the business
