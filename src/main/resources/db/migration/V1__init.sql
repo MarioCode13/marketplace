@@ -67,7 +67,13 @@ CREATE TABLE IF NOT EXISTS business (
     email_verification_token VARCHAR(255),
     is_email_verified BOOLEAN DEFAULT FALSE,
     is_profile_completed BOOLEAN DEFAULT FALSE,
-    slug VARCHAR(255) UNIQUE
+    slug VARCHAR(255) UNIQUE,
+    -- Omnicheck / CIPC verification metadata (nullable; populated when business verification succeeds)
+    cipc_commercial_id VARCHAR(255),
+    cipc_registration_no VARCHAR(255),
+    cipc_business_name VARCHAR(255),
+    cipc_enquiry_id VARCHAR(255),
+    cipc_enquiry_result_id VARCHAR(255)
 );
 
 -- BusinessUser Table
@@ -752,7 +758,10 @@ CREATE TABLE trust_rating (
     successful_transactions INTEGER NOT NULL DEFAULT 0,
     last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Omnicheck ID verification quota tracking
+    id_verification_attempts INTEGER NOT NULL DEFAULT 0,
+    id_verification_period_start TIMESTAMP
 );
 
 -- Business Trust Rating System
@@ -771,7 +780,10 @@ CREATE TABLE IF NOT EXISTS business_trust_rating (
     successful_transactions INTEGER NOT NULL DEFAULT 0,
     last_calculated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Omnicheck business verification quota tracking
+    business_verification_attempts INTEGER NOT NULL DEFAULT 0,
+    business_verification_period_start TIMESTAMP
 );
 
 -- Verification Documents table

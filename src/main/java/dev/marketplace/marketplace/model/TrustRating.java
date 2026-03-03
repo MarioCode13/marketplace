@@ -74,7 +74,14 @@ public class TrustRating {
     
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
+
+    // Omnicheck ID verification quota tracking (attempts per period)
+    @Column(name = "id_verification_attempts", nullable = false)
+    @Builder.Default
+    private int idVerificationAttempts = 0;
+
+    @Column(name = "id_verification_period_start")
+    private LocalDateTime idVerificationPeriodStart;
 
     @PrePersist
     protected void onCreate() {

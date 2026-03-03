@@ -190,12 +190,39 @@ public class OmnicheckService {
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
                 JsonNode responseJson = objectMapper.readTree(response.getBody());
-                
-                // Extract enquiry IDs from response
-                String enquiryId = responseJson.has("enquiry_id") ? responseJson.get("enquiry_id").asText() : null;
-                String enquiryResultId = responseJson.has("enquiry_result_id") ? responseJson.get("enquiry_result_id").asText() : null;
+
+                // Omnicheck company match responses may either be flat:
+                // { "enquiry_id": "...", "enquiry_result_id": "..." }
+                // or nested as per docs:
+                // { "Status": "Success", "CompanyMatches": { "CommercialID": "...", "RegistrationNo": "...",
+                //                                           "Businessname": "...", "EnquiryID": "...", "EnquiryResultID": "..." } }
+                JsonNode matchNode = responseJson.has("CompanyMatches") && !responseJson.get("CompanyMatches").isNull()
+                    ? responseJson.get("CompanyMatches")
+                    : responseJson;
+
+                String enquiryId = null;
+                String enquiryResultId = null;
+
+                if (matchNode != null && !matchNode.isNull()) {
+                    if (matchNode.has("enquiry_id")) {
+                        enquiryId = matchNode.get("enquiry_id").asText();
+                    } else if (matchNode.has("EnquiryID")) {
+                        enquiryId = matchNode.get("EnquiryID").asText();
+                    } else if (matchNode.has("enquiryId")) {
+                        enquiryId = matchNode.get("enquiryId").asText();
+                    }
+
+                    if (matchNode.has("enquiry_result_id")) {
+                        enquiryResultId = matchNode.get("enquiry_result_id").asText();
+                    } else if (matchNode.has("EnquiryResultID")) {
+                        enquiryResultId = matchNode.get("EnquiryResultID").asText();
+                    } else if (matchNode.has("enquiryResultId")) {
+                        enquiryResultId = matchNode.get("enquiryResultId").asText();
+                    }
+                }
+
                 boolean success = enquiryId != null && enquiryResultId != null;
-                
+
                 log.info("Omnicheck CIPC match response: success={}, enquiryId={}", success, enquiryId);
                 return new CipcMatchResult(success, enquiryId, enquiryResultId, response.getBody(), responseJson);
             }
@@ -300,8 +327,15 @@ public class OmnicheckService {
         if (responseJson == null) return false;
         
         // Check for common success indicators in Omnicheck responses
+        JsonNode statusNode = null;
         if (responseJson.has("status")) {
-            String status = responseJson.get("status").asText().toLowerCase();
+            statusNode = responseJson.get("status");
+        } else if (responseJson.has("Status")) {
+            statusNode = responseJson.get("Status");
+        }
+
+        if (statusNode != null && !statusNode.isNull()) {
+            String status = statusNode.asText().toLowerCase();
             return status.contains("success") || status.contains("verified") || status.equals("200");
         }
         

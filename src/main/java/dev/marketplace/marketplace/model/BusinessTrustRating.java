@@ -71,6 +71,14 @@ public class BusinessTrustRating {
     @Builder.Default
     private boolean verifiedWithThirdParty = false;
 
+    // Omnicheck business verification quota tracking (attempts per period)
+    @Column(name = "business_verification_attempts", nullable = false)
+    @Builder.Default
+    private int businessVerificationAttempts = 0;
+
+    @Column(name = "business_verification_period_start")
+    private LocalDateTime businessVerificationPeriodStart;
+
     @Transient
     @Builder.Default
     private Double averageRating = 0.0;

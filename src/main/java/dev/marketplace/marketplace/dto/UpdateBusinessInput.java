@@ -14,4 +14,7 @@ public class UpdateBusinessInput {
     private UUID cityId;
     private String postalCode;
     private String slug;
+     // Optional CIPC / Omnicheck business metadata provided by the user
+    private String cipcRegistrationNo;
+    private String cipcBusinessName;
 }

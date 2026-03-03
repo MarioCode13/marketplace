@@ -77,6 +77,8 @@ public class BusinessMutationResolver {
         if (business.getAddressLine1() != null) existingBusiness.setAddressLine1(business.getAddressLine1());
         if (business.getAddressLine2() != null) existingBusiness.setAddressLine2(business.getAddressLine2());
         if (business.getPostalCode() != null) existingBusiness.setPostalCode(business.getPostalCode());
+        if (business.getCipcRegistrationNo() != null) existingBusiness.setCipcRegistrationNo(business.getCipcRegistrationNo());
+        if (business.getCipcBusinessName() != null) existingBusiness.setCipcBusinessName(business.getCipcBusinessName());
         if (business.getCityId() != null) {
                 existingBusiness.setCity(cityService.getCityById((UUID) business.getCityId()));
 
@@ -143,6 +145,8 @@ public class BusinessMutationResolver {
         business.setAddressLine1(input.getAddressLine1());
         business.setAddressLine2(input.getAddressLine2());
         business.setPostalCode(input.getPostalCode());
+        business.setCipcRegistrationNo(input.getCipcRegistrationNo());
+        business.setCipcBusinessName(input.getCipcBusinessName());
         if (input.getCityId() != null) {
 
                 business.setCity(cityService.getCityById((UUID) input.getCityId()));
@@ -162,6 +166,8 @@ public class BusinessMutationResolver {
         if (input.getAddressLine1() != null) business.setAddressLine1(input.getAddressLine1());
         if (input.getAddressLine2() != null) business.setAddressLine2(input.getAddressLine2());
         if (input.getPostalCode() != null) business.setPostalCode(input.getPostalCode());
+        if (input.getCipcRegistrationNo() != null) business.setCipcRegistrationNo(input.getCipcRegistrationNo());
+        if (input.getCipcBusinessName() != null) business.setCipcBusinessName(input.getCipcBusinessName());
         if (input.getCityId() != null) {
             business.setCity(cityService.getCityById((UUID) input.getCityId()));
         }

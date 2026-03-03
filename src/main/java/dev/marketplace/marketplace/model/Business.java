@@ -84,6 +84,22 @@ public class Business {
     @Column(nullable = false, unique = true)
     private String slug;
 
+    // Omnicheck / CIPC verification metadata (nullable; populated when business verification succeeds)
+    @Column(name = "cipc_commercial_id")
+    private String cipcCommercialId;
+
+    @Column(name = "cipc_registration_no")
+    private String cipcRegistrationNo;
+
+    @Column(name = "cipc_business_name")
+    private String cipcBusinessName;
+
+    @Column(name = "cipc_enquiry_id")
+    private String cipcEnquiryId;
+
+    @Column(name = "cipc_enquiry_result_id")
+    private String cipcEnquiryResultId;
+
     @Transient
     private Boolean profileCompleted; // transient: runtime-only flag (no DB column) to avoid adding migrations
 

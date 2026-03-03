@@ -219,6 +219,9 @@ public class BusinessService {
         existingBusiness.setAddressLine2(business.getAddressLine2());
         existingBusiness.setCity(business.getCity());
         existingBusiness.setPostalCode(business.getPostalCode());
+        // Allow updating CIPC / Omnicheck metadata via the update flow when provided
+        existingBusiness.setCipcRegistrationNo(business.getCipcRegistrationNo());
+        existingBusiness.setCipcBusinessName(business.getCipcBusinessName());
         if (business.getSlug() != null) {
             existingBusiness.setSlug(business.getSlug());
         }

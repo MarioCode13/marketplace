@@ -294,6 +294,14 @@ type Business {
     city: City
     postalCode: String
     slug: String
+    """
+    CIPC registration number for this business (optional, user-supplied or populated from Omnicheck).
+    """
+    cipcRegistrationNo: String
+    """
+    Registered business name as per CIPC (optional, user-supplied or populated from Omnicheck).
+    """
+    cipcBusinessName: String
     owner: User!
     storeBranding: StoreBranding
     businessUsers: [BusinessUser!]!
@@ -351,6 +359,8 @@ input UpdateBusinessInput {
     cityId: ID
     postalCode: String
     slug: String
+    cipcRegistrationNo: String
+    cipcBusinessName: String
 }
 
 input CreateBusinessInput {
