@@ -733,6 +733,7 @@ CREATE TABLE IF NOT EXISTS listing (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
     archived BOOLEAN DEFAULT FALSE,
+    seller_marked_18_plus BOOLEAN DEFAULT FALSE,
     nsfw_flagged BOOLEAN DEFAULT FALSE,
     nsfw_approval_status VARCHAR(50),
     nsfw_review_notes TEXT,
@@ -937,7 +938,7 @@ INSERT INTO "users" (username, email, password, role, first_name, last_name, bio
 VALUES
     ('resellerjoe', 'reseller@marketplace.com', '$2a$10$7QJ8QwQwQwQwQwQwQwQwQeQwQwQwQwQwQwQwQwQwQwQwQwQwQw','HAS_ACCOUNT',
      'Joe','Reseller','We sell the best gadgets and accessories!', (SELECT id FROM city WHERE name = 'Cape Town'),'+27111222333',NOW(), 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'),
-    ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'SUBSCRIBED',
+    ('admin', 'admin@admin.com', '$2a$10$r1d0EfJx3L7OSW9ofStBPueFKHXQtyrUVhwf09h4pLOEOSMKGJmPm', 'ADMIN',
      'Admin', 'User', 'System administrator and marketplace enthusiast. I love testing new features and helping users.',  (SELECT id FROM city WHERE name = 'Johannesburg'), '+27-10-555-0100', NOW(), 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')
 ON CONFLICT (email) DO NOTHING;
 
@@ -1331,6 +1332,8 @@ CREATE INDEX idx_content_approval_listing_id ON content_approval_queue(listing_i
 CREATE INDEX idx_content_approval_status ON content_approval_queue(status);
 CREATE INDEX idx_content_approval_flag_type ON content_approval_queue(flag_type);
 CREATE INDEX idx_content_approval_created_at ON content_approval_queue(created_at);
+
+CREATE INDEX idx_listing_seller_marked_18_plus ON listing(seller_marked_18_plus);
 
 
 

@@ -43,28 +43,25 @@ public class ListingQueryResolver {
             @Argument String sortBy,
             @Argument String sortOrder,
             @Argument UUID userId,
-            @Argument UUID businessId // Added businessId argument
+            @Argument UUID businessId,
+            @AuthenticationPrincipal UserDetails userDetails  // Add user context
     ) {
-        // Resolve slug inputs to IDs if provided
-        // Only resolve slug if categoryId is not already provided (to avoid conflicts)
+        // ...existing slug resolution code...
         if (categoryId == null && categorySlug != null && !categorySlug.isBlank()) {
             try {
                 categoryId = listingService.getCategoryService().findBySlug(categorySlug).getId();
             } catch (Exception e) {
-                // If slug lookup fails, categoryId remains null and query will return all categories
                 throw new RuntimeException("Category not found with slug: " + categorySlug, e);
             }
         }
-        // Only resolve city slug if cityId is not already provided
         if (cityId == null && citySlug != null && !citySlug.isBlank()) {
             try {
                 cityId = listingService.getCityService().getCityBySlug(citySlug).getId();
             } catch (Exception e) {
-                // If slug lookup fails, cityId remains null
                 throw new RuntimeException("City not found with slug: " + citySlug, e);
             }
         }
-        // Convert condition string to enum if provided
+
         dev.marketplace.marketplace.enums.Condition conditionEnum = null;
         if (condition != null && !condition.isEmpty()) {
             try {
@@ -74,30 +71,32 @@ public class ListingQueryResolver {
             }
         }
 
-        // Convert date strings to LocalDateTime if provided
         java.time.LocalDateTime minDateTime = null;
         java.time.LocalDateTime maxDateTime = null;
         
         if (minDate != null && !minDate.isEmpty()) {
             try {
-                // Parse as LocalDate first (YYYY-MM-DD format from HTML date input)
                 java.time.LocalDate minDateParsed = java.time.LocalDate.parse(minDate);
                 minDateTime = minDateParsed.atStartOfDay();
             } catch (Exception e) {
-                // Invalid date format, ignore it
                 System.err.println("Failed to parse minDate: " + minDate + ", error: " + e.getMessage());
             }
         }
         
         if (maxDate != null && !maxDate.isEmpty()) {
             try {
-                // Parse as LocalDate first (YYYY-MM-DD format from HTML date input)
                 java.time.LocalDate maxDateParsed = java.time.LocalDate.parse(maxDate);
-                maxDateTime = maxDateParsed.atTime(23, 59, 59); // End of day
+                maxDateTime = maxDateParsed.atTime(23, 59, 59);
             } catch (Exception e) {
-                // Invalid date format, ignore it
                 System.err.println("Failed to parse maxDate: " + maxDate + ", error: " + e.getMessage());
             }
+        }
+
+        // Get current user (if authenticated)
+        dev.marketplace.marketplace.model.User currentUser = null;
+        if (userDetails != null) {
+            UUID currentUserId = userService.getUserIdByUsername(userDetails.getUsername());
+            currentUser = userService.getUserById(currentUserId);
         }
 
         return listingService.getListingsWithFilters(
@@ -114,7 +113,8 @@ public class ListingQueryResolver {
             sortBy,
             sortOrder,
             userId,
-            businessId // Pass businessId to service
+            businessId,
+            currentUser  // Pass the current user
         );
     }
 

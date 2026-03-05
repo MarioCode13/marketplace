@@ -278,7 +278,10 @@ public class TransactionService {
                 listing.getCreatedAt(),
                 listing.isSold(),
                 listing.getExpiresAt() != null ? listing.getExpiresAt().toString() : null,
-                listing.isArchived() // Pass archived field
+                listing.isArchived(),
+                listing.isSellerMarked18Plus(),
+                listing.getNsfwFlagged(),
+                listing.getNsfwApprovalStatus()
         );
         
         return TransactionDTO.fromTransaction(transaction, listingDTO);

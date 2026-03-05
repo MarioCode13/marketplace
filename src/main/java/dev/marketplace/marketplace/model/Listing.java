@@ -70,6 +70,9 @@ public class Listing {
     private java.math.BigDecimal soldPrice; // Price at which it was sold (nullable)
 
     // NSFW Content Tracking
+    @Column(name = "seller_marked_18_plus")
+    private boolean sellerMarked18Plus = false; // Seller's declaration that item is 18+ appropriate
+
     @Column(name = "nsfw_flagged")
     private boolean nsfwFlagged = false;
 
@@ -121,6 +124,7 @@ public class Listing {
         this.archived = builder.archived;
         this.soldAt = builder.soldAt;
         this.soldPrice = builder.soldPrice;
+        this.sellerMarked18Plus = builder.sellerMarked18Plus;
         this.nsfwFlagged = builder.nsfwFlagged;
         this.nsfwApprovalStatus = builder.nsfwApprovalStatus;
         this.nsfwReviewNotes = builder.nsfwReviewNotes;
@@ -148,6 +152,7 @@ public class Listing {
         private int quantity = 1;
         private LocalDateTime soldAt;
         private java.math.BigDecimal soldPrice;
+        private boolean sellerMarked18Plus = false;
         private boolean nsfwFlagged = false;
         private ContentApprovalStatus nsfwApprovalStatus;
         private String nsfwReviewNotes;
@@ -246,6 +251,11 @@ public class Listing {
 
         public Builder soldPrice(java.math.BigDecimal soldPrice) {
             this.soldPrice = soldPrice;
+            return this;
+        }
+
+        public Builder sellerMarked18Plus(boolean sellerMarked18Plus) {
+            this.sellerMarked18Plus = sellerMarked18Plus;
             return this;
         }
 

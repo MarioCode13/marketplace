@@ -4,6 +4,7 @@ import dev.marketplace.marketplace.model.Category;
 import dev.marketplace.marketplace.dto.UserDTO;
 import dev.marketplace.marketplace.model.City;
 import dev.marketplace.marketplace.model.Business;
+import dev.marketplace.marketplace.enums.ContentApprovalStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,5 +26,8 @@ public record ListingDTO(
         LocalDateTime createdAt,
         boolean sold,
         String expiresAt,
-        boolean archived // Added
+        boolean archived,
+        boolean sellerMarked18Plus,
+        boolean nsfwFlagged,
+        ContentApprovalStatus nsfwApprovalStatus
 ) {}

@@ -36,8 +36,12 @@ public class ListingMutationResolver {
                                  @Argument Integer quantity,
                                  @Argument UUID cityId,
                                  @Argument String customCity,
-                                 @Argument UUID businessId) {
-        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId, quantity, businessId);
+                                 @Argument UUID businessId,
+                                 @Argument Boolean sellerMarked18Plus,
+                                 @Argument Boolean nsfwFlagged) {
+        boolean marked18Plus = sellerMarked18Plus != null ? sellerMarked18Plus : false;
+        boolean flagged = nsfwFlagged != null ? nsfwFlagged : false;
+        return listingService.createListing(title, description, images, categoryId, price, cityId, customCity, condition, userId, quantity, businessId, marked18Plus, flagged);
     }
 
     @MutationMapping

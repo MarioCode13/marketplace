@@ -14,5 +14,6 @@ public record ListingUpdateInput(
         UUID categoryId,
         UUID cityId,
         String customCity,
-        Integer quantity
+        Integer quantity,
+        Boolean sellerMarked18Plus
 ) {}

@@ -48,12 +48,23 @@ public class NSFWContentService {
      * Filters based on NSFW approval status and user eligibility
      */
     public boolean canUserViewListing(Listing listing, User user) {
-        // If listing is not NSFW flagged, everyone can see it
+        // If listing is not NSFW flagged
         if (!listing.getNsfwFlagged()) {
+            // If seller marked it as 18+ but it wasn't flagged by system,
+            // check if it's been approved by admin
+            if (listing.isSellerMarked18Plus()) {
+                // Seller-marked 18+ content requires admin approval
+                if (listing.getNsfwApprovalStatus() == ContentApprovalStatus.APPROVED) {
+                    return canUserViewNSFW(user);
+                }
+                // Not approved yet, so hide it
+                return false;
+            }
+            // Normal content, not marked 18+ - visible to all
             return true;
         }
 
-        // Check approval status of flagged listing
+        // If flagged by system, only show approved NSFW content to eligible users
         if (listing.getNsfwApprovalStatus() == ContentApprovalStatus.APPROVED) {
             // Approved NSFW content - only show to eligible users
             return canUserViewNSFW(user);
@@ -127,20 +138,33 @@ public class NSFWContentService {
      * Returns message about NSFW flag and approval status
      */
     public String getNSFWStatusMessage(Listing listing) {
-        if (!listing.getNsfwFlagged()) {
-            return "Content is not flagged";
+        if (!listing.getNsfwFlagged() && !listing.isSellerMarked18Plus()) {
+            return "Content is not flagged - visible to all users";
         }
 
-        ContentApprovalStatus status = listing.getNsfwApprovalStatus();
-        if (status == ContentApprovalStatus.PENDING) {
-            return "Content is pending admin review";
-        } else if (status == ContentApprovalStatus.APPROVED) {
-            return "Content approved but restricted to adults 18+";
-        } else if (status == ContentApprovalStatus.DECLINED) {
-            return "Content declined and will not be visible";
-        } else {
-            return "Content flagged - status unknown";
+        if (listing.isSellerMarked18Plus()) {
+            ContentApprovalStatus status = listing.getNsfwApprovalStatus();
+            if (status == ContentApprovalStatus.PENDING) {
+                return "Seller marked as 18+ - pending admin review";
+            } else if (status == ContentApprovalStatus.APPROVED) {
+                return "Seller marked as 18+ and approved - visible to adults 18+ only";
+            } else if (status == ContentApprovalStatus.DECLINED) {
+                return "Seller marked as 18+ but declined by admin - not visible";
+            }
         }
+
+        if (listing.getNsfwFlagged()) {
+            ContentApprovalStatus status = listing.getNsfwApprovalStatus();
+            if (status == ContentApprovalStatus.PENDING) {
+                return "Content is pending admin review (flagged by system)";
+            } else if (status == ContentApprovalStatus.APPROVED) {
+                return "Content approved but restricted to adults 18+";
+            } else if (status == ContentApprovalStatus.DECLINED) {
+                return "Content declined and will not be visible";
+            }
+        }
+
+        return "Content flagged - status unknown";
     }
 
     /**
@@ -154,10 +178,27 @@ public class NSFWContentService {
             String description
     ) {
         public static NSFWVisibilityRules getRule(Listing listing, User user) {
-            if (!listing.getNsfwFlagged()) {
+            // Not flagged and not marked 18+ = public content
+            if (!listing.getNsfwFlagged() && !listing.isSellerMarked18Plus()) {
                 return new NSFWVisibilityRules(false, false, "PUBLIC", "No restrictions");
             }
 
+            // Seller marked as 18+ but not flagged by system
+            if (!listing.getNsfwFlagged() && listing.isSellerMarked18Plus()) {
+                if (listing.getNsfwApprovalStatus() == ContentApprovalStatus.APPROVED) {
+                    return new NSFWVisibilityRules(
+                            true, true, "ADULT_ONLY",
+                            "Seller marked as 18+ and approved by admin - visible only to users 18+ with explicit content enabled"
+                    );
+                } else {
+                    return new NSFWVisibilityRules(
+                            true, true, "HIDDEN",
+                            "Seller marked as 18+ but pending admin approval"
+                    );
+                }
+            }
+
+            // Flagged by system
             ContentApprovalStatus status = listing.getNsfwApprovalStatus();
             if (status == ContentApprovalStatus.APPROVED) {
                 return new NSFWVisibilityRules(
