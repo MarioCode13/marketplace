@@ -1195,3 +1195,94 @@ INSERT INTO subscription (
         NOW()
     )
 ON CONFLICT DO NOTHING;
+
+-- Reserved Slug Table
+CREATE TABLE IF NOT EXISTS reserved_slug (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    reason VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Seed Reserved Slugs: Well-known global brands
+INSERT INTO reserved_slug (slug, reason) VALUES
+    ('google', 'Well-known brand'),
+    ('facebook', 'Well-known brand'),
+    ('amazon', 'Well-known brand'),
+    ('apple', 'Well-known brand'),
+    ('microsoft', 'Well-known brand'),
+    ('twitter', 'Well-known brand'),
+    ('instagram', 'Well-known brand'),
+    ('linkedin', 'Well-known brand'),
+    ('youtube', 'Well-known brand'),
+    ('netflix', 'Well-known brand'),
+    ('uber', 'Well-known brand'),
+    ('airbnb', 'Well-known brand'),
+    ('slack', 'Well-known brand'),
+    ('spotify', 'Well-known brand'),
+    ('dropbox', 'Well-known brand'),
+    ('ebay', 'Well-known brand'),
+    ('paypal', 'Well-known brand'),
+    ('stripe', 'Well-known brand'),
+    ('github', 'Well-known brand'),
+    ('gitlab', 'Well-known brand'),
+
+    -- Well-known South African brands and companies
+    ('takealot', 'South African brand'),
+    ('jumia', 'South African brand'),
+    ('superbalist', 'South African brand'),
+    ('yuppiechef', 'South African brand'),
+    ('makro', 'South African brand'),
+    ('spar', 'South African brand'),
+    ('shoprite', 'South African brand'),
+    ('woolworths', 'South African brand'),
+    ('checkers', 'South African brand'),
+    ('capitec', 'South African brand'),
+    ('absa', 'South African brand'),
+    ('standard-bank', 'South African brand'),
+    ('investec', 'South African brand'),
+    ('first-national-bank', 'South African brand'),
+    ('vodacom', 'South African brand'),
+    ('mtn', 'South African brand'),
+    ('telkom', 'South African brand'),
+    ('cell-c', 'South African brand'),
+    ('eskom', 'South African brand'),
+    ('transnet', 'South African brand'),
+    ('south-african-airways', 'South African brand'),
+    ('kulula', 'South African brand'),
+    ('flysafair', 'South African brand'),
+    ('cityrental', 'South African brand'),
+    ('car-rental-pro', 'South African brand'),
+
+    -- Platform-related
+    ('admin', 'Platform reserved'),
+    ('api', 'Platform reserved'),
+    ('support', 'Platform reserved'),
+    ('marketplace', 'Platform reserved'),
+    ('help', 'Platform reserved'),
+    ('blog', 'Platform reserved'),
+    ('shop', 'Platform reserved'),
+    ('store', 'Platform reserved'),
+    ('account', 'Platform reserved'),
+    ('user', 'Platform reserved'),
+    ('profile', 'Platform reserved'),
+    ('settings', 'Platform reserved'),
+    ('dashboard', 'Platform reserved'),
+    ('login', 'Platform reserved'),
+    ('signup', 'Platform reserved'),
+    ('register', 'Platform reserved'),
+    ('checkout', 'Platform reserved'),
+    ('cart', 'Platform reserved'),
+    ('payment', 'Platform reserved'),
+    ('order', 'Platform reserved'),
+    ('listing', 'Platform reserved'),
+    ('product', 'Platform reserved'),
+    ('category', 'Platform reserved'),
+    ('search', 'Platform reserved'),
+    ('about', 'Platform reserved'),
+    ('contact', 'Platform reserved'),
+    ('terms', 'Platform reserved'),
+    ('privacy', 'Platform reserved')
+ON CONFLICT (slug) DO NOTHING;
+
+

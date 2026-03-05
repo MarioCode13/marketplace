@@ -28,6 +28,7 @@ public class BusinessService {
     private final BusinessRepository businessRepository;
     private final BusinessUserRepository businessUserRepository;
     private final ListingRepository listingRepository;
+    private final SlugValidationService slugValidationService;
     private final UserService userService;
     private final NotificationService notificationService;
     private final ListingImageService listingImageService;
@@ -207,10 +208,21 @@ public class BusinessService {
             businessRepository.existsByEmailAndIdNot(business.getEmail(), business.getId())) {
             throw new IllegalArgumentException("Business email already exists: " + business.getEmail());
         }
-        // Slug uniqueness validation
-        if (business.getSlug() != null && !business.getSlug().equals(existingBusiness.getSlug()) &&
-            businessRepository.existsBySlugAndIdNot(business.getSlug(), business.getId())) {
-            throw new IllegalArgumentException("Business slug already exists: " + business.getSlug());
+        // Slug uniqueness and reserved slug validation
+        if (business.getSlug() != null && !business.getSlug().equals(existingBusiness.getSlug())) {
+            // Check for duplicate slug
+            if (businessRepository.existsBySlugAndIdNot(business.getSlug(), business.getId())) {
+                throw new IllegalArgumentException("Business slug already exists: " + business.getSlug());
+            }
+            // Validate against reserved slugs
+            SlugValidationService.SlugValidationResult validation = slugValidationService.validateSlug(business.getSlug());
+            if (validation.getStatus() == SlugValidationService.SlugValidationResult.SlugStatus.REJECTED) {
+                throw new IllegalArgumentException(validation.getMessage());
+            }
+            if (validation.getStatus() == SlugValidationService.SlugValidationResult.SlugStatus.PENDING_REVIEW) {
+                log.warn("Slug '{}' requires manual review: {}", business.getSlug(), validation.getMessage());
+                // For now, allow it but log for admin review. You can change this to throw an exception if stricter.
+            }
         }
         existingBusiness.setName(business.getName());
         existingBusiness.setEmail(business.getEmail());
@@ -341,6 +353,15 @@ public class BusinessService {
     // Helper to make a URL-friendly slug from a string
     private String generateSlug(String input) {
         if (input == null) return "business" + System.currentTimeMillis();
+        return normalizeSlug(input, 50);
+    }
+
+    /**
+     * Normalize a slug: lowercase, remove diacritics, keep only alphanumeric + hyphens.
+     * This is also useful for validating user-provided slugs.
+     */
+    public String normalizeSlug(String input, int maxLength) {
+        if (input == null) return null;
         String normalized = Normalizer.normalize(input, Normalizer.Form.NFD);
         // remove diacritics
         normalized = normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
@@ -351,7 +372,7 @@ public class BusinessService {
         // trim hyphens
         normalized = normalized.replaceAll("^-|-$", "");
         String slug = normalized.toLowerCase();
-        if (slug.length() > 50) slug = slug.substring(0, 50);
+        if (slug.length() > maxLength) slug = slug.substring(0, maxLength);
         if (slug.isBlank()) slug = "business-" + System.currentTimeMillis();
         return slug;
     }
