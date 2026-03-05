@@ -30,6 +30,10 @@ type User {
     storeBranding: StoreBranding
     listings: [Listing!]!
     business: Business
+    # Age Verification & NSFW Content Fields
+    dateOfBirth: String
+    ageVerified: Boolean!
+    allowsExplicitContent: Boolean!
 }
 
 type StoreBranding {
@@ -74,6 +78,12 @@ type Listing {
     user: User      # Now nullable
     business: Business # Added, nullable
     archived: Boolean! # Added
+    # NSFW Content Fields
+    nsfwFlagged: Boolean!
+    nsfwApprovalStatus: ContentApprovalStatus
+    nsfwReviewNotes: String
+    nsfwReviewedAt: String
+    nsfwReviewedBy: User
 }
 
 type ListingPageResponse {
@@ -419,6 +429,72 @@ enum BusinessUserRole {
     CONTRIBUTOR
 }
 
+enum ContentApprovalStatus {
+    PENDING
+    APPROVED
+    DECLINED
+}
+
+enum FlaggedSlugStatus {
+    PENDING
+    APPROVED
+    REJECTED
+}
+
+enum ContentFlagType {
+    NSFW_IMAGE
+    PROBLEMATIC_SLUG
+}
+
+type ContentApprovalQueueItem {
+    id: ID!
+    listing: Listing!
+    flagType: ContentFlagType!
+    flaggedData: String
+    status: ContentApprovalStatus!
+    approvalNotes: String
+    createdAt: String!
+    updatedAt: String!
+    reviewedAt: String
+    reviewedBy: User
+}
+
+type FlaggedSlug {
+    id: ID!
+    slug: String!
+    business: Business!
+    reason: String!
+    status: FlaggedSlugStatus!
+    reviewNotes: String
+    reviewedBy: User
+    createdAt: String!
+    updatedAt: String!
+    reviewedAt: String
+}
+
+type ApprovalDashboardStats {
+    totalPendingApprovals: Int!
+    pendingNsfwApprovals: Int!
+    pendingSlugApprovals: Int!
+    pendingFlaggedSlugs: Int!
+}
+
+type NSFWContentPage {
+    items: [ContentApprovalQueueItem!]!
+    totalCount: Int!
+    pageNumber: Int!
+    pageSize: Int!
+    hasNextPage: Boolean!
+}
+
+type FlaggedSlugPage {
+    items: [FlaggedSlug!]!
+    totalCount: Int!
+    pageNumber: Int!
+    pageSize: Int!
+    hasNextPage: Boolean!
+}
+
 type Query {
     getUserById(id: ID!): User
     user(id: ID!): User
@@ -498,6 +574,15 @@ type Query {
     getBusinessTransactions(businessId: ID!): [Transaction!]!
     userSubscriptions(userId: ID!): [Subscription!]!
     businessSubscriptions(businessId: ID!): [Subscription!]!
+    # Admin NSFW Content Approval Queries
+    getPendingApprovals(page: Int, size: Int): NSFWContentPage!
+    getApprovalQueueItem(id: ID!): ContentApprovalQueueItem
+    getApprovalsByType(flagType: ContentFlagType!, status: ContentApprovalStatus, page: Int, size: Int): NSFWContentPage!
+    getPendingFlaggedSlugs(page: Int, size: Int): FlaggedSlugPage!
+    getFlaggedSlugsByStatus(status: FlaggedSlugStatus!, page: Int, size: Int): FlaggedSlugPage!
+    getFlaggedSlug(id: ID!): FlaggedSlug
+    getApprovalsForListing(listingId: ID!): [ContentApprovalQueueItem!]!
+    getAdminDashboardStats: ApprovalDashboardStats!
 }
 
 
@@ -560,4 +645,12 @@ type Mutation {
     sendInvitation(businessId: ID!, recipientEmail: String!, role: BusinessUserRole!): Invitation!
     acceptInvitation(invitationId: ID!): Invitation!
     declineInvitation(invitationId: ID!): Invitation!
+    # Admin NSFW Content Approval Mutations
+    approveListing(approvalQueueId: ID!, approvalNotes: String): ContentApprovalQueueItem!
+    declineListing(approvalQueueId: ID!, declineReason: String!): ContentApprovalQueueItem!
+    approveFlaggedSlug(flaggedSlugId: ID!, approvalNotes: String): FlaggedSlug!
+    rejectFlaggedSlug(flaggedSlugId: ID!, rejectionReason: String!): FlaggedSlug!
+    # User NSFW Preference Mutations
+    verifyUserAge(dateOfBirth: String!): User!
+    updateExplicitContentPreference(allowExplicit: Boolean!): User!
 }

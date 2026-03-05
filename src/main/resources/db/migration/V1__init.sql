@@ -46,6 +46,9 @@ CREATE TABLE IF NOT EXISTS "users" (
     email_verified BOOLEAN DEFAULT false,
     email_verification_token VARCHAR(255),
     email_verification_token_expiry TIMESTAMP,
+    date_of_birth DATE,
+    age_verified BOOLEAN DEFAULT false,
+    allows_explicit_content BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -730,6 +733,11 @@ CREATE TABLE IF NOT EXISTS listing (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
     archived BOOLEAN DEFAULT FALSE,
+    nsfw_flagged BOOLEAN DEFAULT FALSE,
+    nsfw_approval_status VARCHAR(50),
+    nsfw_review_notes TEXT,
+    nsfw_reviewed_at TIMESTAMP,
+    nsfw_reviewed_by UUID REFERENCES users(id),
     CONSTRAINT unique_user_listing_title UNIQUE (user_id, title),
     CONSTRAINT unique_business_listing_title UNIQUE (business_id, title),
     CONSTRAINT listing_user_or_business CHECK ((user_id IS NOT NULL) OR (business_id IS NOT NULL))
@@ -1284,5 +1292,45 @@ INSERT INTO reserved_slug (slug, reason) VALUES
     ('terms', 'Platform reserved'),
     ('privacy', 'Platform reserved')
 ON CONFLICT (slug) DO NOTHING;
+
+-- Flagged Slugs Table - tracks slugs that need admin review (too similar to reserved brands)
+CREATE TABLE IF NOT EXISTS flagged_slug (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug VARCHAR(255) NOT NULL,
+    business_id UUID NOT NULL REFERENCES business(id) ON DELETE CASCADE,
+    reason TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    reviewed_by UUID REFERENCES "users"(id),
+    review_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    UNIQUE(slug, business_id)
+);
+
+-- Content Approval Queue Table - admin workflow for reviewing flagged listings
+CREATE TABLE IF NOT EXISTS content_approval_queue (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    listing_id UUID NOT NULL REFERENCES listing(id) ON DELETE CASCADE,
+    flag_type VARCHAR(50) NOT NULL,
+    flagged_data TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    approval_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP,
+    reviewed_by UUID REFERENCES "users"(id)
+);
+
+-- Create indexes for better query performance
+CREATE INDEX idx_flagged_slug_business_id ON flagged_slug(business_id);
+CREATE INDEX idx_flagged_slug_status ON flagged_slug(status);
+CREATE INDEX idx_flagged_slug_created_at ON flagged_slug(created_at);
+
+CREATE INDEX idx_content_approval_listing_id ON content_approval_queue(listing_id);
+CREATE INDEX idx_content_approval_status ON content_approval_queue(status);
+CREATE INDEX idx_content_approval_flag_type ON content_approval_queue(flag_type);
+CREATE INDEX idx_content_approval_created_at ON content_approval_queue(created_at);
+
 
 

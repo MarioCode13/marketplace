@@ -7,14 +7,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.JoinColumn;
-
 @Entity
 @Table(name = "users")
 @Getter
@@ -76,6 +75,16 @@ public class User {
 
     @Column(name = "email_verification_token_expiry")
     private LocalDateTime emailVerificationTokenExpiry;
+
+    // Age Verification and NSFW Content Handling
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "age_verified", nullable = false)
+    private Boolean ageVerified = false; // User is verified to be 18+
+
+    @Column(name = "allows_explicit_content", nullable = false)
+    private Boolean allowsExplicitContent = false; // User preference to see NSFW content
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -1,6 +1,7 @@
 package dev.marketplace.marketplace.model;
 
 import dev.marketplace.marketplace.enums.Condition;
+import dev.marketplace.marketplace.enums.ContentApprovalStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -68,9 +69,36 @@ public class Listing {
     private LocalDateTime soldAt; // Timestamp when listing was sold (nullable)
     private java.math.BigDecimal soldPrice; // Price at which it was sold (nullable)
 
+    // NSFW Content Tracking
+    @Column(name = "nsfw_flagged")
+    private boolean nsfwFlagged = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "nsfw_approval_status")
+    private ContentApprovalStatus nsfwApprovalStatus;
+
+    @Column(name = "nsfw_review_notes", columnDefinition = "TEXT")
+    private String nsfwReviewNotes;
+
+    @Column(name = "nsfw_reviewed_at")
+    private LocalDateTime nsfwReviewedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "nsfw_reviewed_by")
+    private User nsfwReviewedBy;
+
     @PrePersist
     public void setExpiration() {
         this.expiresAt = this.createdAt.plusDays(30);
+    }
+
+    // NSFW Getter Methods
+    public boolean getNsfwFlagged() {
+        return nsfwFlagged;
+    }
+
+    public ContentApprovalStatus getNsfwApprovalStatus() {
+        return nsfwApprovalStatus;
     }
 
     private Listing(Builder builder) {
@@ -93,6 +121,11 @@ public class Listing {
         this.archived = builder.archived;
         this.soldAt = builder.soldAt;
         this.soldPrice = builder.soldPrice;
+        this.nsfwFlagged = builder.nsfwFlagged;
+        this.nsfwApprovalStatus = builder.nsfwApprovalStatus;
+        this.nsfwReviewNotes = builder.nsfwReviewNotes;
+        this.nsfwReviewedAt = builder.nsfwReviewedAt;
+        this.nsfwReviewedBy = builder.nsfwReviewedBy;
     }
 
     public static class Builder {
@@ -115,6 +148,11 @@ public class Listing {
         private int quantity = 1;
         private LocalDateTime soldAt;
         private java.math.BigDecimal soldPrice;
+        private boolean nsfwFlagged = false;
+        private ContentApprovalStatus nsfwApprovalStatus;
+        private String nsfwReviewNotes;
+        private LocalDateTime nsfwReviewedAt;
+        private User nsfwReviewedBy;
 
         public Builder id(UUID id) {
             this.id = id;
@@ -208,6 +246,31 @@ public class Listing {
 
         public Builder soldPrice(java.math.BigDecimal soldPrice) {
             this.soldPrice = soldPrice;
+            return this;
+        }
+
+        public Builder nsfwFlagged(boolean nsfwFlagged) {
+            this.nsfwFlagged = nsfwFlagged;
+            return this;
+        }
+
+        public Builder nsfwApprovalStatus(ContentApprovalStatus nsfwApprovalStatus) {
+            this.nsfwApprovalStatus = nsfwApprovalStatus;
+            return this;
+        }
+
+        public Builder nsfwReviewNotes(String nsfwReviewNotes) {
+            this.nsfwReviewNotes = nsfwReviewNotes;
+            return this;
+        }
+
+        public Builder nsfwReviewedAt(LocalDateTime nsfwReviewedAt) {
+            this.nsfwReviewedAt = nsfwReviewedAt;
+            return this;
+        }
+
+        public Builder nsfwReviewedBy(User nsfwReviewedBy) {
+            this.nsfwReviewedBy = nsfwReviewedBy;
             return this;
         }
 
