@@ -115,7 +115,8 @@ public class ListingService {
                                  UUID categoryId, double price, UUID cityId, String customCity, Condition condition, UUID userId, Integer quantity, UUID businessId, boolean sellerMarked18Plus, boolean nsfwFlagged) {
         imageService.validateImages(imageUrls);
         cityService.validateCityOrCustomCity(cityId, customCity);
-        List<String> imageFilenames = imageService.convertUrlsToFilenames(imageUrls);
+        // Convert to ArrayList to ensure it's mutable for JPA's @ElementCollection
+        List<String> imageFilenames = new java.util.ArrayList<>(imageService.convertUrlsToFilenames(imageUrls));
         User user = authorizationService.validateUserExists(userId);
         Category category = categoryService.findById(categoryId);
         City city = cityId != null ? cityService.getCityById(cityId) : null;
@@ -310,6 +311,18 @@ public class ListingService {
             ? categoryService.getAllDescendantCategoryIds(categoryId)
             : null;
 
+        // Resolve the business (if any) that the current user is associated with once,
+        // so we can allow business owners/users to see their own pending approval listings.
+        dev.marketplace.marketplace.model.Business tmpBusiness = null;
+        if (currentUser != null) {
+            try {
+                tmpBusiness = authorizationService.getBusinessForUser(currentUser.getId());
+            } catch (Exception ignored) {
+                // If we can't resolve a business for the user, we simply won't apply the business-based override below.
+            }
+        }
+        final dev.marketplace.marketplace.model.Business currentUserBusiness = tmpBusiness;
+
         List<Listing> filteredListings = listingRepository.findAll();
 
         filteredListings = filteredListings.stream()
@@ -323,7 +336,27 @@ public class ListingService {
             .filter(l -> searchTerm == null || l.getTitle().toLowerCase().contains(searchTerm.toLowerCase()) || l.getDescription().toLowerCase().contains(searchTerm.toLowerCase()))
             .filter(l -> minDate == null || (l.getCreatedAt() != null && !l.getCreatedAt().isBefore(minDate)))
             .filter(l -> maxDate == null || (l.getCreatedAt() != null && !l.getCreatedAt().isAfter(maxDate)))
-            .filter(l -> nsfwContentService.canUserViewListing(l, currentUser))  // Apply NSFW filtering
+            .filter(l -> {
+                // Always allow the owner of a listing (personal listing) to see it,
+                // even if it is pending NSFW approval.
+                boolean isPersonalOwner = currentUser != null
+                        && l.getUser() != null
+                        && l.getUser().getId().equals(currentUser.getId());
+
+                // For business listings, allow users associated with that business
+                // to see their own pending approval items.
+                boolean isBusinessUser = currentUser != null
+                        && currentUserBusiness != null
+                        && l.getBusiness() != null
+                        && l.getBusiness().getId().equals(currentUserBusiness.getId());
+
+                if (isPersonalOwner || isBusinessUser) {
+                    return true;
+                }
+
+                // Fallback to normal NSFW visibility rules for everyone else.
+                return nsfwContentService.canUserViewListing(l, currentUser);
+            })
             .toList();
 
         if (sortBy != null && sortOrder != null) {
@@ -357,7 +390,7 @@ public class ListingService {
     }
 
     /**
-     * Returns all listings for a given user.
+     * Returns all listings for a given user, including those pending NSFW approval.
      */
     public List<ListingDTO> getListingsByUserId(UUID userId) {
         List<Listing> listings = listingRepository.findByUserId(userId);

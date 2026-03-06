@@ -319,6 +319,7 @@ public class UserService implements UserDetailsService {
     /**
      * Returns user with city relation loaded (for me query and profile).
      */
+    @Transactional(readOnly = true)
     public Optional<User> getUserByEmailWithCity(String email) {
         return userRepository.findByEmailWithCity(email);
     }

@@ -20,7 +20,7 @@ import java.util.UUID;
 
 @Repository
 public interface ListingRepository extends JpaRepository<Listing, UUID> {
-    @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE l.user.id = :userId AND l.sold = false")
+    @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE l.user.id = :userId AND (l.sold = false OR l.nsfwApprovalStatus = 'PENDING')")
     List<Listing> findByUserId(UUID userId);
 
     @Query("SELECT l FROM Listing l JOIN FETCH l.user WHERE l.user.id = :userId")

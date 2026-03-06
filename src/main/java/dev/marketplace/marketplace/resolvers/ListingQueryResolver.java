@@ -4,9 +4,11 @@ import dev.marketplace.marketplace.dto.ListingDTO;
 import dev.marketplace.marketplace.dto.ListingPageResponse;
 import dev.marketplace.marketplace.service.ListingService;
 import dev.marketplace.marketplace.service.UserService;
+import dev.marketplace.marketplace.service.ListingImageService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -20,10 +22,12 @@ import java.util.UUID;
 public class ListingQueryResolver {
     private final ListingService listingService;
     private final UserService userService;
+    private final ListingImageService listingImageService;
 
-    public ListingQueryResolver(ListingService listingService, UserService userService) {
+    public ListingQueryResolver(ListingService listingService, UserService userService, ListingImageService listingImageService) {
         this.listingService = listingService;
         this.userService = userService;
+        this.listingImageService = listingImageService;
     }
 
     @QueryMapping
@@ -159,6 +163,21 @@ public class ListingQueryResolver {
     @QueryMapping
     public List<ListingDTO> listingsByUser(@Argument UUID userId) {
         return listingService.getListingsByUserId(userId);
+    }
+
+    @SchemaMapping(typeName = "Listing", field = "images")
+    public List<String> resolveImages(Object listingObj) {
+        // Handle both ListingDTO and Listing entity objects
+        if (listingObj instanceof ListingDTO) {
+            ListingDTO dto = (ListingDTO) listingObj;
+            // DTO already has pre-signed URLs
+            return dto.images();
+        } else if (listingObj instanceof dev.marketplace.marketplace.model.Listing) {
+            dev.marketplace.marketplace.model.Listing listing = (dev.marketplace.marketplace.model.Listing) listingObj;
+            // Raw entity - convert filenames to URLs
+            return listingImageService.generatePreSignedUrls(listing.getImages());
+        }
+        return List.of();
     }
 
 }

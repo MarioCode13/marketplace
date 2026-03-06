@@ -65,7 +65,12 @@ public class ListingFileUploadController {
             // Optionally update listing with filenames if your DB stores them
             Listing listing = listingService.getListingByIdRaw(listingId);
             List<String> currentImages = listing.getImages();
-            if (currentImages == null) currentImages = new ArrayList<>();
+            // Ensure we have a mutable list (JPA might return immutable list)
+            if (currentImages == null) {
+                currentImages = new ArrayList<>();
+            } else {
+                currentImages = new ArrayList<>(currentImages);
+            }
             // If you want to store filenames, you can strip folder prefix from URLs
             currentImages.addAll(uploadedUrls.stream().map(url -> url.substring(url.lastIndexOf("/") + 1)).toList());
             listing.setImages(currentImages);

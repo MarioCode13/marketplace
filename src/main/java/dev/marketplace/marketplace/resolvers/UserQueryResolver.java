@@ -29,6 +29,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Base64;
 import java.util.List;
@@ -198,17 +199,23 @@ public class UserQueryResolver {
     }
 
     @SchemaMapping(typeName = "User", field = "business")
+    @Transactional(readOnly = true)
     public Business resolveBusiness(Object userObj) {
         UserDTO user = userObj instanceof UserDTO ? (UserDTO) userObj : UserMapper.toDto((User) userObj);
+        // Use the user service to find the user with eager loading of businesses
         Optional<User> userEntityOpt = userService.findById(user.getId());
-        if (userEntityOpt.isEmpty()) return null;
+        if (userEntityOpt.isEmpty()) {
+            return null;
+        }
         User userEntity = userEntityOpt.get();
+
         // Try to find business where user is owner
         Optional<Business> ownedBusiness = businessRepository.findOwnedByUser(userEntity);
         if (ownedBusiness.isPresent()) {
             return ownedBusiness.get();
         }
-        // Optionally, return first business where user is a team member
+
+        // Try to find first business where user is a team member
         List<Business> businesses = businessRepository.findByUser(userEntity);
         return businesses.isEmpty() ? null : businesses.get(0);
     }
@@ -357,9 +364,12 @@ public class UserQueryResolver {
         if (principal instanceof UserDetails) {
             String email = ((UserDetails) principal).getUsername();
             // Load user with city so cityId/city is populated in the DTO and resolvers
-            return userService.getUserByEmailWithCity(email)
-                    .map(UserMapper::toDto)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+            Optional<User> userOpt = userService.getUserByEmailWithCity(email);
+            if (userOpt.isEmpty()) {
+                throw new RuntimeException("User not found with email: " + email);
+            }
+            User user = userOpt.get();
+            return UserMapper.toDto(user);
         } else {
             throw new RuntimeException("Invalid authentication details");
         }

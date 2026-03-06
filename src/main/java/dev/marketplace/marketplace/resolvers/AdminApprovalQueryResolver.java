@@ -152,9 +152,13 @@ public class AdminApprovalQueryResolver {
     }
 
     private ContentApprovalQueueItemDTO convertToDTO(ContentApprovalQueue item) {
+        // Ensure listing is not null - it's required per the schema
+        if (item.getListing() == null) {
+            throw new IllegalStateException("ContentApprovalQueue item must have a non-null listing");
+        }
         return new ContentApprovalQueueItemDTO(
                 item.getId().toString(),
-                item.getListing().getId().toString(),
+                item.getListing(),
                 item.getFlagType().name(),
                 item.getFlaggedData(),
                 item.getStatus().name(),
@@ -200,7 +204,7 @@ public class AdminApprovalQueryResolver {
 
     public record ContentApprovalQueueItemDTO(
             String id,
-            String listingId,
+            dev.marketplace.marketplace.model.Listing listing,
             String flagType,
             String flaggedData,
             String status,

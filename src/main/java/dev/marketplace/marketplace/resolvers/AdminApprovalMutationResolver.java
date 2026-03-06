@@ -106,9 +106,13 @@ public class AdminApprovalMutationResolver {
 
     // Helper methods
     private AdminApprovalQueryResolver.ContentApprovalQueueItemDTO convertToDTO(ContentApprovalQueue item) {
+        // Ensure listing is not null - it's required per the schema
+        if (item.getListing() == null) {
+            throw new IllegalStateException("ContentApprovalQueue item must have a non-null listing");
+        }
         return new AdminApprovalQueryResolver.ContentApprovalQueueItemDTO(
                 item.getId().toString(),
-                item.getListing().getId().toString(),
+                item.getListing(),
                 item.getFlagType().name(),
                 item.getFlaggedData(),
                 item.getStatus().name(),

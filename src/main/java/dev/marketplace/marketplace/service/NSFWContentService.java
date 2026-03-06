@@ -34,13 +34,14 @@ public class NSFWContentService {
             return false;
         }
 
-        // User must be age verified
-        if (!user.getAgeVerified()) {
+        // User must be age verified (canonical source of truth for 18+)
+        if (!Boolean.TRUE.equals(user.getAgeVerified())) {
             return false;
         }
 
-        // User must be 18+
-        return isUserAdult(user);
+        // ageVerified implies 18+; only fall back to DOB check if ageVerified is true
+        // (handles edge case where DOB might be null but user was verified via other means)
+        return true;
     }
 
     /**

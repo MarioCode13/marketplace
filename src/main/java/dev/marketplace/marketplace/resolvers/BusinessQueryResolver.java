@@ -18,6 +18,7 @@ import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -39,6 +40,7 @@ public class BusinessQueryResolver {
     }
 
     @QueryMapping
+    @Transactional(readOnly = true)
     public Business myBusiness() {
         User currentUser = getCurrentUser();
         log.info("Fetching business for user: {}", currentUser.getId());
@@ -48,6 +50,7 @@ public class BusinessQueryResolver {
     }
 
     @QueryMapping
+    @Transactional(readOnly = true)
     public List<Business> myBusinesses() {
         User currentUser = getCurrentUser();
         log.info("Fetching all businesses for user: {}", currentUser.getId());
